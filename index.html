@@ -247,10 +247,8 @@ import {
   Sun, Zap, Truck, HardHat, FileSignature, ListChecks,
   Lock, PieChart, BarChart3, ScrollText, Target, Scale,
   Menu, LogIn, Users2, Loader2, Gamepad2, Network, Cloud,
-  Mail, UserPlus, Check, Smartphone
+  Mail, UserPlus, Check, Smartphone, RefreshCw
 } from 'lucide-react';
-
-// --- 注意：不再静态导入 leancloud-storage，改为在组件内动态加载 CDN ---
 
 // --- 2. 静态配置 ---
 const PROJECT_INFO = {
@@ -342,9 +340,6 @@ const RISK_TABLE = [
   { level: '低风险', basis: '项目可能产生极少或不存在环境和社会不利影响', req: '不要求进行环境和社会评估' }
 ];
 
-// ------------------------------------------------------------------
-// 组件: MobileNavBtn
-// ------------------------------------------------------------------
 const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn }) => {
   const isActive = active === role;
   const colorClass = role === 'owner' ? 'text-blue-600' : 
@@ -372,10 +367,6 @@ const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn 
     </button>
   );
 };
-
-// ------------------------------------------------------------------
-// GameEntryWrapper (Updated for CDN Loading)
-// ------------------------------------------------------------------
 
 const ROLE_ORDER = ['owner', 'gov', 'mdb', 'epc', 'ngo'];
 
@@ -438,18 +429,25 @@ const GameEntryWrapper = ({ children }) => {
       return () => clearInterval(timer);
   }, [sdkReady]);
 
+  // 修复2: 多人模式Bug - 强制解析房间号，确保存储和查询类型一致
   const enterRoomReal = async () => {
       if (!sdkReady) return alert("系统初始化中，请稍后...");
       const AV = window.AV;
 
-      const rNum = parseInt(roomNumber);
+      const rNum = parseInt(roomNumber); // 强制转换为数字
       if (!playerName.trim()) return alert("请输入昵称");
       if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
 
       try {
           setLobbyStatus('waiting');
+          // 清理旧订阅
+          if (liveQuerySub) {
+              liveQuerySub.unsubscribe();
+              setLiveQuerySub(null);
+          }
+
           const query = new AV.Query('GamePlayer');
-          query.equalTo('room', rNum);
+          query.equalTo('room', rNum); // 使用数字类型查询
           query.ascending('createdAt');
           const existingPlayers = await query.find();
           
@@ -473,8 +471,9 @@ const GameEntryWrapper = ({ children }) => {
           };
           await updateList();
 
+          // 重建订阅
           const liveQuery = new AV.Query('GamePlayer');
-          liveQuery.equalTo('room', rNum);
+          liveQuery.equalTo('room', rNum); // 确保 LiveQuery 也用数字
           const subscription = await liveQuery.subscribe();
           
           subscription.on('create', (obj) => { updateList(); });
@@ -484,15 +483,24 @@ const GameEntryWrapper = ({ children }) => {
 
       } catch (error) {
           console.error("LeanCloud Connection Error:", error);
-          let errorMsg = "网络连接失败。";
-          if (error.code === 403) {
-              errorMsg = "连接被拒绝(403)。请检查AppID配置或域名白名单。";
-          } else if (error.code === 0 || (error.message && error.message.includes('Network'))) {
-              errorMsg = "网络连接失败。请检查网络。";
-          }
-          alert(errorMsg); 
-          setLobbyStatus('login'); // 回退到登录页
+          alert("网络连接失败，请重试。"); 
+          setLobbyStatus('login');
       }
+  };
+
+  const manualRefreshLobby = async () => {
+      if (!sdkReady || !roomNumber) return;
+      const AV = window.AV;
+      const rNum = parseInt(roomNumber);
+      const q = new AV.Query('GamePlayer');
+      q.equalTo('room', rNum);
+      q.ascending('createdAt');
+      const players = await q.find();
+      setRoomPlayers(players.map(p => ({
+          name: p.get('name'),
+          role: p.get('role'),
+          id: p.id
+      })));
   };
 
   const selectRole = async (roleToSelect) => {
@@ -514,6 +522,7 @@ const GameEntryWrapper = ({ children }) => {
 
           if (existingRole) {
               alert("选角失败：云端显示该角色刚被占用。");
+              manualRefreshLobby();
               return;
           }
 
@@ -530,6 +539,7 @@ const GameEntryWrapper = ({ children }) => {
 
           await player.save();
           setMyRole(roleToSelect);
+          manualRefreshLobby(); // 立即刷新一次
       } catch (e) {
           console.error("选角失败", e);
           alert(`选角失败: ${e.message || "网络错误"}`);
@@ -560,11 +570,12 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   if (appState === 'cover') {
+      // 修改1: 首页海报文字上移。将 justify-center 改为 justify-start，并增加顶部 padding (pt-24) 和负 margin (-top-[10%]) 来拉高视觉重心。
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
+        <div className="min-h-screen flex flex-col items-center justify-start pt-32 md:justify-center bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=2000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-30" />
             
-            <div className="text-center space-y-8 z-10 animate-in fade-in duration-1000 slide-in-from-bottom-10 relative -top-[5%] leading-loose">
+            <div className="text-center space-y-8 z-10 animate-in fade-in duration-1000 slide-in-from-bottom-10 relative -top-[10%] leading-loose">
                 <div className="mb-8 flex justify-center"><div className="w-24 h-24 bg-blue-500 rounded-full blur-[60px] absolute opacity-50 animate-pulse"></div><Activity size={80} className="text-blue-400 relative z-10" /></div>
                 <div className="space-y-4 relative -top-[25px]"><h1 className="text-5xl md:text-7xl font-black tracking-tight text-white drop-shadow-lg leading-relaxed">SunLink</h1><h1 className="text-4xl md:text-6xl font-black tracking-tight text-blue-300 drop-shadow-lg leading-relaxed">ESG Simulator</h1></div>
                 <div className="mt-8 space-y-4 relative -top-[10px]"><h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide leading-relaxed">国际工程项目ESG</h2><h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide leading-relaxed">多角色全流程模拟</h2></div>
@@ -588,7 +599,7 @@ const GameEntryWrapper = ({ children }) => {
                 </div>
             </div>
 
-            <div className="absolute bottom-4 z-10 text-center space-y-2 opacity-80 w-full px-4">
+            <div className="absolute bottom-8 z-10 text-center space-y-2 opacity-80 w-full px-4 pb-4">
                 <div className="text-sm md:text-base font-light text-slate-300">
                     开发单位：天津大学全球工程经营实验室
                 </div>
@@ -649,7 +660,8 @@ const GameEntryWrapper = ({ children }) => {
           return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
                <Card className="w-full max-w-2xl border-t-4 border-purple-500 shadow-2xl">
-                  <CardHeader className="text-center pb-2 border-b border-slate-100">
+                  <CardHeader className="text-center pb-2 border-b border-slate-100 relative">
+                     <Button variant="ghost" size="sm" className="absolute left-2 top-2" onClick={()=>manualRefreshLobby()}><RefreshCw size={16}/></Button>
                      <CardTitle className="flex items-center justify-center gap-2 text-purple-800">
                         房间 #{roomNumber} - 角色选择
                      </CardTitle>
@@ -814,14 +826,14 @@ const TransitionOverlay = ({ isVisible, stageTitle, extraText, onComplete }) => 
     );
 };
 
+// 修改3: 移除死高度，改为 flex-1 overflow-y-auto
 const EsmpResponsibilityList = ({ ownerRespEsmp }) => (
-    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-[100px]">
+    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="bg-slate-100 text-[10px] px-2 py-1 font-bold border-b border-slate-200 text-slate-600 flex justify-between items-center shrink-0">
            <span>ESMP 责任划分表</span>
            <ListChecks size={12}/>
         </div>
-        {/* FIX: 问题3 - 增加滚动条 */}
-        <div className="flex-1 bg-white p-1 overflow-y-auto max-h-[200px]">
+        <div className="flex-1 bg-white p-1 overflow-y-auto">
            {ESMP_LIBRARY.map(item => {
               const isOwner = ownerRespEsmp.includes(item.id);
               return (
@@ -1036,6 +1048,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
       const AV = window.AV;
       if (!AV) return;
 
+      // 修复2: 强制转换为整数进行查询
       const query = new AV.Query('GameAction');
       query.equalTo('room', parseInt(roomNumber));
       query.subscribe().then(subscription => {
@@ -1056,7 +1069,6 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                   if(data.s3State) setS3State(data.s3State);
                   if(data.s4State) setS4State(data.s4State);
                   if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
-                  // 同步危机历史
                   if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
               }
           });
@@ -1072,6 +1084,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
 
       const Action = AV.Object.extend('GameAction');
       const act = new Action();
+      // 修复2: 强制转换为整数
       act.set('room', parseInt(roomNumber));
       act.set('type', type);
       act.set('payload', payload);
@@ -1731,7 +1744,6 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
      const count = govRulingCount + 1;
      setGovRulingCount(count);
      
-     // FIX: 问题1 - 记录更新每次主张的理由
      const historyItem = { 
          count, 
          amount: numAmount, 
@@ -2124,12 +2136,12 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
   };
 
   const renderS1ApprovedEsiaListFull = () => (
-      <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-[100px]">
+      <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="bg-slate-100 text-[10px] px-2 py-1 font-bold border-b border-slate-200 text-slate-600 flex justify-between items-center shrink-0">
            <span>已通过的ESIA</span>
            <ListChecks size={12}/>
         </div>
-        <div className="flex-1 bg-white p-1 overflow-y-auto max-h-[200px]">
+        <div className="flex-1 bg-white p-1 overflow-y-auto">
            {ESIA_ITEMS.map(item => {
               const isOwnerSelected = ownerEsiaSelection.includes(item.id);
               const isConfirmed = confirmedEsiaSelection.includes(item.id); 
@@ -2163,12 +2175,12 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
   );
 
   const renderS2ApprovedEscpListFull = () => (
-    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-[100px]">
+    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-0">
        <div className="bg-slate-100 text-[10px] px-2 py-1 font-bold border-b border-slate-200 text-slate-600 flex justify-between items-center shrink-0">
           <span>已签署ESCP</span>
           <ListChecks size={12}/>
        </div>
-       <div className="flex-1 bg-white p-1 overflow-y-auto max-h-[200px]">
+       <div className="flex-1 bg-white p-1 overflow-y-auto">
           {ESMP_LIBRARY.map(item => {
              const isOwner = confirmedEscpSelection.includes(item.id);
              const isGov = accumulatedGovEscpReqs.includes(item.id);
@@ -2214,7 +2226,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.30</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.31</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
@@ -2284,6 +2296,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
     
     const isMe = assignedRole === roleKey;
 
+    // 修改3: 修改 ScrollArea 容器，确保高度传递
     return (
       <Card className={`
           flex flex-col border-l-4 ${colorClass} transition-all duration-300 shadow-sm rounded-sm
@@ -2336,7 +2349,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
 
            {isActive ? (
                <ScrollArea className="flex-1 w-full h-full">
-                  <div className={`p-4 md:p-2 pb-20 md:pb-10 ${mode==='multi' && assignedRole && !isMe ? 'pointer-events-none opacity-80' : ''}`}>
+                  <div className={`h-full flex flex-col p-4 md:p-2 pb-20 md:pb-10 ${mode==='multi' && assignedRole && !isMe ? 'pointer-events-none opacity-80' : ''}`}>
                       {renderRoleContent(roleKey)}
                   </div>
                </ScrollArea>
@@ -2405,6 +2418,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
         );
     }
 
+    // 修改3: 对 owner 所有阶段的 UI 进行 flex 布局优化
     if (role === 'owner') {
       if (stage === 1 && s1State === 'owner_draft') {
         const multiplier = 1.0 + (s1SubmissionCount - 1) * 0.2;
@@ -2414,7 +2428,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
           <div className="font-bold text-blue-800 text-xs md:text-[10px]">
              {s1SubmissionCount > 1 ? "选择补充 (价格上涨" + Math.round((multiplier-1)*100) + "%):" : "请开展ESIA专项评价 (括号内为成本):"}
           </div>
-          <div className="border border-slate-200 rounded-sm shadow-inner bg-white flex-1 overflow-y-auto min-h-[200px]">
+          <div className="border border-slate-200 rounded-sm shadow-inner bg-white flex-1 overflow-y-auto min-h-0">
              {ESIA_ITEMS.map(i => {
             const isConfirmed = confirmedEsiaSelection.includes(i.id);
             const isNgoReq = accumulatedNgoReqs.includes(i.id);
@@ -2434,8 +2448,8 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
             )
           })}
           </div>
-          <div className="text-[8px] text-slate-400 italic text-center">提交后不可撤回，若被驳回，后续成本+20%，声誉-3分/项</div>
-          <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 h-10 md:h-8 text-sm md:text-xs" onClick={s1OwnerSubmit}>开展ESIA专项评价</Button>
+          <div className="text-[8px] text-slate-400 italic text-center shrink-0">提交后不可撤回，若被驳回，后续成本+20%，声誉-3分/项</div>
+          <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={s1OwnerSubmit}>开展ESIA专项评价</Button>
         </div>
       );}
       if (stage === 2 && s2State === 'owner_apply') return (
@@ -2449,11 +2463,10 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
         const multiplier = 1.0 + (s2SubmissionCount - 1) * 0.2;
         return (
         <div className="space-y-2 flex flex-col h-full">
-          {riskLevel && <Alert className="p-1 bg-purple-50 border-purple-200 text-[10px] text-purple-800"><AlertDescription>银行评级结果：{riskLevel}</AlertDescription></Alert>}
-          <div className="font-bold text-purple-700 text-xs md:text-[10px]">请选择贷款协议ESCP (括号内为成本):</div>
-          {(accumulatedGovEscpReqs.length > 0 || accumulatedMdbEscpReqs.length > 0) && (<Alert className="p-1 bg-red-50 text-[9px] border-red-200 text-red-800 mb-1"><AlertDescription>需补充: {[...accumulatedGovEscpReqs].map(id=>ESMP_LIBRARY.find(x=>x.id===id)?.label + '(政府)').join(', ')}{accumulatedGovEscpReqs.length>0 && accumulatedMdbEscpReqs.length>0 && ', '}{[...accumulatedMdbEscpReqs].map(id=>ESMP_LIBRARY.find(x=>x.id===id)?.label + '(银行)').join(', ')}</AlertDescription></Alert>)}
-          {/* FIX: 问题2 - S2阶段增加滚动条 */}
-          <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px] max-h-[400px]">{ESMP_LIBRARY.map(i => {
+          {riskLevel && <Alert className="p-1 bg-purple-50 border-purple-200 text-[10px] text-purple-800 shrink-0"><AlertDescription>银行评级结果：{riskLevel}</AlertDescription></Alert>}
+          <div className="font-bold text-purple-700 text-xs md:text-[10px] shrink-0">请选择贷款协议ESCP (括号内为成本):</div>
+          {(accumulatedGovEscpReqs.length > 0 || accumulatedMdbEscpReqs.length > 0) && (<Alert className="p-1 bg-red-50 text-[9px] border-red-200 text-red-800 mb-1 shrink-0"><AlertDescription>需补充: {[...accumulatedGovEscpReqs].map(id=>ESMP_LIBRARY.find(x=>x.id===id)?.label + '(政府)').join(', ')}{accumulatedGovEscpReqs.length>0 && accumulatedMdbEscpReqs.length>0 && ', '}{[...accumulatedMdbEscpReqs].map(id=>ESMP_LIBRARY.find(x=>x.id===id)?.label + '(银行)').join(', ')}</AlertDescription></Alert>)}
+          <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => {
              const isGovReq = accumulatedGovEscpReqs.includes(i.id);
              const isMdbReq = accumulatedMdbEscpReqs.includes(i.id);
              const isPreviouslyLocked = confirmedEscpSelection.includes(i.id);
@@ -2473,23 +2486,22 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                 </div>
              )
           })}</div>
-          <div className="text-[8px] text-slate-400 italic text-center">提交后不可撤回，若被驳回，后续成本+20%，声誉-3分/项</div>
-          <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-xs" onClick={s2OwnerEscp}>提交ESCP</Button>
+          <div className="text-[8px] text-slate-400 italic text-center shrink-0">提交后不可撤回，若被驳回，后续成本+20%，声誉-3分/项</div>
+          <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={s2OwnerEscp}>提交ESCP</Button>
           {renderS1ApprovedEsiaListFull()}
         </div>
       );}
       if (stage === 3 && s3State === 'owner_tender') return (
          <div className="space-y-2 flex flex-col h-full">
-           <Alert className="p-1 bg-green-50 border-green-200 text-[9px] text-green-800"><AlertDescription>1500万项目融资协议已签署，当前拨付300万（20%）</AlertDescription></Alert>
-           <div className="space-y-0.5"><span className="text-xs md:text-[9px]">控制价($万) <span className="text-red-500">*必填</span></span><Input type="number" onChange={e=>setTenderLimitPrice(Number(e.target.value))} className="h-8 md:h-6 text-sm md:text-[10px]"/></div>
-           <div className="space-y-0.5"><span className="text-xs md:text-[9px]">合同工期(月) - 默认20起</span><div className="flex items-center gap-2"><Input type="number" defaultValue={20} onChange={e=>setTenderDuration(Number(e.target.value))} className="h-8 md:h-6 text-sm md:text-[10px] flex-1"/></div></div>
-           <div className="grid grid-cols-2 gap-2">
+           <Alert className="p-1 bg-green-50 border-green-200 text-[9px] text-green-800 shrink-0"><AlertDescription>1500万项目融资协议已签署，当前拨付300万（20%）</AlertDescription></Alert>
+           <div className="space-y-0.5 shrink-0"><span className="text-xs md:text-[9px]">控制价($万) <span className="text-red-500">*必填</span></span><Input type="number" onChange={e=>setTenderLimitPrice(Number(e.target.value))} className="h-8 md:h-6 text-sm md:text-[10px]"/></div>
+           <div className="space-y-0.5 shrink-0"><span className="text-xs md:text-[9px]">合同工期(月) - 默认20起</span><div className="flex items-center gap-2"><Input type="number" defaultValue={20} onChange={e=>setTenderDuration(Number(e.target.value))} className="h-8 md:h-6 text-sm md:text-[10px] flex-1"/></div></div>
+           <div className="grid grid-cols-2 gap-2 shrink-0">
                <div className="space-y-0.5"><span className="text-xs md:text-[9px]">误期罚款(万/月)</span><Input type="number" min={0} defaultValue={0} onChange={e=>setDelayPenalty(Number(e.target.value))} className="h-8 md:h-6 text-sm md:text-[10px]"/></div>
                <div className="space-y-0.5"><span className="text-xs md:text-[9px]">提前奖励(万/月)</span><Input type="number" min={0} defaultValue={0} onChange={e=>setEarlyBonus(Number(e.target.value))} className="h-8 md:h-6 text-sm md:text-[10px]"/></div>
            </div>
-           <div className="font-bold text-xs md:text-[10px] mt-1">业主自管ESMP (未选将由EPC负责):</div>
-           {/* FIX: 问题3 - S3阶段增加滚动条 */}
-           <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[150px] max-h-[250px]">{ESMP_LIBRARY.map(i => {
+           <div className="font-bold text-xs md:text-[10px] mt-1 shrink-0">业主自管ESMP (未选将由EPC负责):</div>
+           <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => {
                const inEscp = confirmedEscpSelection.includes(i.id);
                return (
                  <div key={i.id} className="flex gap-1 py-1 md:py-1 px-1 items-center border-b last:border-0">
@@ -2501,25 +2513,25 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                  </div>
                )
            })}</div>
-           <div className="text-[8px] text-slate-400 italic text-center">自管项目需业主付费，未选项目将列入EPC报价。</div>
-           <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-xs" onClick={s3OwnerTender} disabled={!tenderLimitPrice || tenderLimitPrice <= 0}>发布招标文件</Button>
+           <div className="text-[8px] text-slate-400 italic text-center shrink-0">自管项目需业主付费，未选项目将列入EPC报价。</div>
+           <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={s3OwnerTender} disabled={!tenderLimitPrice || tenderLimitPrice <= 0}>发布招标文件</Button>
            {renderS2ApprovedEscpListFull()}
          </div>
       );
       if (stage === 3 && s3State === 'owner_eval') return (
         <div className="space-y-2 p-2 bg-amber-50 rounded border border-amber-200 flex flex-col h-full">
-          <div className="font-bold text-center border-b border-amber-200 pb-1 mb-1 text-xs md:text-[10px]">报价历史</div>
-          <div className="h-20 overflow-y-auto border bg-white rounded p-1 mb-1">{epcBidHistory.map(h => (<div key={h.round} className="text-xs md:text-[9px] flex justify-between border-b border-slate-100 py-0.5"><span>第{h.round}轮</span><span className="font-bold">${h.price}万</span></div>))}</div>
-          <div className="grid grid-cols-2 gap-1 text-center text-xs md:text-[9px]"><div className="text-slate-500">控制价</div><div className="font-bold">${tenderLimitPrice}</div><div className="text-slate-500">EPC最新报价</div><div className={`font-bold ${epcBid.price>tenderLimitPrice?'text-red-600':''}`}>${epcBid.price}</div><div className="text-slate-500">合同工期</div><div className="font-bold">{tenderDuration}</div></div>
-          <Input placeholder="驳回理由(可选)" className="h-8 md:h-6 text-sm md:text-[10px] bg-white" value={ownerRejectReason} onChange={e=>setOwnerRejectReason(e.target.value)}/>
-          <div className="flex gap-1 mt-1"><Button size="sm" className="flex-1 h-10 md:h-8 text-sm md:text-[10px] bg-green-600 whitespace-normal leading-tight" onClick={()=>s3OwnerEval(true)}>接受报价</Button><Button size="sm" className="flex-1 h-10 md:h-8 text-sm md:text-[10px] bg-red-600 leading-tight" onClick={()=>s3OwnerEval(false)}>驳回重报</Button></div>
+          <div className="font-bold text-center border-b border-amber-200 pb-1 mb-1 text-xs md:text-[10px] shrink-0">报价历史</div>
+          <div className="h-20 overflow-y-auto border bg-white rounded p-1 mb-1 shrink-0">{epcBidHistory.map(h => (<div key={h.round} className="text-xs md:text-[9px] flex justify-between border-b border-slate-100 py-0.5"><span>第{h.round}轮</span><span className="font-bold">${h.price}万</span></div>))}</div>
+          <div className="grid grid-cols-2 gap-1 text-center text-xs md:text-[9px] shrink-0"><div className="text-slate-500">控制价</div><div className="font-bold">${tenderLimitPrice}</div><div className="text-slate-500">EPC最新报价</div><div className={`font-bold ${epcBid.price>tenderLimitPrice?'text-red-600':''}`}>${epcBid.price}</div><div className="text-slate-500">合同工期</div><div className="font-bold">{tenderDuration}</div></div>
+          <Input placeholder="驳回理由(可选)" className="h-8 md:h-6 text-sm md:text-[10px] bg-white shrink-0" value={ownerRejectReason} onChange={e=>setOwnerRejectReason(e.target.value)}/>
+          <div className="flex gap-1 mt-1 shrink-0"><Button size="sm" className="flex-1 h-10 md:h-8 text-sm md:text-[10px] bg-green-600 whitespace-normal leading-tight" onClick={()=>s3OwnerEval(true)}>接受报价</Button><Button size="sm" className="flex-1 h-10 md:h-8 text-sm md:text-[10px] bg-red-600 leading-tight" onClick={()=>s3OwnerEval(false)}>驳回重报</Button></div>
           <EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} />
         </div>
       );
       if (stage === 4 && (s4State === 's4_audit' || s4State === 's4_owner_reaudit')) return (
         <div className="space-y-2 flex flex-col h-full">
-           <div className="font-bold flex items-center gap-1 text-xs md:text-[10px]"><Gavel size={10}/> {s4State==='s4_audit'?'抽查审计项':'整改复查项'}:</div>
-           <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESMP_LIBRARY.map(item => {
+           <div className="font-bold flex items-center gap-1 text-xs md:text-[10px] shrink-0"><Gavel size={10}/> {s4State==='s4_audit'?'抽查审计项':'整改复查项'}:</div>
+           <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(item => {
                const isOwnerResp = ownerRespEsmp.includes(item.id);
                const isViolation = s4State === 's4_owner_reaudit' && epcViolations.includes(item.id);
                
@@ -2539,20 +2551,20 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                    </div>
                )
            })}</div>
-           {s4State === 's4_audit' ? <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-[10px]" onClick={s4OwnerAudit}>执行审计 (花费{ownerAuditItems.length*5}万)</Button> : <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-[10px] bg-orange-600" onClick={s4OwnerReaudit}>执行复查 (确认漏项已修复)</Button>}
+           {s4State === 's4_audit' ? <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-[10px] shrink-0" onClick={s4OwnerAudit}>执行审计 (花费{ownerAuditItems.length*5}万)</Button> : <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-[10px] bg-orange-600 shrink-0" onClick={s4OwnerReaudit}>执行复查 (确认漏项已修复)</Button>}
         </div>
       );
       if (stage === 4 && s4State === 's4_punish_decide') return (
          <div className="space-y-2 bg-red-50 p-2 rounded border border-red-200 h-full flex flex-col">
-            <div className="font-bold text-red-700 text-xs md:text-[10px]">审计发现违规!</div>
+            <div className="font-bold text-red-700 text-xs md:text-[10px] shrink-0">审计发现违规!</div>
             <div className="text-xs md:text-[10px] mb-2 leading-tight flex-1 overflow-y-auto bg-white border border-red-100 p-2 rounded">
                 EPC承包商未执行项目: 
                 <ul className="list-disc list-inside mt-1">
                     {epcViolations.filter(id => !epcExecPlan.includes(id)).map(id=><li key={id}>{ESMP_LIBRARY.find(x=>x.id===id)?.label}</li>)}
                 </ul>
             </div>
-            <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-xs bg-blue-600 mb-1" onClick={()=>s4OwnerPunishDecide('rectify')}>责令整改</Button>
-            <Button size="sm" variant="outline" className="w-full h-10 md:h-8 text-sm md:text-xs" onClick={()=>s4OwnerPunishDecide('pass')}>直接通过 (有风险)</Button>
+            <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-xs bg-blue-600 mb-1 shrink-0" onClick={()=>s4OwnerPunishDecide('rectify')}>责令整改</Button>
+            <Button size="sm" variant="outline" className="w-full h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={()=>s4OwnerPunishDecide('pass')}>直接通过 (有风险)</Button>
          </div>
       );
       if (stage === 4 && protestState === 'owner_route') return (
@@ -2622,18 +2634,19 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
       );
     }
 
+    // 修改3: 对 gov 阶段进行 flex 布局优化
     if (role === 'gov') {
        if (stage === 1 && s1State === 'gov_review') {
          const hasNewMandates = govMandates.filter(id => !accumulatedGovMandates.includes(id)).length > 0;
          return (
          <div className="space-y-2 flex flex-col h-full">
-           {hasProtested && <Alert className="p-1 bg-red-50 text-[9px] border-red-200 text-red-800"><AlertDescription>⚠️ 公众提出抗议</AlertDescription></Alert>}
-           <div className="flex flex-col gap-1">
+           {hasProtested && <Alert className="p-1 bg-red-50 text-[9px] border-red-200 text-red-800 shrink-0"><AlertDescription>⚠️ 公众提出抗议</AlertDescription></Alert>}
+           <div className="flex flex-col gap-1 shrink-0">
                <Button size="sm" className="w-full bg-green-600 hover:bg-green-700 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s1GovReview(true)}>批准业主ESIA</Button>
                <Button size="sm" className="w-full bg-red-600 hover:bg-red-700 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s1GovReview(false)} disabled={!hasNewMandates}>驳回业主ESIA</Button>
            </div>
-           <div className="font-bold mt-1 text-xs md:text-[10px] text-slate-600">请选择政府监管部门要求补充的ESIA专项评价：</div>
-           <div className="bg-white border border-slate-200 rounded flex-1 overflow-y-auto min-h-[150px]">{ESIA_ITEMS.map(i=> {
+           <div className="font-bold mt-1 text-xs md:text-[10px] text-slate-600 shrink-0">请选择政府监管部门要求补充的ESIA专项评价：</div>
+           <div className="bg-white border border-slate-200 rounded flex-1 overflow-y-auto min-h-0">{ESIA_ITEMS.map(i=> {
                 const isOwnerSelected = confirmedEsiaSelection.includes(i.id);
                 const isPublicReq = accumulatedNgoReqs.includes(i.id) || ngoRequirements.includes(i.id);
                 if (isOwnerSelected) return <div key={i.id} className="flex gap-1 py-1 md:py-1 px-1 items-center bg-slate-100 opacity-60 border-b last:border-0"><Checkbox className="h-4 w-4 md:h-4 md:w-4" checked disabled /><span className="text-sm md:text-[10px] text-slate-500 leading-none">{i.label}</span></div>
@@ -2644,16 +2657,15 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                     </div>
                 )
              })}</div>
-             <div className="text-[8px] text-slate-400 italic text-center">监督成本+2万/项；声誉+1分/项，若未满足公众要求，声誉-2分/项</div>
+             <div className="text-[8px] text-slate-400 italic text-center shrink-0">监督成本+2万/项；声誉+1分/项，若未满足公众要求，声誉-2分/项</div>
          </div>
        );}
        if (stage === 2 && s2State === 'gov_check') {
          const hasNewMandates = govEscpMandates.filter(id => !accumulatedGovEscpReqs.includes(id)).length > 0;
          return (
          <div className="space-y-2 flex flex-col h-full">
-            <div className="font-bold text-xs md:text-[10px] text-slate-600">审核ESCP (勾选新增项以驳回):</div>
-            {/* FIX: 问题2 - S2阶段增加滚动条 */}
-            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px] max-h-[400px]">{ESMP_LIBRARY.map(i => {
+            <div className="font-bold text-xs md:text-[10px] text-slate-600 shrink-0">审核ESCP (勾选新增项以驳回):</div>
+            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => {
                 const isOwnerSelected = ownerEscpSelection.includes(i.id);
                 const isAlreadyForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id);
                 return (
@@ -2663,23 +2675,22 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                     </div>
                 )
             })}</div>
-            <div className="flex gap-2 mt-1"><Button size="sm" className="flex-1 bg-green-600 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s2GovCheck(true)}>通过</Button><Button size="sm" className="flex-1 bg-red-600 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s2GovCheck(false)} disabled={!hasNewMandates}>驳回</Button></div>
-            <div className="text-[8px] text-slate-400 italic text-center">监督成本+2万/项，政府声誉+2分/项</div>
+            <div className="flex gap-2 mt-1 shrink-0"><Button size="sm" className="flex-1 bg-green-600 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s2GovCheck(true)}>通过</Button><Button size="sm" className="flex-1 bg-red-600 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s2GovCheck(false)} disabled={!hasNewMandates}>驳回</Button></div>
+            <div className="text-[8px] text-slate-400 italic text-center shrink-0">监督成本+2万/项，政府声誉+2分/项</div>
             {renderS1ApprovedEsiaListFull()}
          </div>
        );}
        if (stage === 4 && protestState === 'gov_ruling') return (
          <div className="space-y-2 border-t-4 border-red-500 pt-2 bg-red-50 p-2 rounded border border-red-100 flex flex-col h-full">
             <CrisisContextBox crisis={currentCrisis} />
-            <div className="font-bold text-red-700 text-center border-b border-red-200 pb-1 text-xs md:text-[10px]">{govRulingCount >= 2 ? "第3次: 终局裁决" : `第${govRulingCount + 1}次裁决`}</div>
-            <div className="text-xs md:text-[9px] mb-1 bg-white border border-red-100 rounded p-1 flex-1 overflow-y-auto min-h-[100px]">
+            <div className="font-bold text-red-700 text-center border-b border-red-200 pb-1 text-xs md:text-[10px] shrink-0">{govRulingCount >= 2 ? "第3次: 终局裁决" : `第${govRulingCount + 1}次裁决`}</div>
+            <div className="text-xs md:text-[9px] mb-1 bg-white border border-red-100 rounded p-1 flex-1 overflow-y-auto min-h-0">
                <div className="grid grid-cols-3 gap-1 font-bold border-b pb-1 mb-1 text-center text-slate-600"><div>轮次</div><div>公众/责任方</div><div>裁决</div></div>
                <div className="grid grid-cols-3 gap-1 py-1 border-b border-slate-50 last:border-0 text-center items-center">
                    <div className="text-slate-500">当前</div>
                    <div className="font-bold">${ngoDemandAmount} / ${offerAmount}</div>
                    <div className="text-red-600 italic">待定</div>
                </div>
-               {/* FIX: 问题1 - 展示双方理由 */}
                {govRulingHistory.map(h => (
                    <div key={h.count} className="border-b border-slate-100 pb-1 mb-1 opacity-70">
                        <div className="grid grid-cols-3 gap-1 py-1 text-center items-center">
@@ -2694,9 +2705,9 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                    </div>
                ))}
             </div>
-            <div className="space-y-0.5 mt-1"><span className="text-xs md:text-[9px] font-bold">裁决赔偿额($万):</span><Input type="number" className="h-10 md:h-6 bg-white text-sm md:text-[10px]" value={govRulingAmount} onChange={e=>setGovRulingAmount(e.target.value)}/></div>
-            <div className="space-y-0.5 mt-1"><span className="text-xs md:text-[9px] font-bold">裁决理由(可选):</span><Input type="text" className="h-10 md:h-6 bg-white text-sm md:text-[10px]" value={govRulingReason} onChange={e=>setGovRulingReason(e.target.value)}/></div>
-            <Button size="sm" className="w-full bg-red-600 hover:bg-red-700 h-10 md:h-8 text-sm md:text-xs mt-1" onClick={()=>protestGovRuling(govRulingAmount)} disabled={govRulingAmount === "" || Number(govRulingAmount) < 0}>{govRulingCount >= 2 ? "发布终局裁决 (强制执行)" : "发布裁决"}</Button>
+            <div className="space-y-0.5 mt-1 shrink-0"><span className="text-xs md:text-[9px] font-bold">裁决赔偿额($万):</span><Input type="number" className="h-10 md:h-6 bg-white text-sm md:text-[10px]" value={govRulingAmount} onChange={e=>setGovRulingAmount(e.target.value)}/></div>
+            <div className="space-y-0.5 mt-1 shrink-0"><span className="text-xs md:text-[9px] font-bold">裁决理由(可选):</span><Input type="text" className="h-10 md:h-6 bg-white text-sm md:text-[10px]" value={govRulingReason} onChange={e=>setGovRulingReason(e.target.value)}/></div>
+            <Button size="sm" className="w-full bg-red-600 hover:bg-red-700 h-10 md:h-8 text-sm md:text-xs mt-1 shrink-0" onClick={()=>protestGovRuling(govRulingAmount)} disabled={govRulingAmount === "" || Number(govRulingAmount) < 0}>{govRulingCount >= 2 ? "发布终局裁决 (强制执行)" : "发布裁决"}</Button>
             <EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} />
          </div>
        );
@@ -2714,15 +2725,16 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
        );
     }
 
+    // 修改3: 对 mdb 阶段进行 flex 布局优化
     if (role === 'mdb') {
        if (stage === 2 && s2State === 'risk_assess') return (
           <div className="flex flex-col h-full">
-             <div className="text-xs md:text-[9px] bg-yellow-50 border border-yellow-200 p-1 rounded mb-2 text-slate-700 leading-tight">请根据项目的类型、位置、敏感性和规模，判断项目的环境社会风险等级</div>
-             <div className="text-xs md:text-[9px] border border-slate-200 rounded overflow-hidden mb-3 flex flex-col flex-1 overflow-y-auto">
-                <div className="grid grid-cols-4 bg-slate-100 font-bold p-1 border-b border-slate-200"><div>风险等级</div><div className="col-span-1">分类依据</div><div className="col-span-2 pl-1">管理要求</div></div>
+             <div className="text-xs md:text-[9px] bg-yellow-50 border border-yellow-200 p-1 rounded mb-2 text-slate-700 leading-tight shrink-0">请根据项目的类型、位置、敏感性和规模，判断项目的环境社会风险等级</div>
+             <div className="text-xs md:text-[9px] border border-slate-200 rounded overflow-hidden mb-3 flex flex-col flex-1 overflow-y-auto min-h-0">
+                <div className="grid grid-cols-4 bg-slate-100 font-bold p-1 border-b border-slate-200 shrink-0"><div>风险等级</div><div className="col-span-1">分类依据</div><div className="col-span-2 pl-1">管理要求</div></div>
                 <div className="overflow-y-auto flex-1">{RISK_TABLE.map((r,i) => (<div key={i} className="grid grid-cols-4 p-1 border-b border-slate-100 last:border-0 bg-white hover:bg-slate-50 leading-tight"><div className="font-bold text-blue-700">{r.level}</div><div className="col-span-1 text-[8px] text-slate-600">{r.basis}</div><div className="col-span-2 text-[8px] text-slate-600 pl-1">{r.req}</div></div>))}</div>
              </div>
-             <div className="grid grid-cols-3 gap-2 mb-4">{['高风险','中风险','低风险'].map(l=><Button key={l} variant="outline" size="sm" className="text-xs md:text-[10px] h-8 md:h-6" onClick={()=>s2MdbRisk(l)}>{l}</Button>)}</div>
+             <div className="grid grid-cols-3 gap-2 mb-4 shrink-0">{['高风险','中风险','低风险'].map(l=><Button key={l} variant="outline" size="sm" className="text-xs md:text-[10px] h-8 md:h-6" onClick={()=>s2MdbRisk(l)}>{l}</Button>)}</div>
              {renderS1ApprovedEsiaListFull()}
           </div>
        );
@@ -2730,9 +2742,8 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
         const hasNewMandates = mdbEscpMandates.filter(id => !accumulatedMdbEscpReqs.includes(id)).length > 0;
         return (
           <div className="space-y-2 flex flex-col h-full">
-             <Alert className="p-1 bg-green-50 border-green-200 text-[9px] text-green-800"><AlertDescription>政府已批准ESCP。请复核并签约。</AlertDescription></Alert>
-             {/* FIX: 问题2 - S2阶段增加滚动条 */}
-             <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px] max-h-[400px]">{ESMP_LIBRARY.map(i => {
+             <Alert className="p-1 bg-green-50 border-green-200 text-[9px] text-green-800 shrink-0"><AlertDescription>政府已批准ESCP。请复核并签约。</AlertDescription></Alert>
+             <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => {
                 const isOwnerSelected = ownerEscpSelection.includes(i.id);
                 const isAlreadyForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id);
                 const isMdbSelected = mdbEscpMandates.includes(i.id);
@@ -2743,38 +2754,38 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                     </div>
                 )
              })}</div>
-             <div className="flex gap-2 mt-1">
+             <div className="flex gap-2 mt-1 shrink-0">
                 <div className="flex-1"><Button size="sm" className="w-full bg-purple-600 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s2MdbSign(true)}>签署1500万贷款协议</Button></div>
                 <Button size="sm" variant="outline" className="w-full flex-1 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s2MdbSign(false)} disabled={!hasNewMandates}>驳回</Button>
              </div>
-             <div className="text-[8px] text-slate-400 italic text-center">监督成本+2万/项，政府声誉+2分/项</div>
+             <div className="text-[8px] text-slate-400 italic text-center shrink-0">监督成本+2万/项，政府声誉+2分/项</div>
           </div>
        );}
        if (stage === 4 && protestState === 'bank_decision') return (
           <div className="space-y-2 bg-red-50 p-2 rounded border border-red-200 flex flex-col h-full">
-             <div className="bg-white p-2 rounded border border-slate-200 text-xs md:text-[10px] mb-1"><div className="font-bold text-red-600 mb-0.5">相关事件: {currentCrisis?.title}</div><div className="text-slate-500 leading-tight">{currentCrisis?.desc}</div></div>
-             <div className="text-xs md:text-[9px] border-t border-slate-200 pt-1 mb-1 flex-1 overflow-y-auto min-h-[100px]"><div className="font-bold text-slate-700">历次裁决记录:</div><div className="mt-0.5">{govRulingHistory.map(h => (<div key={h.count} className="grid grid-cols-3 gap-1 py-0.5 border-b border-slate-100"><span>第{h.count}轮</span><span>${h.ngoDemand}/${h.partyOffer}</span><span className="font-bold text-purple-700">=> ${h.amount}</span></div>))}</div></div>
-             <div className="font-bold text-red-700 flex items-center gap-1 text-xs md:text-[10px]"><ShieldAlert size={10}/> 政府终局裁决已出</div>
-             <div className="text-xs md:text-[9px] mb-1">是否因危机暂停当前 {currentCrisis?.index === 3 ? '15%' : '20%'} 贷款拨付?</div>
-             <Button size="sm" className="w-full bg-red-700 text-white hover:bg-red-800 mb-1 h-10 md:h-8 text-sm md:text-xs" onClick={()=>protestBankDecision(true)}>暂停拨付</Button>
-             <Button size="sm" className="w-full bg-green-600 hover:bg-green-700 h-10 md:h-8 text-sm md:text-xs" onClick={()=>protestBankDecision(false)}>继续拨付</Button>
+             <div className="bg-white p-2 rounded border border-slate-200 text-xs md:text-[10px] mb-1 shrink-0"><div className="font-bold text-red-600 mb-0.5">相关事件: {currentCrisis?.title}</div><div className="text-slate-500 leading-tight">{currentCrisis?.desc}</div></div>
+             <div className="text-xs md:text-[9px] border-t border-slate-200 pt-1 mb-1 flex-1 overflow-y-auto min-h-0"><div className="font-bold text-slate-700">历次裁决记录:</div><div className="mt-0.5">{govRulingHistory.map(h => (<div key={h.count} className="grid grid-cols-3 gap-1 py-0.5 border-b border-slate-100"><span>第{h.count}轮</span><span>${h.ngoDemand}/${h.partyOffer}</span><span className="font-bold text-purple-700">=> ${h.amount}</span></div>))}</div></div>
+             <div className="font-bold text-red-700 flex items-center gap-1 text-xs md:text-[10px] shrink-0"><ShieldAlert size={10}/> 政府终局裁决已出</div>
+             <div className="text-xs md:text-[9px] mb-1 shrink-0">是否因危机暂停当前 {currentCrisis?.index === 3 ? '15%' : '20%'} 贷款拨付?</div>
+             <Button size="sm" className="w-full bg-red-700 text-white hover:bg-red-800 mb-1 h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={()=>protestBankDecision(true)}>暂停拨付</Button>
+             <Button size="sm" className="w-full bg-green-600 hover:bg-green-700 h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={()=>protestBankDecision(false)}>继续拨付</Button>
           </div>
        );
     }
 
+    // 修改3: 对 epc 阶段进行 flex 布局优化
     if (role === 'epc') {
        if (stage === 3 && s3State === 'epc_bid') return (
           <div className="space-y-2 flex flex-col h-full">
-             {epcBidHistory.length > 0 && (<Alert className="p-1 bg-amber-50 border-amber-200 text-amber-800 mb-1"><AlertDescription className="text-xs md:text-[9px] leading-none">业主驳回了之前的报价。历史记录: {epcBidHistory.map(h=>`$${h.price}`).join(', ')}{ownerRejectReason && <div className="mt-1 text-red-600 font-bold">驳回理由: {ownerRejectReason}</div>}</AlertDescription></Alert>)}
-             <div className="font-bold text-xs md:text-[10px] mb-0.5">责任划分 & 风险提示:</div>
-             <div className="text-xs md:text-[9px] text-slate-500 bg-yellow-50 p-1 rounded border border-yellow-100 mb-1 leading-tight">根据ESMP责任划分、工期要求和各类风险，请合理报价。</div>
-             {/* FIX: 问题3 - S3阶段增加滚动条 */}
-             <div className="bg-white border rounded mb-1 flex-1 overflow-y-auto min-h-[150px] max-h-[250px]">{ESMP_LIBRARY.map(i => {
+             {epcBidHistory.length > 0 && (<Alert className="p-1 bg-amber-50 border-amber-200 text-amber-800 mb-1 shrink-0"><AlertDescription className="text-xs md:text-[9px] leading-none">业主驳回了之前的报价。历史记录: {epcBidHistory.map(h=>`$${h.price}`).join(', ')}{ownerRejectReason && <div className="mt-1 text-red-600 font-bold">驳回理由: {ownerRejectReason}</div>}</AlertDescription></Alert>)}
+             <div className="font-bold text-xs md:text-[10px] mb-0.5 shrink-0">责任划分 & 风险提示:</div>
+             <div className="text-xs md:text-[9px] text-slate-500 bg-yellow-50 p-1 rounded border border-yellow-100 mb-1 leading-tight shrink-0">根据ESMP责任划分、工期要求和各类风险，请合理报价。</div>
+             <div className="bg-white border rounded mb-1 flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => {
                  const isOwnerResp = ownerRespEsmp.includes(i.id);
                  return (<div key={i.id} className="flex justify-between items-center py-1 md:py-1 px-1 border-b last:border-0 text-xs md:text-[9px]"><span className="leading-none">{i.label}</span>{isOwnerResp ? <Badge className="text-[8px] h-3 bg-blue-100 text-blue-700 hover:bg-blue-200 border-0 leading-none">业主</Badge> : <Badge className="text-[8px] h-3 bg-orange-100 text-orange-700 hover:bg-orange-200 border-0 leading-none">EPC</Badge>}</div>)
              })}</div>
-             <div className="space-y-0.5"><div className="text-xs md:text-[9px] text-slate-500 leading-tight">工期:{tenderDuration}月 | 误期罚款:{delayPenalty}万/月 | 提前奖励:{earlyBonus}万/月</div><Input type="number" placeholder="报价($万)" className="h-10 md:h-7 text-sm md:text-[10px]" onChange={e=>setEpcBid({...epcBid, price: Number(e.target.value)})}/></div>
-             <Button size="sm" className="w-full bg-orange-500 hover:bg-orange-600 h-10 md:h-8 text-sm md:text-xs" onClick={s3EpcBid} disabled={!epcBid.price || epcBid.price <= 0}>提交报价</Button>
+             <div className="space-y-0.5 shrink-0"><div className="text-xs md:text-[9px] text-slate-500 leading-tight">工期:{tenderDuration}月 | 误期罚款:{delayPenalty}万/月 | 提前奖励:{earlyBonus}万/月</div><Input type="number" placeholder="报价($万)" className="h-10 md:h-7 text-sm md:text-[10px]" onChange={e=>setEpcBid({...epcBid, price: Number(e.target.value)})}/></div>
+             <Button size="sm" className="w-full bg-orange-500 hover:bg-orange-600 h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={s3EpcBid} disabled={!epcBid.price || epcBid.price <= 0}>提交报价</Button>
              {renderS2ApprovedEscpListFull()}
           </div>
        );
@@ -2793,8 +2804,8 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
        );
        if (stage === 4 && (s4State === 's4_planning' || s4State === 's4_epc_replan')) return (
           <div className="space-y-2 flex flex-col h-full">
-             <div className="font-bold text-xs md:text-[10px]">ESMP执行方案:</div>
-             <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESMP_LIBRARY.map(item => {
+             <div className="font-bold text-xs md:text-[10px] shrink-0">ESMP执行方案:</div>
+             <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(item => {
                  const isOwnerResp = ownerRespEsmp.includes(item.id);
                  const isViolation = epcViolations.includes(item.id);
                  const wasOriginallySelected = originalEpcExecPlan.includes(item.id);
@@ -2808,8 +2819,8 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                    </div>
                  )
              })}</div>
-             <div className="text-[8px] text-slate-400 italic text-center">已提交选项不可撤回；若未执行且被业主审查发现，后续成本+20%，声誉-5分/项</div>
-             {s4State === 's4_planning' ? <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-xs" onClick={s4EpcPlan}>提交执行方案</Button> : <Button size="sm" className="w-full bg-orange-600 h-10 md:h-8 text-sm md:text-xs" onClick={s4EpcReplanSubmit}>提交整改方案</Button>}
+             <div className="text-[8px] text-slate-400 italic text-center shrink-0">已提交选项不可撤回；若未执行且被业主审查发现，后续成本+20%，声誉-5分/项</div>
+             {s4State === 's4_planning' ? <Button size="sm" className="w-full h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={s4EpcPlan}>提交执行方案</Button> : <Button size="sm" className="w-full bg-orange-600 h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={s4EpcReplanSubmit}>提交整改方案</Button>}
              {renderS2ApprovedEscpListFull()}
           </div>
        );
@@ -2824,10 +2835,10 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
        if (stage === 4 && protestState === 'epc_route_check') return (
          <div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200 flex flex-col h-full">
              <CrisisContextBox crisis={currentCrisis} />
-             <div className="font-bold text-orange-800 text-xs md:text-[10px]">业主转交危机处理</div>
-             <div className="text-xs md:text-[9px] mb-1">业主认为这是EPC承包商的责任，转交给你处理。是否接受?</div>
-             <Button size="sm" className="w-full bg-blue-600 mb-1 h-10 md:h-7 text-sm md:text-[10px]" onClick={()=>protestEpcRouteCheck(true)}>接受处理 (承担赔偿责任)</Button>
-             <Button size="sm" variant="outline" className="w-full h-10 md:h-7 text-sm md:text-[10px]" onClick={()=>protestEpcRouteCheck(false)}>拒绝 (非我方责任，退回)</Button>
+             <div className="font-bold text-orange-800 text-xs md:text-[10px] shrink-0">业主转交危机处理</div>
+             <div className="text-xs md:text-[9px] mb-1 shrink-0">业主认为这是EPC承包商的责任，转交给你处理。是否接受?</div>
+             <Button size="sm" className="w-full bg-blue-600 mb-1 h-10 md:h-7 text-sm md:text-[10px] shrink-0" onClick={()=>protestEpcRouteCheck(true)}>接受处理 (承担赔偿责任)</Button>
+             <Button size="sm" variant="outline" className="w-full h-10 md:h-7 text-sm md:text-[10px] shrink-0" onClick={()=>protestEpcRouteCheck(false)}>拒绝 (非我方责任，退回)</Button>
              <EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} />
          </div>
        );
@@ -2893,13 +2904,14 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
       );
     }
 
+    // 修改3: 对 ngo 阶段进行 flex 布局优化
     if (role === 'ngo') {
       if (stage === 1 && s1State === 'ngo_eval') {
          const hasNewReqs = ngoRequirements.filter(id => !accumulatedNgoReqs.includes(id)).length > 0;
          return (
          <div className="space-y-2 flex flex-col h-full">
-            <div className="font-bold text-xs md:text-[10px] text-red-700">如对业主ESIA不满意，请勾选补充:</div>
-            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESIA_ITEMS.map(i=> {
+            <div className="font-bold text-xs md:text-[10px] text-red-700 shrink-0">如对业主ESIA不满意，请勾选补充:</div>
+            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESIA_ITEMS.map(i=> {
                 const isOwnerSelected = confirmedEsiaSelection.includes(i.id);
                 const isPrevReq = accumulatedNgoReqs.includes(i.id);
                 if (isOwnerSelected) return <div key={i.id} className="flex gap-1 py-1 md:py-1 px-1 items-center bg-slate-100 opacity-60 border-b last:border-0"><Checkbox className="h-4 w-4 md:h-4 md:w-4" checked disabled /><span className="text-sm md:text-[10px] text-slate-500 leading-none">{i.label}</span></div>
@@ -2911,17 +2923,17 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                   </div>
                 )
             })}</div>
-            <div className="text-[8px] text-slate-400 italic text-center">监督成本+2万/项，声誉+2分/项</div>
-            <div className="flex gap-2"><Button size="sm" variant="destructive" className="flex-1 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s1NgoEval(true)} disabled={!hasNewReqs}>抗议</Button><Button size="sm" variant="outline" className="flex-1 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s1NgoEval(false)}>无异议</Button></div>
+            <div className="text-[8px] text-slate-400 italic text-center shrink-0">监督成本+2万/项，声誉+2分/项</div>
+            <div className="flex gap-2 shrink-0"><Button size="sm" variant="destructive" className="flex-1 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s1NgoEval(true)} disabled={!hasNewReqs}>抗议</Button><Button size="sm" variant="outline" className="flex-1 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s1NgoEval(false)}>无异议</Button></div>
          </div>
       );}
       if (stage === 4 && protestState === 'ngo_decide') return (
          <div className="space-y-2 bg-yellow-50 p-2 rounded border border-yellow-200 flex flex-col h-full">
-            <div className="font-bold text-red-600 text-xs md:text-[10px]">危机爆发: {currentCrisis?.title}</div>
+            <div className="font-bold text-red-600 text-xs md:text-[10px] shrink-0">危机爆发: {currentCrisis?.title}</div>
             <div className="text-sm md:text-base text-slate-700 mb-1 leading-snug overflow-y-auto flex-1 bg-white p-2 border rounded">{currentCrisis?.desc}</div>
-            <div className="text-[8px] text-slate-500 text-center italic mb-1">索赔需花费努力成本10万，声誉+10分; 不索赔声誉-10</div>
-            <Button size="sm" className="w-full bg-red-600 mb-1 h-10 md:h-8 text-sm md:text-xs" onClick={()=>protestNgoDecide(true)}>要求赔偿</Button>
-            <Button size="sm" variant="outline" className="w-full h-10 md:h-8 text-sm md:text-xs" onClick={()=>protestNgoDecide(false)} disabled={ngoNoClaimDisabled}>不要求赔偿</Button>
+            <div className="text-[8px] text-slate-500 text-center italic mb-1 shrink-0">索赔需花费努力成本10万，声誉+10分; 不索赔声誉-10</div>
+            <Button size="sm" className="w-full bg-red-600 mb-1 h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={()=>protestNgoDecide(true)}>要求赔偿</Button>
+            <Button size="sm" variant="outline" className="w-full h-10 md:h-8 text-sm md:text-xs shrink-0" onClick={()=>protestNgoDecide(false)} disabled={ngoNoClaimDisabled}>不要求赔偿</Button>
          </div>
       );
       if (stage === 4 && protestState === 'ngo_input_demand') return (
@@ -3057,7 +3069,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
       <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
         <CardHeader className="border-b border-slate-100 pb-4">
-          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.30</Badge></div>
+          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.31</Badge></div>
         </CardHeader>
         <CardContent className="space-y-8 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3182,7 +3194,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
   );
 }
 
-function SunLinkV7_30_CDN() {
+function SunLinkV7_31_UIFix() {
     return (
         <GameEntryWrapper>
             <SunLinkESGSimV7_30_CDN />
@@ -3192,7 +3204,7 @@ function SunLinkV7_30_CDN() {
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_30_CDN />
+      		    <SunLinkV7_31_UIFix />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
