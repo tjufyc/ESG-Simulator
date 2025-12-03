@@ -396,11 +396,12 @@ const GameEntryWrapper = ({ children }) => {
           console.log("LeanCloud SDK Loaded via CDN");
           try {
              const AV = window.AV;
+             // 修改2: 修正LeanCloud配置
              if (!AV.applicationId) {
                  AV.init({
                     appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
                     appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
-                    serverURL: "https://oxljnef7.api.lncldglobal.com"
+                    serverURL: "https://api.sunlink-gipc.com"
                  });
              }
              setSdkReady(true);
@@ -429,13 +430,10 @@ const GameEntryWrapper = ({ children }) => {
       return () => clearInterval(timer);
   }, [sdkReady]);
 
-  // 修复2: 多人模式Bug - 增强错误处理和连接逻辑
   const enterRoomReal = async () => {
-      // 确保 SDK 已加载
       if (!sdkReady || !window.AV) return alert("系统正在初始化，请稍等两秒再试...");
       const AV = window.AV;
 
-      // 强制类型转换，防止字符串/数字混用导致查询失败
       const rNum = parseInt(roomNumber); 
       if (!playerName.trim()) return alert("请输入昵称");
       if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
@@ -443,21 +441,17 @@ const GameEntryWrapper = ({ children }) => {
       try {
           setLobbyStatus('waiting');
           
-          // 清理旧订阅
           if (liveQuerySub) {
               liveQuerySub.unsubscribe();
               setLiveQuerySub(null);
           }
 
-          // 1. 基础查询，检查连接是否畅通
           const query = new AV.Query('GamePlayer');
           query.equalTo('room', rNum); 
           query.ascending('createdAt');
           
-          // 如果这里报错，会直接跳到 catch，提示网络错误
           const existingPlayers = await query.find(); 
           
-          // 检查是否已经有同名玩家（重连逻辑）
           const existingMe = existingPlayers.find(p => p.get('name') === playerName);
           if (existingMe) {
              setMyRole(existingMe.get('role')); 
@@ -465,14 +459,12 @@ const GameEntryWrapper = ({ children }) => {
              setMyRole(null); 
           }
 
-          // 更新本地列表
           setRoomPlayers(existingPlayers.map(p => ({
               name: p.get('name'),
               role: p.get('role'),
               id: p.id
           })));
 
-          // 2. 尝试建立 LiveQuery 订阅
           try {
               const liveQuery = new AV.Query('GamePlayer');
               liveQuery.equalTo('room', rNum);
@@ -484,14 +476,11 @@ const GameEntryWrapper = ({ children }) => {
               setLiveQuerySub(subscription);
           } catch (subError) {
               console.warn("LiveQuery 订阅失败，将使用轮询模式:", subError);
-              // 如果 LiveQuery 失败（例如服务未开通），降级为手动刷新或定时刷新，不阻断流程
               const pollTimer = setInterval(() => manualRefreshLobby(), 5000);
-              // 保存 timer ID 以便清理 (简化处理，暂不存储cleanup)
           }
 
       } catch (error) {
           console.error("LeanCloud Connection Error:", error);
-          // 给出更明确的错误提示
           let errMsg = "网络连接失败，请重试。";
           if (error.code === 0) errMsg = "网络不可用，请检查您的网络设置。";
           if (error.code === 403) errMsg = "访问被拒绝，可能是AppKey配置错误。";
@@ -556,7 +545,7 @@ const GameEntryWrapper = ({ children }) => {
 
           await player.save();
           setMyRole(roleToSelect);
-          manualRefreshLobby(); // 立即刷新一次
+          manualRefreshLobby(); 
       } catch (e) {
           console.error("选角失败", e);
           alert(`选角失败: ${e.message || "网络错误"}`);
@@ -587,42 +576,38 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   if (appState === 'cover') {
-      // 修改1: 首页海报重构。使用 flex-col justify-between 布局。
-      // 顶部留白，中部内容大幅上移 (-mt-20)，底部文字固定。
+      // 修改1: 首页海报重构。压缩上下空间，版权上移。
       return (
-        <div className="min-h-screen flex flex-col justify-between bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
+        <div className="min-h-screen flex flex-col bg-slate-900 text-white p-6 relative overflow-hidden font-sans">
             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=2000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-30" />
             
-            {/* 顶部占位 */}
-            <div className="w-full h-10"></div>
-
-            {/* 中部核心内容 - 向上偏移 */}
-            <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto z-10 relative -mt-20 md:-mt-32">
-                <div className="mb-8 flex justify-center relative">
-                    <div className="w-24 h-24 bg-blue-500 rounded-full blur-[60px] absolute opacity-50 animate-pulse"></div>
-                    <Activity size={80} className="text-blue-400 relative z-10" />
+            {/* 核心内容区：利用 flex-grow 居中，同时 margin-top 为负值稍微向上提 */}
+            <div className="flex-grow flex flex-col items-center justify-center w-full max-w-4xl mx-auto z-10 relative -mt-16 md:-mt-24">
+                <div className="mb-6 flex justify-center relative">
+                    <div className="w-20 h-20 bg-blue-500 rounded-full blur-[50px] absolute opacity-50 animate-pulse"></div>
+                    <Activity size={70} className="text-blue-400 relative z-10" />
                 </div>
-                <div className="text-center space-y-4 mb-8">
-                    <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white drop-shadow-lg leading-tight">SunLink</h1>
-                    <h1 className="text-4xl md:text-6xl font-black tracking-tight text-blue-300 drop-shadow-lg leading-tight">ESG Simulator</h1>
-                    <div className="h-1 w-20 bg-blue-500 mx-auto mt-4 rounded-full"></div>
+                <div className="text-center space-y-3 mb-6">
+                    <h1 className="text-4xl md:text-7xl font-black tracking-tight text-white drop-shadow-lg leading-tight">SunLink</h1>
+                    <h1 className="text-3xl md:text-6xl font-black tracking-tight text-blue-300 drop-shadow-lg leading-tight">ESG Simulator</h1>
+                    <div className="h-1 w-16 bg-blue-500 mx-auto mt-3 rounded-full"></div>
                 </div>
-                <div className="text-center space-y-2 mb-12">
-                    <h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide">国际工程项目ESG</h2>
-                    <h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide">多角色全流程模拟</h2>
+                <div className="text-center space-y-1 mb-8">
+                    <h2 className="text-lg md:text-2xl font-light text-slate-200 tracking-wide">国际工程项目ESG</h2>
+                    <h2 className="text-lg md:text-2xl font-light text-slate-200 tracking-wide">多角色全流程模拟</h2>
                 </div>
                 
-                <div className="flex flex-col md:flex-row gap-6 justify-center w-full max-w-2xl px-4">
-                    <Button size="lg" className="flex-1 h-auto py-6 text-lg bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
-                        <Smartphone size={28} />
+                <div className="flex flex-col md:flex-row gap-4 justify-center w-full max-w-2xl px-4">
+                    <Button size="lg" className="flex-1 h-auto py-4 text-lg bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-1" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
+                        <Smartphone size={24} />
                         <div className="flex flex-col items-center">
                             <span>单机体验版</span>
                             <span className="text-xs opacity-70 font-normal">一人分饰五角·自由探索</span>
                         </div>
                     </Button>
                     
-                    <Button size="lg" className="flex-1 h-auto py-6 text-lg bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
-                        <Network size={28} />
+                    <Button size="lg" className="flex-1 h-auto py-4 text-lg bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-1" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
+                        <Network size={24} />
                         <div className="flex flex-col items-center">
                             <span>多人互动版</span>
                             <span className="text-xs opacity-70 font-normal">5人实时组队·真实决策</span>
@@ -631,8 +616,8 @@ const GameEntryWrapper = ({ children }) => {
                 </div>
             </div>
 
-            {/* 底部版权信息 - 固定在底部，padding 保证不贴底 */}
-            <div className="z-10 text-center space-y-1 opacity-80 w-full px-4 pb-4 text-slate-400">
+            {/* 底部版权信息 - 上移 20% (pb-16 md:pb-8) */}
+            <div className="z-10 text-center space-y-1 opacity-80 w-full px-4 pb-16 md:pb-8 text-slate-400 shrink-0">
                 <div className="text-sm font-light text-slate-300">开发单位：天津大学全球工程经营实验室</div>
                 <div className="text-xs font-light">Developed by Tianjin University Global Infrastructure Project Center</div>
                 <div className="text-xs font-mono">联系人：傅老师 yongcheng_fu@tju.edu.cn</div>
@@ -790,7 +775,7 @@ const SummaryForm = ({ role, onSubmit }) => {
   };
 
   return (
-    <div className="space-y-3 pb-24 md:pb-10"> {/* 修改3: 增加移动端底部 Padding */}
+    <div className="space-y-3 pb-24 md:pb-10"> 
        <div className="text-xs font-bold text-slate-700">请填写项目完工总结:</div>
        <div className="space-y-1">
           <span className="text-xs font-medium text-slate-600">项目优点/成功之处:</span>
@@ -851,12 +836,12 @@ const TransitionOverlay = ({ isVisible, stageTitle, extraText, onComplete }) => 
 };
 
 const EsmpResponsibilityList = ({ ownerRespEsmp }) => (
-    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-0">
+    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col shrink-0">
         <div className="bg-slate-100 text-xs px-2 py-1 font-bold border-b border-slate-200 text-slate-700 flex justify-between items-center shrink-0">
            <span>ESMP 责任划分表</span>
            <ListChecks size={12}/>
         </div>
-        <div className="flex-1 bg-white p-1 overflow-y-auto">
+        <div className="bg-white p-1 overflow-y-auto h-32">
            {ESMP_LIBRARY.map(item => {
               const isOwner = ownerRespEsmp.includes(item.id);
               return (
@@ -2158,12 +2143,12 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
   };
 
   const renderS1ApprovedEsiaListFull = () => (
-      <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-0">
+      <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col shrink-0">
         <div className="bg-slate-100 text-xs px-2 py-1 font-bold border-b border-slate-200 text-slate-700 flex justify-between items-center shrink-0">
            <span>已通过的ESIA</span>
            <ListChecks size={12}/>
         </div>
-        <div className="flex-1 bg-white p-1 overflow-y-auto">
+        <div className="bg-white p-1 overflow-y-auto h-32">
            {ESIA_ITEMS.map(item => {
               const isOwnerSelected = ownerEsiaSelection.includes(item.id);
               const isConfirmed = confirmedEsiaSelection.includes(item.id); 
@@ -2197,12 +2182,12 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
   );
 
   const renderS2ApprovedEscpListFull = () => (
-    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col flex-1 min-h-0">
+    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col shrink-0">
        <div className="bg-slate-100 text-xs px-2 py-1 font-bold border-b border-slate-200 text-slate-700 flex justify-between items-center shrink-0">
           <span>已签署ESCP</span>
           <ListChecks size={12}/>
        </div>
-       <div className="flex-1 bg-white p-1 overflow-y-auto">
+       <div className="bg-white p-1 overflow-y-auto h-32">
           {ESMP_LIBRARY.map(item => {
              const isOwner = confirmedEscpSelection.includes(item.id);
              const isGov = accumulatedGovEscpReqs.includes(item.id);
@@ -2248,7 +2233,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.32</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.34</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
@@ -2295,10 +2280,24 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
   );
 
   const renderRoleColumn = (roleKey, title, Icon, colorClass) => {
-    const isActive = activeRole === roleKey || activeRole === 'all' 
-       || (stage===4 && ['gov','ngo',protestHandler].includes(roleKey))
-       || (stage===4 && protestState==='ruling_result_display' && (roleKey==='ngo' || roleKey===protestHandler))
-       || (stage===5 && inspectionState==='s5_ruling_result' && (roleKey==='owner' || roleKey==='epc'));
+    // 修改3: 修正亮灯逻辑，stage=4 裁决结果展示时，只有 ngo 和 protestHandler 亮灯
+    let isActive = activeRole === roleKey || activeRole === 'all';
+    
+    // 特殊情况处理：S4 裁决结果展示阶段
+    if (stage === 4 && protestState === 'ruling_result_display') {
+        isActive = (roleKey === 'ngo' || roleKey === protestHandler);
+    }
+    // 特殊情况处理：S5 裁决结果展示阶段
+    else if (stage === 5 && inspectionState === 's5_ruling_result') {
+        isActive = (roleKey === 'owner' || roleKey === 'epc');
+    }
+    // 通用危机处理高亮逻辑 (当 activeRole 指向特定角色时，该角色自然亮起)
+    else if (stage === 4) {
+        // 保持原有的一些辅助高亮逻辑，但要受 activeRole 控制
+        if (['gov','ngo',protestHandler].includes(roleKey)) {
+             // 这里不做强制覆盖，依然依赖 activeRole 变化
+        }
+    }
 
     const state = playerState[roleKey];
     
@@ -2370,7 +2369,6 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
 
            {isActive ? (
                <ScrollArea className="flex-1 w-full h-full">
-                   {/* 修改3: 手机端增加底部 Padding pb-24，防止被导航栏遮挡 */}
                   <div className={`h-full flex flex-col p-4 md:p-2 pb-24 md:pb-10 ${mode==='multi' && assignedRole && !isMe ? 'pointer-events-none opacity-80' : ''}`}>
                       {renderRoleContent(roleKey)}
                   </div>
@@ -2390,7 +2388,6 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
     );
   };
 
-  // 修改3: 优化 renderRoleContent 中的样式，增加 text-xs/text-sm，加深颜色
   const renderRoleContent = (role) => {
       if (stage === 6) {
        if (isSummarySubmitted[role]) {
@@ -2714,6 +2711,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                    <div className="font-bold">${ngoDemandAmount} / ${offerAmount}</div>
                    <div className="text-red-600 italic">待定</div>
                </div>
+               {/* 修改4: 在裁决历史中展示申诉理由 */}
                {govRulingHistory.map(h => (
                    <div key={h.count} className="border-b border-slate-100 pb-1 mb-1 opacity-70">
                        <div className="grid grid-cols-3 gap-1 py-1 text-center items-center">
@@ -2721,13 +2719,21 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                        </div>
                        {(h.appealReasonParty || h.appealReasonNgo) && (
                            <div className="text-[10px] text-left px-1 text-slate-500 bg-slate-50 p-1 rounded mt-1">
-                               {h.appealReasonParty && <div className="mb-0.5"><span className="font-bold text-blue-500">责任方:</span> {h.appealReasonParty}</div>}
-                               {h.appealReasonNgo && <div><span className="font-bold text-red-500">公众:</span> {h.appealReasonNgo}</div>}
+                               {h.appealReasonParty && <div className="mb-0.5"><span className="font-bold text-blue-500">责任方申诉:</span> {h.appealReasonParty}</div>}
+                               {h.appealReasonNgo && <div><span className="font-bold text-red-500">公众申诉:</span> {h.appealReasonNgo}</div>}
                            </div>
                        )}
                    </div>
                ))}
             </div>
+            {/* 修改4 补充: 显示当前轮次的申诉理由 (如果不是第一轮) */}
+            {(partyAppealReason || ngoAppealReason) && (
+                <div className="text-[10px] bg-yellow-50 p-1 border border-yellow-100 rounded text-slate-600 shrink-0 mb-1">
+                   {partyAppealReason && <div className="mb-0.5"><span className="font-bold">责任方申诉:</span> {partyAppealReason}</div>}
+                   {ngoAppealReason && <div><span className="font-bold">公众申诉:</span> {ngoAppealReason}</div>}
+                </div>
+            )}
+
             <div className="space-y-0.5 mt-1 shrink-0"><span className="text-xs font-bold text-slate-700">裁决赔偿额($万):</span><Input type="number" className="h-12 md:h-6 bg-white text-sm" value={govRulingAmount} onChange={e=>setGovRulingAmount(e.target.value)}/></div>
             <div className="space-y-0.5 mt-1 shrink-0"><span className="text-xs font-bold text-slate-700">裁决理由(可选):</span><Input type="text" className="h-12 md:h-6 bg-white text-sm" value={govRulingReason} onChange={e=>setGovRulingReason(e.target.value)}/></div>
             <Button size="sm" className="w-full bg-red-600 hover:bg-red-700 h-12 md:h-8 text-sm mt-1 shrink-0 font-bold" onClick={()=>protestGovRuling(govRulingAmount)} disabled={govRulingAmount === "" || Number(govRulingAmount) < 0}>{govRulingCount >= 2 ? "发布终局裁决 (强制执行)" : "发布裁决"}</Button>
@@ -3092,7 +3098,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
       <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
         <CardHeader className="border-b border-slate-100 pb-4">
-          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.32</Badge></div>
+          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.34</Badge></div>
         </CardHeader>
         <CardContent className="space-y-8 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3217,7 +3223,7 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
   );
 }
 
-function SunLinkV7_32_MobileFix() {
+function SunLinkV7_34_Fixes() {
     return (
         <GameEntryWrapper>
             <SunLinkESGSimV7_30_CDN />
@@ -3227,7 +3233,7 @@ function SunLinkV7_32_MobileFix() {
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_32_MobileFix />
+      		    <SunLinkV7_34_Fixes />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
