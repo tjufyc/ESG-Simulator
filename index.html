@@ -5,7 +5,7 @@
     <title>CodeSandbox</title>
 
     <script type="importmap">
-      {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
+      {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","leancloud-storage":"https://esm.sh/leancloud-storage?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
     </script>
 
     <script>
@@ -248,6 +248,21 @@ import {
   Lock, PieChart, BarChart3, ScrollText, Target, Scale
 } from 'lucide-react';
 
+// --- LEANCLOUD 集成 ---
+import AV from 'leancloud-storage';
+
+// 初始化 LeanCloud
+try {
+  AV.init({
+    appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
+    appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
+    serverURL: "https://oxljnef7.api.lncldglobal.com"
+  });
+  console.log("LeanCloud Initialized");
+} catch (err) {
+  console.error("LeanCloud Init Error:", err);
+}
+
 // --- 1. 静态配置 ---
 
 const PROJECT_INFO = {
@@ -287,7 +302,7 @@ const ROLE_DETAILS = {
     task: "你为项目提供关键的低息贷款，遵循世界银行《环境社会框架》（ESF），期望通过项目促进当地经济社会发展并支持当地能力建设。你的《环境社会标准》（ESS）是项目的紧箍咒，你并不直接管理项目建设，但如果项目出现丑闻，声誉风险是你无法接受的。"
   },
   epc: {
-    label: "EPC承包商", // Fixed label
+    label: "EPC承包商", 
     desc: "GIP国际工程公司",
     task: "你是项目的总承包商。你的目标是争取对自己有利的合同条件，在合同谈判阶段与业主划分ESG责任，并在报价中考虑自己需要负责的环境社会管理计划（ESMP）。建设阶段按合同办事，落实ESMP会增加成本，但也需要考虑企业声誉的影响。"
   },
@@ -459,7 +474,7 @@ const CrisisContextBox = ({ crisis }) => {
 };
 
 
-function SunLinkESGSimV7_15_Refinements() {
+function SunLinkESGSimV7_15_LeanCloud() {
   // --- 全局状态 ---
   const [viewMode, setViewMode] = useState('cover'); 
   const [gameTime, setGameTime] = useState(0);
@@ -1572,7 +1587,50 @@ function SunLinkESGSimV7_15_Refinements() {
   };
 
   const submitSummary = (role, data) => {
-    setSummaryData(prev => ({ ...prev, [role]: data }));
+    setSummaryData(prev => {
+        const nextSummary = { ...prev, [role]: data };
+
+        // --- LEANCLOUD UPLOAD LOGIC ---
+        const doCloudSave = async () => {
+             try {
+                const GameRecord = AV.Object.extend('GameRecord');
+                const record = new GameRecord();
+
+                // Basic Info
+                record.set('timestamp', new Date());
+                record.set('totalTimeSeconds', gameTime);
+
+                // Role Status & Metrics
+                record.set('finalScores', playerState);
+
+                // Process Data
+                record.set('logs', logs);
+                record.set('crisisHistory', crisisQueue);
+                record.set('govRulingHistory', govRulingHistory);
+
+                // Contract Info
+                record.set('contract', {
+                    price: finalContractPrice,
+                    duration: finalContractDuration,
+                    penalty: finalDelayPenalty,
+                    bonus: finalEarlyBonus
+                });
+
+                // The Summary Content (Most important part here)
+                record.set('summary', nextSummary);
+
+                await record.save();
+                console.log("Data uploaded to LeanCloud successfully.");
+             } catch (e) {
+                 console.error("LeanCloud upload failed:", e);
+             }
+        };
+        doCloudSave();
+        // -------------------------------
+
+        return nextSummary;
+    });
+
     setIsSummarySubmitted(prev => ({ ...prev, [role]: true }));
     addLog(`系统: ${INITIAL_STATES[role].label} 已提交完工总结。`, 'gray');
   };
@@ -3205,7 +3263,7 @@ function SunLinkESGSimV7_15_Refinements() {
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkESGSimV7_15_Refinements />
+      		    <SunLinkESGSimV7_15_LeanCloud />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
