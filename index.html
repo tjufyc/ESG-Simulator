@@ -557,7 +557,7 @@ const GameEntryWrapper = ({ children }) => {
                     <Button size="lg" className="flex-1 h-20 text-lg bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 hover:shadow-[0_0_50px_-10px_rgba(37,99,235,0.7)] border border-blue-400/50 flex flex-col items-center justify-center gap-1" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
                         <Smartphone size={28} />
                         <span>单机体验版</span>
-                        <span className="text-xs opacity-70 font-normal">手机竖屏模式 · 自由切换</span>
+                        <span className="text-xs opacity-70 font-normal">自动适配 电脑/手机</span>
                     </Button>
                     
                     <Button size="lg" className="flex-1 h-20 text-lg bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 hover:shadow-[0_0_50px_-10px_rgba(147,51,234,0.7)] border border-purple-400/50 flex flex-col items-center justify-center gap-1" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
@@ -572,14 +572,11 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   // Single Player: Intro -> Game
-  // [修改点1] 在这里应用 16:9 手机容器约束
+  // [修改点1] 移除强制“手机壳”容器，使用原生全屏容器，依靠内部 CSS 响应式
   if (appState === 'single_intro') {
       return (
-         <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-0 md:p-4">
-            {/* 手机容器 */}
-            <div className="w-full h-full md:w-[400px] md:h-[711px] md:max-h-[90vh] bg-slate-100 relative md:rounded-3xl overflow-hidden md:shadow-2xl border-0 md:border-8 md:border-slate-800 flex flex-col">
-                {React.cloneElement(children, { assignedRole: null, mode: 'single', onExit: () => setAppState('cover') })}
-            </div>
+         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
+             {React.cloneElement(children, { assignedRole: null, mode: 'single', onExit: () => setAppState('cover') })}
          </div>
       );
   }
@@ -687,7 +684,7 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   // Playing State: Render Game with Props
-  // [修改点1] 对于 Single Mode (Playing 状态), 同样需要容器约束
+  // [修改点1] 对于 Single Mode (Playing 状态), 同样移除强制手机壳，使用全屏 Flex 布局
   if (appState === 'playing') {
       const gameContent = React.cloneElement(children, { 
          assignedRole: myRole, 
@@ -699,10 +696,8 @@ const GameEntryWrapper = ({ children }) => {
 
      if (mode === 'single') {
         return (
-            <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-0 md:p-4">
-                <div className="w-full h-full md:w-[400px] md:h-[711px] md:max-h-[90vh] bg-slate-100 relative md:rounded-3xl overflow-hidden md:shadow-2xl border-0 md:border-8 md:border-slate-800 flex flex-col">
-                   {gameContent}
-                </div>
+            <div className="h-screen w-screen bg-slate-900 overflow-hidden">
+               {gameContent}
             </div>
         )
      }
@@ -2200,7 +2195,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.20</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.21</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
@@ -3038,7 +3033,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
       <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
         <CardHeader className="border-b border-slate-100 pb-4">
-          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.20</Badge></div>
+          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.21</Badge></div>
         </CardHeader>
         <CardContent className="space-y-8 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3169,7 +3164,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
 // ------------------------------------------------------------------
 // Final Export
 // ------------------------------------------------------------------
-function SunLinkV7_20_MobileFix() {
+function SunLinkV7_21_ResponsiveFix() {
     return (
         <GameEntryWrapper>
             <SunLinkESGSimV7_15_Responsive />
@@ -3179,7 +3174,7 @@ function SunLinkV7_20_MobileFix() {
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_20_MobileFix />
+      		    <SunLinkV7_21_ResponsiveFix />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
