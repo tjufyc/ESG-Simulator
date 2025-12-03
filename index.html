@@ -247,7 +247,7 @@ import {
   Sun, Zap, Truck, HardHat, FileSignature, ListChecks,
   Lock, PieChart, BarChart3, ScrollText, Target, Scale,
   Menu, LogIn, Users2, Loader2, Gamepad2, Network, Cloud,
-  Mail, UserPlus, Check
+  Mail, UserPlus, Check, Smartphone
 } from 'lucide-react';
 
 import AV from 'leancloud-storage';
@@ -358,7 +358,6 @@ const RISK_TABLE = [
 // ------------------------------------------------------------------
 // 组件: MobileNavBtn
 // ------------------------------------------------------------------
-// [修改点1] 改进提醒逻辑，支持 'all' 和多角色同时提醒
 const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn }) => {
   const isActive = active === role;
   const colorClass = role === 'owner' ? 'text-blue-600' : 
@@ -423,7 +422,7 @@ const GameEntryWrapper = ({ children }) => {
       return () => clearInterval(timer);
   }, []);
 
-  // [修改点2] 真实 Lobby 逻辑：进入房间 & 允许选择角色
+  // 进入房间逻辑
   const enterRoomReal = async () => {
       const rNum = parseInt(roomNumber);
       if (!playerName.trim()) return alert("请输入昵称");
@@ -438,7 +437,7 @@ const GameEntryWrapper = ({ children }) => {
           query.ascending('createdAt');
           const existingPlayers = await query.find();
           
-          // 2. 判断我是不是重连
+          // 2. 判断我是不是重连 (根据名字)
           const existingMe = existingPlayers.find(p => p.get('name') === playerName);
           if (existingMe) {
              setMyRole(existingMe.get('role')); // 如果已存在，恢复角色
@@ -485,29 +484,49 @@ const GameEntryWrapper = ({ children }) => {
       }
   };
 
-  // [修改点2] 新增：选择角色逻辑
+  // [修改点2] 修复：选择角色逻辑
+  // 必须确保先查询是否真的被占，且使用正确的 ACL/创建逻辑
   const selectRole = async (roleToSelect) => {
       if (myRole) return; // 已经有角色了
 
-      // 双重检查：本地判断是否被占
-      const isTaken = roomPlayers.some(p => p.role === roleToSelect);
-      if (isTaken) {
+      // 1. 双重检查：本地判断是否被占
+      const isTakenLocal = roomPlayers.some(p => p.role === roleToSelect);
+      if (isTakenLocal) {
           alert("该角色已被抢先一步！");
           return;
       }
 
       try {
+          // 2. 云端检查 & 原子操作 (这里做简化：先查后写)
+          const checkQuery = new AV.Query('GamePlayer');
+          checkQuery.equalTo('room', parseInt(roomNumber));
+          checkQuery.equalTo('role', roleToSelect);
+          const existingRole = await checkQuery.first();
+
+          if (existingRole) {
+              alert("选角失败：云端显示该角色刚被占用。");
+              return;
+          }
+
+          // 3. 创建记录
           const GamePlayer = AV.Object.extend('GamePlayer');
           const player = new GamePlayer();
           player.set('room', parseInt(roomNumber));
           player.set('name', playerName);
           player.set('role', roleToSelect);
+          
+          // 设置 ACL 确保可读写 (防止权限错误)
+          const acl = new AV.ACL();
+          acl.setPublicReadAccess(true);
+          acl.setPublicWriteAccess(true);
+          player.setACL(acl);
+
           await player.save();
           
           setMyRole(roleToSelect);
       } catch (e) {
           console.error("选角失败", e);
-          alert("选角失败，可能刚被占用或网络错误");
+          alert(`选角失败: ${e.message || "网络错误或权限不足"}`);
       }
   };
 
@@ -536,9 +555,9 @@ const GameEntryWrapper = ({ children }) => {
                 {/* Mode Selection Buttons */}
                 <div className="mt-16 flex flex-col md:flex-row gap-6 justify-center w-full max-w-2xl mx-auto">
                     <Button size="lg" className="flex-1 h-20 text-lg bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 hover:shadow-[0_0_50px_-10px_rgba(37,99,235,0.7)] border border-blue-400/50 flex flex-col items-center justify-center gap-1" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
-                        <Gamepad2 size={28} />
+                        <Smartphone size={28} />
                         <span>单机体验版</span>
-                        <span className="text-xs opacity-70 font-normal">一人分饰五角 · 自由探索</span>
+                        <span className="text-xs opacity-70 font-normal">手机竖屏模式 · 自由切换</span>
                     </Button>
                     
                     <Button size="lg" className="flex-1 h-20 text-lg bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 hover:shadow-[0_0_50px_-10px_rgba(147,51,234,0.7)] border border-purple-400/50 flex flex-col items-center justify-center gap-1" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
@@ -548,20 +567,21 @@ const GameEntryWrapper = ({ children }) => {
                     </Button>
                 </div>
             </div>
-            <div className="absolute bottom-8 text-center space-y-6 z-10 opacity-80 text-sm w-full flex flex-col items-center leading-[2.5]">
-                <div>
-                    <p className="font-bold text-slate-200">开发单位：天津大学全球工程经营实验室</p>
-                    <p className="text-xs text-slate-400 font-light tracking-wider">Developed by Tianjin University Global Infrastructure Project Center</p>
-                    <p className="text-xs text-slate-300 mt-1 flex items-center justify-center gap-1">联系人：傅老师 <Mail size={10}/> yongcheng_fu@126.com</p>
-                </div>
-            </div>
         </div>
       );
   }
 
   // Single Player: Intro -> Game
+  // [修改点1] 在这里应用 16:9 手机容器约束
   if (appState === 'single_intro') {
-     return React.cloneElement(children, { assignedRole: null, mode: 'single', onExit: () => setAppState('cover') });
+      return (
+         <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-0 md:p-4">
+            {/* 手机容器 */}
+            <div className="w-full h-full md:w-[400px] md:h-[711px] md:max-h-[90vh] bg-slate-100 relative md:rounded-3xl overflow-hidden md:shadow-2xl border-0 md:border-8 md:border-slate-800 flex flex-col">
+                {React.cloneElement(children, { assignedRole: null, mode: 'single', onExit: () => setAppState('cover') })}
+            </div>
+         </div>
+      );
   }
 
   // Multi Player: Lobby -> Waiting Room -> Game
@@ -598,7 +618,6 @@ const GameEntryWrapper = ({ children }) => {
 
       if (lobbyStatus === 'waiting') {
           const isRoomFull = roomPlayers.length >= 5;
-          // [修改点2] 渲染可选角色列表
           return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
                <Card className="w-full max-w-2xl border-t-4 border-purple-500 shadow-2xl">
@@ -615,7 +634,6 @@ const GameEntryWrapper = ({ children }) => {
                            const isMe = player?.name === playerName;
                            const isTaken = !!player;
                            
-                           // 颜色配置
                            const roleColor = role === 'owner' ? 'bg-blue-50 border-blue-200 text-blue-800' :
                                              role === 'gov' ? 'bg-green-50 border-green-200 text-green-800' :
                                              role === 'mdb' ? 'bg-purple-50 border-purple-200 text-purple-800' :
@@ -669,14 +687,27 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   // Playing State: Render Game with Props
+  // [修改点1] 对于 Single Mode (Playing 状态), 同样需要容器约束
   if (appState === 'playing') {
-     return React.cloneElement(children, { 
+      const gameContent = React.cloneElement(children, { 
          assignedRole: myRole, 
-         mode: 'multi',
+         mode: mode,
          roomNumber: roomNumber,
          playerList: roomPlayers,
          onExit: () => setAppState('cover')
      });
+
+     if (mode === 'single') {
+        return (
+            <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-0 md:p-4">
+                <div className="w-full h-full md:w-[400px] md:h-[711px] md:max-h-[90vh] bg-slate-100 relative md:rounded-3xl overflow-hidden md:shadow-2xl border-0 md:border-8 md:border-slate-800 flex flex-col">
+                   {gameContent}
+                </div>
+            </div>
+        )
+     }
+
+     return gameContent;
   }
   
   return null;
@@ -954,7 +985,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
 
   const scrollRef = useRef(null);
 
-  // [新增逻辑]: 初始化时若有 assignedRole (Multi Mode), 切换到该 Tab
+  // 初始化时若有 assignedRole (Multi Mode), 切换到该 Tab
   useEffect(() => {
       if (mode === 'multi' && assignedRole) {
           setMobileTab(assignedRole);
@@ -1001,7 +1032,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
   // ================================================================
   // 核心修改：基础状态同步 Hook (Sync Logic)
   // ================================================================
-  // 这是一个简化版的同步，用于在真人操作后，通知其他客户端更新关键状态。
   
   useEffect(() => {
       if (mode !== 'multi' || !roomNumber) return;
@@ -1029,7 +1059,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
                   if(data.s3State) setS3State(data.s3State);
                   if(data.s4State) setS4State(data.s4State);
                   if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
-                  // 更多细节略，防止Token溢出，主要同步流程控制变量
+                  // 更多细节略
               }
           });
       });
@@ -2170,7 +2200,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.19</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.20</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
@@ -3008,7 +3038,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
       <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
         <CardHeader className="border-b border-slate-100 pb-4">
-          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.19</Badge></div>
+          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.20</Badge></div>
         </CardHeader>
         <CardContent className="space-y-8 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3073,7 +3103,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
   );
 
   return (
-    <div className="h-screen w-full bg-slate-100 flex flex-col font-sans overflow-hidden relative">
+    <div className="h-full w-full bg-slate-100 flex flex-col font-sans overflow-hidden relative">
       {renderTopBar()}
       {renderSummaryOverlay()}
       
@@ -3110,7 +3140,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
          </div>
 
          <div className="h-16 bg-white border-t border-slate-200 shrink-0 grid grid-cols-6 gap-1 p-1 pb-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-30">
-            {/* [修改点1] 根据 activeRole 实现多角色同时闪烁 */}
             <MobileNavBtn role="owner" label="业主" icon={User} active={mobileTab} onClick={setMobileTab} alert={financialAlerts.owner} isTurn={activeRole === 'owner' || activeRole === 'all' || (stage===4 && protestState==='ruling_result_display' && protestHandler==='owner') || (stage===5 && inspectionState==='s5_ruling_result')} />
             <MobileNavBtn role="gov" label="政府" icon={Landmark} active={mobileTab} onClick={setMobileTab} isTurn={activeRole === 'gov' || activeRole === 'all'} />
             <MobileNavBtn role="mdb" label="银行" icon={Globe} active={mobileTab} onClick={setMobileTab} isTurn={activeRole === 'mdb' || activeRole === 'all'} />
@@ -3140,7 +3169,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
 // ------------------------------------------------------------------
 // Final Export
 // ------------------------------------------------------------------
-function SunLinkV7_19_RoleSelect() {
+function SunLinkV7_20_MobileFix() {
     return (
         <GameEntryWrapper>
             <SunLinkESGSimV7_15_Responsive />
@@ -3150,7 +3179,7 @@ function SunLinkV7_19_RoleSelect() {
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_19_RoleSelect />
+      		    <SunLinkV7_20_MobileFix />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
