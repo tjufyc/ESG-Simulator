@@ -5,7 +5,7 @@
     <title>CodeSandbox</title>
 
     <script type="importmap">
-      {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","leancloud-storage":"https://esm.sh/leancloud-storage?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
+      {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
     </script>
 
     <script>
@@ -250,45 +250,9 @@ import {
   Mail, UserPlus, Check, Smartphone
 } from 'lucide-react';
 
-// --- FIX: 移除 'leancloud-storage' 导入，改为内部 Mock，防止环境报错 ---
-// import AV from 'leancloud-storage';
+// --- 注意：不再静态导入 leancloud-storage，改为在组件内动态加载 CDN ---
 
-// Mock AV 对象以防报错，保证单机模式正常运行
-const AV = {
-  applicationId: null,
-  init: (config) => console.log("LeanCloud Mock Initialized", config),
-  Query: class {
-    constructor(className) {}
-    equalTo() { return this; }
-    ascending() { return this; }
-    descending() { return this; }
-    limit() { return this; }
-    async subscribe() { 
-        console.log("Mock subscribe"); 
-        return { on: () => {}, unsubscribe: () => {} }; 
-    }
-    async find() { return []; }
-    async first() { return null; }
-    async count() { return 0; }
-  },
-  Object: {
-    extend: (className) => {
-        return class {
-            constructor() { this.data = {}; this.id = 'mock_id_' + Date.now(); }
-            set(key, val) { this.data[key] = val; }
-            get(key) { return this.data[key]; }
-            setACL() {}
-            async save() { console.log("Mock save", this.data); return this; }
-        }
-    }
-  },
-  ACL: class {
-      setPublicReadAccess() {}
-      setPublicWriteAccess() {}
-  }
-};
-
-// --- 1. 静态配置 ---
+// --- 2. 静态配置 ---
 const PROJECT_INFO = {
   name: "SunLink 光伏+输变电项目", 
   location: "A国 (虚构发展中国家) - 北部干旱荒漠与'绿洲'湿地保护区的交界地带",
@@ -410,12 +374,13 @@ const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn 
 };
 
 // ------------------------------------------------------------------
-// GameEntryWrapper
+// GameEntryWrapper (Updated for CDN Loading)
 // ------------------------------------------------------------------
 
 const ROLE_ORDER = ['owner', 'gov', 'mdb', 'epc', 'ngo'];
 
 const GameEntryWrapper = ({ children }) => {
+  const [sdkReady, setSdkReady] = useState(false);
   const [appState, setAppState] = useState('cover'); 
   const [mode, setMode] = useState('single'); 
   
@@ -427,7 +392,38 @@ const GameEntryWrapper = ({ children }) => {
   const [onlineCount, setOnlineCount] = useState(0); 
   const [liveQuerySub, setLiveQuerySub] = useState(null);
 
+  // --- Dynamic Script Loading ---
   useEffect(() => {
+      if (window.AV) {
+          setSdkReady(true);
+          return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js';
+      script.async = true;
+      script.onload = () => {
+          console.log("LeanCloud SDK Loaded via CDN");
+          try {
+             const AV = window.AV;
+             if (!AV.applicationId) {
+                 AV.init({
+                    appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
+                    appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
+                    serverURL: "https://oxljnef7.api.lncldglobal.com"
+                 });
+             }
+             setSdkReady(true);
+          } catch (e) {
+             console.error("AV Init failed:", e);
+          }
+      };
+      document.body.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+      if (!sdkReady) return;
+      const AV = window.AV;
+      
       const fetchOnlineCount = async () => {
            try {
                const query = new AV.Query('GamePlayer');
@@ -440,9 +436,12 @@ const GameEntryWrapper = ({ children }) => {
       fetchOnlineCount();
       const timer = setInterval(fetchOnlineCount, 15000);
       return () => clearInterval(timer);
-  }, []);
+  }, [sdkReady]);
 
   const enterRoomReal = async () => {
+      if (!sdkReady) return alert("系统初始化中，请稍后...");
+      const AV = window.AV;
+
       const rNum = parseInt(roomNumber);
       if (!playerName.trim()) return alert("请输入昵称");
       if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
@@ -487,23 +486,20 @@ const GameEntryWrapper = ({ children }) => {
           console.error("LeanCloud Connection Error:", error);
           let errorMsg = "网络连接失败。";
           if (error.code === 403) {
-              errorMsg = "连接被拒绝(403)。这通常是因为域名未在LeanCloud后台配置白名单。\n请联系管理员检查 Web 安全域名配置。";
+              errorMsg = "连接被拒绝(403)。请检查AppID配置或域名白名单。";
           } else if (error.code === 0 || (error.message && error.message.includes('Network'))) {
-              errorMsg = "网络连接失败或跨域限制。\n1. 请检查网络\n2. 如在公司/学校内网，请尝试切换手机热点";
+              errorMsg = "网络连接失败。请检查网络。";
           }
-          // alert(errorMsg); // MOCK: 不弹窗报错
-          setLobbyStatus('waiting'); // MOCK: 假装成功进入等待
-          setRoomPlayers([{name: playerName, role: 'owner', id: 'mock1'}]); // Mock数据
+          alert(errorMsg); 
+          setLobbyStatus('login'); // 回退到登录页
       }
   };
 
   const selectRole = async (roleToSelect) => {
+      if (!sdkReady) return;
+      const AV = window.AV;
       if (myRole) return; 
-      // MOCK: 直接成功
-      setMyRole(roleToSelect);
-      setRoomPlayers(prev => [...prev.filter(p=>p.name!==playerName), {name: playerName, role: roleToSelect, id: 'mock'}]);
       
-      /* Real Logic Commented out for Mock
       const isTakenLocal = roomPlayers.some(p => p.role === roleToSelect);
       if (isTakenLocal) {
           alert("该角色已被抢先一步！");
@@ -536,13 +532,8 @@ const GameEntryWrapper = ({ children }) => {
           setMyRole(roleToSelect);
       } catch (e) {
           console.error("选角失败", e);
-          let errMsg = e.message || "网络错误或权限不足";
-          if (errMsg.includes("Terminated") || errMsg.includes("Network")) {
-              errMsg = "网络请求失败，请重试或检查网络连接。";
-          }
-          alert(`选角失败: ${errMsg}`);
+          alert(`选角失败: ${e.message || "网络错误"}`);
       }
-      */
   };
 
   useEffect(() => {
@@ -555,6 +546,18 @@ const GameEntryWrapper = ({ children }) => {
       if (!myRole) return alert("请先选择一个角色！");
       setAppState('playing');
   };
+
+  if (!sdkReady) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+              <div className="flex flex-col items-center gap-4">
+                  <Loader2 size={48} className="animate-spin text-blue-500" />
+                  <div className="text-lg font-light">正在连接后端服务...</div>
+                  <div className="text-xs text-slate-500">Initializing LeanCloud SDK...</div>
+              </div>
+          </div>
+      )
+  }
 
   if (appState === 'cover') {
       return (
@@ -643,7 +646,6 @@ const GameEntryWrapper = ({ children }) => {
       }
 
       if (lobbyStatus === 'waiting') {
-          const isRoomFull = roomPlayers.length >= 5;
           return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
                <Card className="w-full max-w-2xl border-t-4 border-purple-500 shadow-2xl">
@@ -818,7 +820,8 @@ const EsmpResponsibilityList = ({ ownerRespEsmp }) => (
            <span>ESMP 责任划分表</span>
            <ListChecks size={12}/>
         </div>
-        <div className="flex-1 bg-white p-1 overflow-y-auto">
+        {/* FIX: 问题3 - 增加滚动条 */}
+        <div className="flex-1 bg-white p-1 overflow-y-auto max-h-[200px]">
            {ESMP_LIBRARY.map(item => {
               const isOwner = ownerRespEsmp.includes(item.id);
               return (
@@ -841,7 +844,6 @@ const CrisisContextBox = ({ crisis }) => {
             <div className="font-bold flex items-center gap-1 text-red-700 mb-1 text-sm md:text-base">
                 <AlertTriangle size={14}/> 当前危机: {crisis.title}
             </div>
-            {/* FIX: 问题3 - 危机事件文本描述字号大一些 */}
             <div className="leading-snug text-sm md:text-base font-medium">{crisis.desc}</div>
             <div className="mt-2 text-[10px] text-slate-500 font-mono">关联ESMP: {ESMP_LIBRARY.find(i=>i.id===crisis.esmpId)?.label}</div>
         </div>
@@ -852,7 +854,7 @@ const CrisisContextBox = ({ crisis }) => {
 // 主游戏组件
 // ------------------------------------------------------------------
 
-function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber, playerList }) {
+function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, playerList }) {
   const [viewMode, setViewMode] = useState('intro'); 
   
   useEffect(() => {
@@ -1031,6 +1033,9 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
   useEffect(() => {
       if (mode !== 'multi' || !roomNumber) return;
 
+      const AV = window.AV;
+      if (!AV) return;
+
       const query = new AV.Query('GameAction');
       query.equalTo('room', parseInt(roomNumber));
       query.subscribe().then(subscription => {
@@ -1051,6 +1056,8 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
                   if(data.s3State) setS3State(data.s3State);
                   if(data.s4State) setS4State(data.s4State);
                   if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
+                  // 同步危机历史
+                  if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
               }
           });
       });
@@ -1060,6 +1067,9 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
 
   const syncToCloud = (type, payload) => {
       if (mode !== 'multi') return;
+      const AV = window.AV;
+      if (!AV) return;
+
       const Action = AV.Object.extend('GameAction');
       const act = new Action();
       act.set('room', parseInt(roomNumber));
@@ -1071,7 +1081,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
   const broadcastState = (overrides = {}) => {
       if (mode !== 'multi') return;
       syncToCloud('SYNC_STATE_FULL', {
-          stage, activeRole, playerState, s1State, s2State, s3State, s4State, lastActionInfo,
+          stage, activeRole, playerState, s1State, s2State, s3State, s4State, lastActionInfo, govRulingHistory,
           ...overrides
       });
   };
@@ -1527,22 +1537,19 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
      broadcastState({ s4State: 's4_owner_reaudit', activeRole: 'owner' });
   };
 
-  // --- FIX START: 问题2 - 修复复查逻辑，确保有漏项时不能通过 ---
   const s4OwnerReaudit = () => {
-     // 1. 业主选择进行复查，首先再次比对EPC的执行方案和违规项
      const stillViolating = epcViolations.filter(id => !epcExecPlan.includes(id));
      
      if (stillViolating.length > 0) {
         const currentViolations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
         
         if (currentViolations.length > 0) {
-            setEpcViolations(currentViolations); // 更新违规列表
+            setEpcViolations(currentViolations); 
             updateLastAction('owner', `复查仍发现 ${currentViolations.length} 项违规`);
             addLog(`S4: 复查发现仍有 ${currentViolations.length} 项违规！必须整改或风险通过。`, 'red');
             
             alert(`复查不通过！发现 ${currentViolations.length} 项遗漏。请责令整改或选择风险通过。`);
 
-            // 强制停留在处罚决定界面
             setS4State('s4_punish_decide'); setActiveRole('owner');
             broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner' });
         } else {
@@ -1552,7 +1559,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
              broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc' });
         }
      } else {
-         // 再次检查当前 ownerAuditItems 覆盖的范围是否都达标了
          const currentViolations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
          if (currentViolations.length > 0) {
             setEpcViolations(currentViolations);
@@ -1569,7 +1575,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
          }
      }
   };
-  // --- FIX END ---
   
   const s4EpcConfirmAuditPass = () => {
      prepareS4Construction();
@@ -1726,6 +1731,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
      const count = govRulingCount + 1;
      setGovRulingCount(count);
      
+     // FIX: 问题1 - 记录更新每次主张的理由
      const historyItem = { 
          count, 
          amount: numAmount, 
@@ -1733,7 +1739,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
          ngoReason: ngoDemandReason,
          partyOffer: offerAmount,
          partyReason: partyOfferReason,
-         // FIX: 问题4 - 记录更新每次主张的理由
          appealReasonParty: partyAppealReason,
          appealReasonNgo: ngoAppealReason
      }; 
@@ -1749,7 +1754,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
         addLog(`政府终局裁决: $${numAmount}万。强制执行。`, 'purple');
         
         setProtestState('ruling_result_display'); setActiveRole('all');
-        broadcastState({ activeRole: 'all' });
+        broadcastState({ activeRole: 'all', govRulingHistory: [...govRulingHistory, historyItem] });
      } else {
         addLog(`政府第${count}次裁决下达。等待双方表态。`, 'blue');
         setPartyResponse(null);
@@ -1759,7 +1764,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
         setNgoAppealInput('');
         setNgoAppealReason(''); 
         setProtestState('parties_react_ruling'); setActiveRole('all'); 
-        broadcastState({ activeRole: 'all' });
+        broadcastState({ activeRole: 'all', govRulingHistory: [...govRulingHistory, historyItem] });
      }
   };
   
@@ -2061,6 +2066,9 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
 
         const doCloudSave = async () => {
              try {
+                const AV = window.AV;
+                if(!AV) return;
+
                 const GameRecord = AV.Object.extend('GameRecord');
                 const record = new GameRecord();
 
@@ -2121,7 +2129,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
            <span>已通过的ESIA</span>
            <ListChecks size={12}/>
         </div>
-        <div className="flex-1 bg-white p-1 overflow-y-auto">
+        <div className="flex-1 bg-white p-1 overflow-y-auto max-h-[200px]">
            {ESIA_ITEMS.map(item => {
               const isOwnerSelected = ownerEsiaSelection.includes(item.id);
               const isConfirmed = confirmedEsiaSelection.includes(item.id); 
@@ -2160,7 +2168,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
           <span>已签署ESCP</span>
           <ListChecks size={12}/>
        </div>
-       <div className="flex-1 bg-white p-1 overflow-y-auto">
+       <div className="flex-1 bg-white p-1 overflow-y-auto max-h-[200px]">
           {ESMP_LIBRARY.map(item => {
              const isOwner = confirmedEscpSelection.includes(item.id);
              const isGov = accumulatedGovEscpReqs.includes(item.id);
@@ -2206,7 +2214,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.28</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.30</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
@@ -2406,7 +2414,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
           <div className="font-bold text-blue-800 text-xs md:text-[10px]">
              {s1SubmissionCount > 1 ? "选择补充 (价格上涨" + Math.round((multiplier-1)*100) + "%):" : "请开展ESIA专项评价 (括号内为成本):"}
           </div>
-          {/* FIX: 问题3 - 尽量用满界面 */}
           <div className="border border-slate-200 rounded-sm shadow-inner bg-white flex-1 overflow-y-auto min-h-[200px]">
              {ESIA_ITEMS.map(i => {
             const isConfirmed = confirmedEsiaSelection.includes(i.id);
@@ -2445,8 +2452,8 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
           {riskLevel && <Alert className="p-1 bg-purple-50 border-purple-200 text-[10px] text-purple-800"><AlertDescription>银行评级结果：{riskLevel}</AlertDescription></Alert>}
           <div className="font-bold text-purple-700 text-xs md:text-[10px]">请选择贷款协议ESCP (括号内为成本):</div>
           {(accumulatedGovEscpReqs.length > 0 || accumulatedMdbEscpReqs.length > 0) && (<Alert className="p-1 bg-red-50 text-[9px] border-red-200 text-red-800 mb-1"><AlertDescription>需补充: {[...accumulatedGovEscpReqs].map(id=>ESMP_LIBRARY.find(x=>x.id===id)?.label + '(政府)').join(', ')}{accumulatedGovEscpReqs.length>0 && accumulatedMdbEscpReqs.length>0 && ', '}{[...accumulatedMdbEscpReqs].map(id=>ESMP_LIBRARY.find(x=>x.id===id)?.label + '(银行)').join(', ')}</AlertDescription></Alert>)}
-          {/* FIX: 问题3 - 尽量用满界面 */}
-          <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESMP_LIBRARY.map(i => {
+          {/* FIX: 问题2 - S2阶段增加滚动条 */}
+          <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px] max-h-[400px]">{ESMP_LIBRARY.map(i => {
              const isGovReq = accumulatedGovEscpReqs.includes(i.id);
              const isMdbReq = accumulatedMdbEscpReqs.includes(i.id);
              const isPreviouslyLocked = confirmedEscpSelection.includes(i.id);
@@ -2481,8 +2488,8 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
                <div className="space-y-0.5"><span className="text-xs md:text-[9px]">提前奖励(万/月)</span><Input type="number" min={0} defaultValue={0} onChange={e=>setEarlyBonus(Number(e.target.value))} className="h-8 md:h-6 text-sm md:text-[10px]"/></div>
            </div>
            <div className="font-bold text-xs md:text-[10px] mt-1">业主自管ESMP (未选将由EPC负责):</div>
-           {/* FIX: 问题3 - 尽量用满界面 */}
-           <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[150px]">{ESMP_LIBRARY.map(i => {
+           {/* FIX: 问题3 - S3阶段增加滚动条 */}
+           <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[150px] max-h-[250px]">{ESMP_LIBRARY.map(i => {
                const inEscp = confirmedEscpSelection.includes(i.id);
                return (
                  <div key={i.id} className="flex gap-1 py-1 md:py-1 px-1 items-center border-b last:border-0">
@@ -2512,7 +2519,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
       if (stage === 4 && (s4State === 's4_audit' || s4State === 's4_owner_reaudit')) return (
         <div className="space-y-2 flex flex-col h-full">
            <div className="font-bold flex items-center gap-1 text-xs md:text-[10px]"><Gavel size={10}/> {s4State==='s4_audit'?'抽查审计项':'整改复查项'}:</div>
-           {/* FIX: 问题3 - 尽量用满界面 */}
            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESMP_LIBRARY.map(item => {
                const isOwnerResp = ownerRespEsmp.includes(item.id);
                const isViolation = s4State === 's4_owner_reaudit' && epcViolations.includes(item.id);
@@ -2627,7 +2633,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
                <Button size="sm" className="w-full bg-red-600 hover:bg-red-700 h-10 md:h-8 text-sm md:text-xs" onClick={()=>s1GovReview(false)} disabled={!hasNewMandates}>驳回业主ESIA</Button>
            </div>
            <div className="font-bold mt-1 text-xs md:text-[10px] text-slate-600">请选择政府监管部门要求补充的ESIA专项评价：</div>
-           {/* FIX: 问题3 - 尽量用满界面 */}
            <div className="bg-white border border-slate-200 rounded flex-1 overflow-y-auto min-h-[150px]">{ESIA_ITEMS.map(i=> {
                 const isOwnerSelected = confirmedEsiaSelection.includes(i.id);
                 const isPublicReq = accumulatedNgoReqs.includes(i.id) || ngoRequirements.includes(i.id);
@@ -2647,8 +2652,8 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
          return (
          <div className="space-y-2 flex flex-col h-full">
             <div className="font-bold text-xs md:text-[10px] text-slate-600">审核ESCP (勾选新增项以驳回):</div>
-            {/* FIX: 问题3 - 尽量用满界面 */}
-            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESMP_LIBRARY.map(i => {
+            {/* FIX: 问题2 - S2阶段增加滚动条 */}
+            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px] max-h-[400px]">{ESMP_LIBRARY.map(i => {
                 const isOwnerSelected = ownerEscpSelection.includes(i.id);
                 const isAlreadyForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id);
                 return (
@@ -2674,7 +2679,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
                    <div className="font-bold">${ngoDemandAmount} / ${offerAmount}</div>
                    <div className="text-red-600 italic">待定</div>
                </div>
-               {/* FIX: 问题4 - 政府每次裁决赔偿额时，要展示双方的理由 */}
+               {/* FIX: 问题1 - 展示双方理由 */}
                {govRulingHistory.map(h => (
                    <div key={h.count} className="border-b border-slate-100 pb-1 mb-1 opacity-70">
                        <div className="grid grid-cols-3 gap-1 py-1 text-center items-center">
@@ -2726,8 +2731,8 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
         return (
           <div className="space-y-2 flex flex-col h-full">
              <Alert className="p-1 bg-green-50 border-green-200 text-[9px] text-green-800"><AlertDescription>政府已批准ESCP。请复核并签约。</AlertDescription></Alert>
-             {/* FIX: 问题3 - 尽量用满界面 */}
-             <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESMP_LIBRARY.map(i => {
+             {/* FIX: 问题2 - S2阶段增加滚动条 */}
+             <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px] max-h-[400px]">{ESMP_LIBRARY.map(i => {
                 const isOwnerSelected = ownerEscpSelection.includes(i.id);
                 const isAlreadyForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id);
                 const isMdbSelected = mdbEscpMandates.includes(i.id);
@@ -2763,8 +2768,8 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
              {epcBidHistory.length > 0 && (<Alert className="p-1 bg-amber-50 border-amber-200 text-amber-800 mb-1"><AlertDescription className="text-xs md:text-[9px] leading-none">业主驳回了之前的报价。历史记录: {epcBidHistory.map(h=>`$${h.price}`).join(', ')}{ownerRejectReason && <div className="mt-1 text-red-600 font-bold">驳回理由: {ownerRejectReason}</div>}</AlertDescription></Alert>)}
              <div className="font-bold text-xs md:text-[10px] mb-0.5">责任划分 & 风险提示:</div>
              <div className="text-xs md:text-[9px] text-slate-500 bg-yellow-50 p-1 rounded border border-yellow-100 mb-1 leading-tight">根据ESMP责任划分、工期要求和各类风险，请合理报价。</div>
-             {/* FIX: 问题3 - 尽量用满界面 */}
-             <div className="bg-white border rounded mb-1 flex-1 overflow-y-auto min-h-[150px]">{ESMP_LIBRARY.map(i => {
+             {/* FIX: 问题3 - S3阶段增加滚动条 */}
+             <div className="bg-white border rounded mb-1 flex-1 overflow-y-auto min-h-[150px] max-h-[250px]">{ESMP_LIBRARY.map(i => {
                  const isOwnerResp = ownerRespEsmp.includes(i.id);
                  return (<div key={i.id} className="flex justify-between items-center py-1 md:py-1 px-1 border-b last:border-0 text-xs md:text-[9px]"><span className="leading-none">{i.label}</span>{isOwnerResp ? <Badge className="text-[8px] h-3 bg-blue-100 text-blue-700 hover:bg-blue-200 border-0 leading-none">业主</Badge> : <Badge className="text-[8px] h-3 bg-orange-100 text-orange-700 hover:bg-orange-200 border-0 leading-none">EPC</Badge>}</div>)
              })}</div>
@@ -2789,7 +2794,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
        if (stage === 4 && (s4State === 's4_planning' || s4State === 's4_epc_replan')) return (
           <div className="space-y-2 flex flex-col h-full">
              <div className="font-bold text-xs md:text-[10px]">ESMP执行方案:</div>
-             {/* FIX: 问题3 - 尽量用满界面 */}
              <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESMP_LIBRARY.map(item => {
                  const isOwnerResp = ownerRespEsmp.includes(item.id);
                  const isViolation = epcViolations.includes(item.id);
@@ -2895,7 +2899,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
          return (
          <div className="space-y-2 flex flex-col h-full">
             <div className="font-bold text-xs md:text-[10px] text-red-700">如对业主ESIA不满意，请勾选补充:</div>
-            {/* FIX: 问题3 - 尽量用满界面 */}
             <div className="bg-white border rounded flex-1 overflow-y-auto min-h-[200px]">{ESIA_ITEMS.map(i=> {
                 const isOwnerSelected = confirmedEsiaSelection.includes(i.id);
                 const isPrevReq = accumulatedNgoReqs.includes(i.id);
@@ -3054,7 +3057,7 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
       <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
         <CardHeader className="border-b border-slate-100 pb-4">
-          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.28</Badge></div>
+          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.30</Badge></div>
         </CardHeader>
         <CardContent className="space-y-8 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3085,7 +3088,6 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
                角色档案 
                {mode === 'multi' && <Badge variant="destructive">多人模式 (已锁定身份)</Badge>}
            </h2>
-           {/* FIX: 问题1 - 档案页返回 Bug 修复, 强制返回 viewMode: 'game' 而不是 'intro' */}
            <Button onClick={()=>setViewMode(mode==='single' ? 'game' : 'game')} variant="outline" disabled={mode==='multi'}><Reply className="mr-2" size={16}/>返回游戏</Button>
          </div>
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -3180,17 +3182,17 @@ function SunLinkESGSimV7_15_Responsive({ assignedRole, mode, onExit, roomNumber,
   );
 }
 
-function SunLinkV7_28_Fixed() {
+function SunLinkV7_30_CDN() {
     return (
         <GameEntryWrapper>
-            <SunLinkESGSimV7_15_Responsive />
+            <SunLinkESGSimV7_30_CDN />
         </GameEntryWrapper>
     );
 }
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_28_Fixed />
+      		    <SunLinkV7_30_CDN />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
