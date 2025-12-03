@@ -396,7 +396,7 @@ const GameEntryWrapper = ({ children }) => {
           console.log("LeanCloud SDK Loaded via CDN");
           try {
              const AV = window.AV;
-             // 修改2: 修正LeanCloud配置
+             // 修改点 2: 严格匹配用户提供的 LeanCloud 配置，解决 403 错误
              if (!AV.applicationId) {
                  AV.init({
                     appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
@@ -431,9 +431,11 @@ const GameEntryWrapper = ({ children }) => {
   }, [sdkReady]);
 
   const enterRoomReal = async () => {
+      // 确保 SDK 已加载
       if (!sdkReady || !window.AV) return alert("系统正在初始化，请稍等两秒再试...");
       const AV = window.AV;
 
+      // 强制类型转换，防止字符串/数字混用导致查询失败
       const rNum = parseInt(roomNumber); 
       if (!playerName.trim()) return alert("请输入昵称");
       if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
@@ -441,17 +443,21 @@ const GameEntryWrapper = ({ children }) => {
       try {
           setLobbyStatus('waiting');
           
+          // 清理旧订阅
           if (liveQuerySub) {
               liveQuerySub.unsubscribe();
               setLiveQuerySub(null);
           }
 
+          // 1. 基础查询，检查连接是否畅通
           const query = new AV.Query('GamePlayer');
           query.equalTo('room', rNum); 
           query.ascending('createdAt');
           
+          // 如果这里报错，会直接跳到 catch，提示网络错误
           const existingPlayers = await query.find(); 
           
+          // 检查是否已经有同名玩家（重连逻辑）
           const existingMe = existingPlayers.find(p => p.get('name') === playerName);
           if (existingMe) {
              setMyRole(existingMe.get('role')); 
@@ -459,12 +465,14 @@ const GameEntryWrapper = ({ children }) => {
              setMyRole(null); 
           }
 
+          // 更新本地列表
           setRoomPlayers(existingPlayers.map(p => ({
               name: p.get('name'),
               role: p.get('role'),
               id: p.id
           })));
 
+          // 2. 尝试建立 LiveQuery 订阅
           try {
               const liveQuery = new AV.Query('GamePlayer');
               liveQuery.equalTo('room', rNum);
@@ -481,6 +489,7 @@ const GameEntryWrapper = ({ children }) => {
 
       } catch (error) {
           console.error("LeanCloud Connection Error:", error);
+          // 给出更明确的错误提示
           let errMsg = "网络连接失败，请重试。";
           if (error.code === 0) errMsg = "网络不可用，请检查您的网络设置。";
           if (error.code === 403) errMsg = "访问被拒绝，可能是AppKey配置错误。";
@@ -545,7 +554,7 @@ const GameEntryWrapper = ({ children }) => {
 
           await player.save();
           setMyRole(roleToSelect);
-          manualRefreshLobby(); 
+          manualRefreshLobby(); // 立即刷新一次
       } catch (e) {
           console.error("选角失败", e);
           alert(`选角失败: ${e.message || "网络错误"}`);
@@ -576,38 +585,40 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   if (appState === 'cover') {
-      // 修改1: 首页海报重构。压缩上下空间，版权上移。
       return (
-        <div className="min-h-screen flex flex-col bg-slate-900 text-white p-6 relative overflow-hidden font-sans">
+        <div className="min-h-screen flex flex-col justify-between bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=2000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-30" />
             
-            {/* 核心内容区：利用 flex-grow 居中，同时 margin-top 为负值稍微向上提 */}
-            <div className="flex-grow flex flex-col items-center justify-center w-full max-w-4xl mx-auto z-10 relative -mt-16 md:-mt-24">
-                <div className="mb-6 flex justify-center relative">
-                    <div className="w-20 h-20 bg-blue-500 rounded-full blur-[50px] absolute opacity-50 animate-pulse"></div>
-                    <Activity size={70} className="text-blue-400 relative z-10" />
+            {/* 顶部占位 */}
+            <div className="w-full h-10"></div>
+
+            {/* 中部核心内容 - 向上偏移 */}
+            <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto z-10 relative -mt-20 md:-mt-32">
+                <div className="mb-8 flex justify-center relative">
+                    <div className="w-24 h-24 bg-blue-500 rounded-full blur-[60px] absolute opacity-50 animate-pulse"></div>
+                    <Activity size={80} className="text-blue-400 relative z-10" />
                 </div>
-                <div className="text-center space-y-3 mb-6">
-                    <h1 className="text-4xl md:text-7xl font-black tracking-tight text-white drop-shadow-lg leading-tight">SunLink</h1>
-                    <h1 className="text-3xl md:text-6xl font-black tracking-tight text-blue-300 drop-shadow-lg leading-tight">ESG Simulator</h1>
-                    <div className="h-1 w-16 bg-blue-500 mx-auto mt-3 rounded-full"></div>
+                <div className="text-center space-y-4 mb-8">
+                    <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white drop-shadow-lg leading-tight">SunLink</h1>
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tight text-blue-300 drop-shadow-lg leading-tight">ESG Simulator</h1>
+                    <div className="h-1 w-20 bg-blue-500 mx-auto mt-4 rounded-full"></div>
                 </div>
-                <div className="text-center space-y-1 mb-8">
-                    <h2 className="text-lg md:text-2xl font-light text-slate-200 tracking-wide">国际工程项目ESG</h2>
-                    <h2 className="text-lg md:text-2xl font-light text-slate-200 tracking-wide">多角色全流程模拟</h2>
+                <div className="text-center space-y-2 mb-12">
+                    <h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide">国际工程项目ESG</h2>
+                    <h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide">多角色全流程模拟</h2>
                 </div>
                 
-                <div className="flex flex-col md:flex-row gap-4 justify-center w-full max-w-2xl px-4">
-                    <Button size="lg" className="flex-1 h-auto py-4 text-lg bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-1" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
-                        <Smartphone size={24} />
+                <div className="flex flex-col md:flex-row gap-6 justify-center w-full max-w-2xl px-4">
+                    <Button size="lg" className="flex-1 h-auto py-6 text-lg bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
+                        <Smartphone size={28} />
                         <div className="flex flex-col items-center">
                             <span>单机体验版</span>
                             <span className="text-xs opacity-70 font-normal">一人分饰五角·自由探索</span>
                         </div>
                     </Button>
                     
-                    <Button size="lg" className="flex-1 h-auto py-4 text-lg bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-1" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
-                        <Network size={24} />
+                    <Button size="lg" className="flex-1 h-auto py-6 text-lg bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
+                        <Network size={28} />
                         <div className="flex flex-col items-center">
                             <span>多人互动版</span>
                             <span className="text-xs opacity-70 font-normal">5人实时组队·真实决策</span>
@@ -616,8 +627,8 @@ const GameEntryWrapper = ({ children }) => {
                 </div>
             </div>
 
-            {/* 底部版权信息 - 上移 20% (pb-16 md:pb-8) */}
-            <div className="z-10 text-center space-y-1 opacity-80 w-full px-4 pb-16 md:pb-8 text-slate-400 shrink-0">
+            {/* 修改点 1: 底部版权信息位置整体上移 20% (增加 mb-[20vh]) */}
+            <div className="z-10 text-center space-y-1 opacity-80 w-full px-4 pb-4 mb-[20vh] text-slate-400">
                 <div className="text-sm font-light text-slate-300">开发单位：天津大学全球工程经营实验室</div>
                 <div className="text-xs font-light">Developed by Tianjin University Global Infrastructure Project Center</div>
                 <div className="text-xs font-mono">联系人：傅老师 yongcheng_fu@tju.edu.cn</div>
@@ -775,7 +786,7 @@ const SummaryForm = ({ role, onSubmit }) => {
   };
 
   return (
-    <div className="space-y-3 pb-24 md:pb-10"> 
+    <div className="space-y-3 pb-24 md:pb-10">
        <div className="text-xs font-bold text-slate-700">请填写项目完工总结:</div>
        <div className="space-y-1">
           <span className="text-xs font-medium text-slate-600">项目优点/成功之处:</span>
@@ -2247,25 +2258,9 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
           ))}
         </div>
       </div>
-      <div className="hidden md:flex items-center gap-2 text-[10px] font-mono">
-         {Object.keys(INITIAL_STATES).map(k => (
-           <div key={k} className={`flex flex-col items-center leading-none px-2 py-1 rounded border relative ${
-               k==='owner'?'bg-blue-50 border-blue-100':
-               k==='gov'?'bg-green-50 border-green-100':
-               k==='mdb'?'bg-purple-50 border-purple-100':
-               k==='epc'?'bg-orange-50 border-orange-100':
-               'bg-red-50 border-red-100'
-           }`}>
-             <span className="text-slate-500 scale-75 mb-0.5">{INITIAL_STATES[k].label}声誉</span>
-             <span className={`font-black text-slate-900 ${playerState[k].reputation<80?'text-red-600':''}`}>
-               {playerState[k].reputation}分
-             </span>
-             {floatEffects.filter(e => e.role === k && !['money','cost','benefit'].includes(e.id)).map(e => (
-                <FloatingText key={e.id} value={e.value} />
-             ))}
-           </div>
-         ))}
-      </div>
+      
+      {/* 修改点 5: 移除了原先顶部的声誉状态栏 */}
+
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode==='roles'?'game':'roles')}>
           {viewMode==='roles' ? <Reply className="mr-2" size={16}/> : <BookOpen className="mr-2" size={16}/>}
@@ -2280,24 +2275,10 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
   );
 
   const renderRoleColumn = (roleKey, title, Icon, colorClass) => {
-    // 修改3: 修正亮灯逻辑，stage=4 裁决结果展示时，只有 ngo 和 protestHandler 亮灯
-    let isActive = activeRole === roleKey || activeRole === 'all';
-    
-    // 特殊情况处理：S4 裁决结果展示阶段
-    if (stage === 4 && protestState === 'ruling_result_display') {
-        isActive = (roleKey === 'ngo' || roleKey === protestHandler);
-    }
-    // 特殊情况处理：S5 裁决结果展示阶段
-    else if (stage === 5 && inspectionState === 's5_ruling_result') {
-        isActive = (roleKey === 'owner' || roleKey === 'epc');
-    }
-    // 通用危机处理高亮逻辑 (当 activeRole 指向特定角色时，该角色自然亮起)
-    else if (stage === 4) {
-        // 保持原有的一些辅助高亮逻辑，但要受 activeRole 控制
-        if (['gov','ngo',protestHandler].includes(roleKey)) {
-             // 这里不做强制覆盖，依然依赖 activeRole 变化
-        }
-    }
+    const isActive = activeRole === roleKey || activeRole === 'all' 
+       || (stage===4 && ['gov','ngo',protestHandler].includes(roleKey))
+       || (stage===4 && protestState==='ruling_result_display' && (roleKey==='ngo' || roleKey===protestHandler))
+       || (stage===5 && inspectionState==='s5_ruling_result' && (roleKey==='owner' || roleKey==='epc'));
 
     const state = playerState[roleKey];
     
@@ -2704,6 +2685,16 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
          <div className="space-y-2 border-t-4 border-red-500 pt-2 bg-red-50 p-2 rounded border border-red-100 flex flex-col h-full">
             <CrisisContextBox crisis={currentCrisis} />
             <div className="font-bold text-red-700 text-center border-b border-red-200 pb-1 text-xs shrink-0">{govRulingCount >= 2 ? "第3次: 终局裁决" : `第${govRulingCount + 1}次裁决`}</div>
+            
+            {/* 修改点 4: 增加显示本轮申诉理由的区域 */}
+            {(partyAppealReason || ngoAppealReason) && (
+                <div className="bg-yellow-50 p-2 rounded border border-yellow-200 text-xs mb-1 shrink-0 animate-in fade-in slide-in-from-top-2">
+                    <div className="font-bold text-slate-700 mb-1 border-b border-yellow-200 pb-1">本轮申诉理由:</div>
+                    {partyAppealReason && <div className="mb-1"><span className="font-bold text-blue-600">责任方:</span> {partyAppealReason}</div>}
+                    {ngoAppealReason && <div><span className="font-bold text-red-600">公众:</span> {ngoAppealReason}</div>}
+                </div>
+            )}
+
             <div className="text-xs mb-1 bg-white border border-red-100 rounded p-1 flex-1 overflow-y-auto min-h-0">
                <div className="grid grid-cols-3 gap-1 font-bold border-b pb-1 mb-1 text-center text-slate-600"><div>轮次</div><div>公众/责任方</div><div>裁决</div></div>
                <div className="grid grid-cols-3 gap-1 py-1 border-b border-slate-50 last:border-0 text-center items-center">
@@ -2711,7 +2702,6 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                    <div className="font-bold">${ngoDemandAmount} / ${offerAmount}</div>
                    <div className="text-red-600 italic">待定</div>
                </div>
-               {/* 修改4: 在裁决历史中展示申诉理由 */}
                {govRulingHistory.map(h => (
                    <div key={h.count} className="border-b border-slate-100 pb-1 mb-1 opacity-70">
                        <div className="grid grid-cols-3 gap-1 py-1 text-center items-center">
@@ -2719,21 +2709,13 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
                        </div>
                        {(h.appealReasonParty || h.appealReasonNgo) && (
                            <div className="text-[10px] text-left px-1 text-slate-500 bg-slate-50 p-1 rounded mt-1">
-                               {h.appealReasonParty && <div className="mb-0.5"><span className="font-bold text-blue-500">责任方申诉:</span> {h.appealReasonParty}</div>}
-                               {h.appealReasonNgo && <div><span className="font-bold text-red-500">公众申诉:</span> {h.appealReasonNgo}</div>}
+                               {h.appealReasonParty && <div className="mb-0.5"><span className="font-bold text-blue-500">责任方:</span> {h.appealReasonParty}</div>}
+                               {h.appealReasonNgo && <div><span className="font-bold text-red-500">公众:</span> {h.appealReasonNgo}</div>}
                            </div>
                        )}
                    </div>
                ))}
             </div>
-            {/* 修改4 补充: 显示当前轮次的申诉理由 (如果不是第一轮) */}
-            {(partyAppealReason || ngoAppealReason) && (
-                <div className="text-[10px] bg-yellow-50 p-1 border border-yellow-100 rounded text-slate-600 shrink-0 mb-1">
-                   {partyAppealReason && <div className="mb-0.5"><span className="font-bold">责任方申诉:</span> {partyAppealReason}</div>}
-                   {ngoAppealReason && <div><span className="font-bold">公众申诉:</span> {ngoAppealReason}</div>}
-                </div>
-            )}
-
             <div className="space-y-0.5 mt-1 shrink-0"><span className="text-xs font-bold text-slate-700">裁决赔偿额($万):</span><Input type="number" className="h-12 md:h-6 bg-white text-sm" value={govRulingAmount} onChange={e=>setGovRulingAmount(e.target.value)}/></div>
             <div className="space-y-0.5 mt-1 shrink-0"><span className="text-xs font-bold text-slate-700">裁决理由(可选):</span><Input type="text" className="h-12 md:h-6 bg-white text-sm" value={govRulingReason} onChange={e=>setGovRulingReason(e.target.value)}/></div>
             <Button size="sm" className="w-full bg-red-600 hover:bg-red-700 h-12 md:h-8 text-sm mt-1 shrink-0 font-bold" onClick={()=>protestGovRuling(govRulingAmount)} disabled={govRulingAmount === "" || Number(govRulingAmount) < 0}>{govRulingCount >= 2 ? "发布终局裁决 (强制执行)" : "发布裁决"}</Button>
@@ -3197,33 +3179,85 @@ function SunLinkESGSimV7_30_CDN({ assignedRole, mode, onExit, roomNumber, player
             )}
          </div>
 
+         {/* 修改点 3: 底部导航灯光逻辑 - 仅公众和责任方在裁决阶段亮灯 */}
          <div className="h-16 bg-white border-t border-slate-200 shrink-0 grid grid-cols-6 gap-1 p-1 pb-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-30">
-            <MobileNavBtn role="owner" label="业主" icon={User} active={mobileTab} onClick={setMobileTab} alert={financialAlerts.owner} isTurn={activeRole === 'owner' || activeRole === 'all' || (stage===4 && protestState==='ruling_result_display' && protestHandler==='owner') || (stage===5 && inspectionState==='s5_ruling_result')} />
-            <MobileNavBtn role="gov" label="政府" icon={Landmark} active={mobileTab} onClick={setMobileTab} isTurn={activeRole === 'gov' || activeRole === 'all'} />
-            <MobileNavBtn role="mdb" label="银行" icon={Globe} active={mobileTab} onClick={setMobileTab} isTurn={activeRole === 'mdb' || activeRole === 'all'} />
-            <MobileNavBtn role="epc" label="EPC" icon={Building2} active={mobileTab} onClick={setMobileTab} alert={financialAlerts.epc} isTurn={activeRole === 'epc' || activeRole === 'all' || (stage===4 && protestState==='ruling_result_display' && protestHandler==='epc') || (stage===5 && inspectionState==='s5_ruling_result')} />
-            <MobileNavBtn role="ngo" label="公众" icon={Users} active={mobileTab} onClick={setMobileTab} isTurn={activeRole === 'ngo' || activeRole === 'all' || (stage===4 && protestState==='ruling_result_display')} />
+            <MobileNavBtn 
+              role="owner" label="业主" icon={User} active={mobileTab} onClick={setMobileTab} alert={financialAlerts.owner} 
+              isTurn={activeRole === 'owner' || activeRole === 'all' || (stage===4 && protestState==='ruling_result_display' && protestHandler==='owner') || (stage===5 && inspectionState==='s5_ruling_result')} 
+            />
+            <MobileNavBtn 
+              role="gov" label="政府" icon={Landmark} active={mobileTab} onClick={setMobileTab} 
+              isTurn={activeRole === 'gov' || activeRole === 'all'} 
+            />
+            <MobileNavBtn 
+              role="mdb" label="银行" icon={Globe} active={mobileTab} onClick={setMobileTab} 
+              isTurn={activeRole === 'mdb' || activeRole === 'all'} 
+            />
+            <MobileNavBtn 
+              role="epc" label="EPC" icon={Building2} active={mobileTab} onClick={setMobileTab} alert={financialAlerts.epc} 
+              isTurn={activeRole === 'epc' || activeRole === 'all' || (stage===4 && protestState==='ruling_result_display' && protestHandler==='epc') || (stage===5 && inspectionState==='s5_ruling_result')} 
+            />
+            <MobileNavBtn 
+              role="ngo" label="公众" icon={Users} active={mobileTab} onClick={setMobileTab} 
+              isTurn={activeRole === 'ngo' || activeRole === 'all' || (stage===4 && protestState==='ruling_result_display')} 
+            />
             <MobileNavBtn role="log" label="日志" icon={ScrollText} active={mobileTab} onClick={setMobileTab} />
          </div>
       </div>
 
-      <div className="hidden md:grid h-44 grid-cols-12 gap-2 px-2 pb-2 shrink-0">
+      {/* 修改点 5: 底部布局重构 - 左侧图片，右侧上方声誉栏，右侧下方公告栏 */}
+      <div className="hidden md:grid h-48 grid-cols-12 gap-2 px-2 pb-2 shrink-0">
+        {/* 左侧：项目场景图 */}
         <div className="col-span-4 bg-slate-800 rounded-sm relative overflow-hidden flex flex-col items-center justify-center text-white shadow-inner group border border-slate-600 hidden md:flex">
            {renderScene()}
            <div className="z-20 text-center p-2 relative bottom-0 w-full bg-black/40 backdrop-blur-sm mt-auto border-t border-white/10"><h3 className="font-bold text-sm flex items-center justify-center gap-2 mb-0.5 text-white drop-shadow-md"><MapPin size={14} className="text-blue-400"/> {stage===1 ? "项目规划与选址 (立项审批)" : stage===2 ? "项目融资 (ESCP签署)" : stage===3 ? "EPC合同谈判" : s4State.includes('crisis') ? "施工现场 (紧急状态)" : (stage===5 || stage===6) ? "验收总结阶段" : "建设现场"}</h3><div className="text-[10px] text-slate-200 inline-block">{s4State.includes('crisis') ? "⚠️ 警报: 危机处理中" : (stage===5 || stage===6) ? "状态: 验收总结" : "状态: 正常推进"}</div></div>
         </div>
-        <div className="col-span-12 md:col-span-8 bg-white rounded-sm border border-slate-300 shadow-sm flex flex-col overflow-hidden">
-           <div className="bg-slate-100 px-3 py-1.5 text-xs font-bold border-b border-slate-200 flex justify-between items-center shrink-0 text-slate-700"><div className="flex items-center gap-2"><Megaphone size={14}/> 项目公告栏</div>{stage===4 && currentCrisis && <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200 animate-pulse">当前事件: {currentCrisis.title}</span>}</div>
-           <div className="flex-1 overflow-y-auto p-2 font-mono text-[11px] space-y-1.5" ref={scrollRef}>
-              {[...logs].reverse().map((l,i) => (<div key={i} className={`border-l-4 pl-2 py-0.5 text-sm rounded-r-sm ${l.type==='red'?'text-red-800 border-red-400 bg-red-50':l.type==='green'?'text-green-800 border-green-400 bg-green-50':l.type==='blue'?'text-blue-800 border-blue-400 bg-blue-50':l.type==='purple'?'text-purple-800 border-purple-400 bg-purple-50':'text-slate-700 border-slate-300 bg-slate-50'}`}><span className="opacity-60 mr-2 text-xs font-bold text-slate-500">[{l.time}]</span>{l.msg}</div>))}
-           </div>
+        
+        {/* 右侧：声誉栏 + 公告栏 */}
+        <div className="col-span-12 md:col-span-8 flex flex-col gap-2 overflow-hidden">
+            
+            {/* 上方：声誉状态栏 (新位置) */}
+            <div className="h-12 bg-white rounded-sm border border-slate-200 shadow-sm flex items-center px-2 justify-between shrink-0">
+               {Object.keys(INITIAL_STATES).map(k => (
+                 <div key={k} className={`flex items-center gap-2 px-3 py-1 rounded border ${
+                     k==='owner'?'bg-blue-50 border-blue-100':
+                     k==='gov'?'bg-green-50 border-green-100':
+                     k==='mdb'?'bg-purple-50 border-purple-100':
+                     k==='epc'?'bg-orange-50 border-orange-100':
+                     'bg-red-50 border-red-100'
+                 } relative`}>
+                   <div className={`text-xs font-bold ${
+                       k==='owner'?'text-blue-700':
+                       k==='gov'?'text-green-700':
+                       k==='mdb'?'text-purple-700':
+                       k==='epc'?'text-orange-700':
+                       'text-red-700'
+                   }`}>{INITIAL_STATES[k].label}</div>
+                   <div className="h-4 w-[1px] bg-slate-300 mx-1"></div>
+                   <div className={`text-xs font-black ${playerState[k].reputation<80?'text-red-600':'text-slate-800'}`}>
+                     {playerState[k].reputation}分
+                   </div>
+                   {floatEffects.filter(e => e.role === k && !['money','cost','benefit'].includes(e.id)).map(e => (
+                      <FloatingText key={e.id} value={e.value} />
+                   ))}
+                 </div>
+               ))}
+            </div>
+
+            {/* 下方：项目公告栏 */}
+            <div className="bg-white rounded-sm border border-slate-300 shadow-sm flex flex-col overflow-hidden flex-1">
+               <div className="bg-slate-100 px-3 py-1.5 text-xs font-bold border-b border-slate-200 flex justify-between items-center shrink-0 text-slate-700"><div className="flex items-center gap-2"><Megaphone size={14}/> 项目公告栏</div>{stage===4 && currentCrisis && <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200 animate-pulse">当前事件: {currentCrisis.title}</span>}</div>
+               <div className="flex-1 overflow-y-auto p-2 font-mono text-[11px] space-y-1.5" ref={scrollRef}>
+                  {[...logs].reverse().map((l,i) => (<div key={i} className={`border-l-4 pl-2 py-0.5 text-sm rounded-r-sm ${l.type==='red'?'text-red-800 border-red-400 bg-red-50':l.type==='green'?'text-green-800 border-green-400 bg-green-50':l.type==='blue'?'text-blue-800 border-blue-400 bg-blue-50':l.type==='purple'?'text-purple-800 border-purple-400 bg-purple-50':'text-slate-700 border-slate-300 bg-slate-50'}`}><span className="opacity-60 mr-2 text-xs font-bold text-slate-500">[{l.time}]</span>{l.msg}</div>))}
+               </div>
+            </div>
         </div>
       </div>
     </div>
   );
 }
 
-function SunLinkV7_34_Fixes() {
+function SunLinkV7_34_FinalFix() {
     return (
         <GameEntryWrapper>
             <SunLinkESGSimV7_30_CDN />
@@ -3233,7 +3267,7 @@ function SunLinkV7_34_Fixes() {
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_34_Fixes />
+      		    <SunLinkV7_34_FinalFix />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
