@@ -314,6 +314,9 @@ const RISK_TABLE = [
   { level: '低风险', basis: '项目可能产生极少或不存在环境和社会不利影响', req: '不要求进行环境和社会评估' }
 ];
 
+// --- 修改点 5: 底部灯光逻辑 ---
+// 只有当 stage === 4 && protestState === 'ruling_result_display' 时，才强制限制亮灯为 NGO 和 责任方
+// 其他情况走默认逻辑
 const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn }) => {
   const isActive = active === role;
   const colorClass = role === 'owner' ? 'text-blue-600' : 
@@ -356,7 +359,7 @@ const GameEntryWrapper = ({ children }) => {
   const [myRole, setMyRole] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0); 
   const [liveQuerySub, setLiveQuerySub] = useState(null);
-  const [isOfflineMode, setIsOfflineMode] = useState(false); // 新增：离线模式状态
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   // --- Dynamic Script Loading ---
   useEffect(() => {
@@ -365,7 +368,6 @@ const GameEntryWrapper = ({ children }) => {
           return;
       }
       const script = document.createElement('script');
-      // 使用更稳定的 CDN 版本
       script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js';
       script.async = true;
       script.onload = () => {
@@ -373,17 +375,16 @@ const GameEntryWrapper = ({ children }) => {
           try {
              const AV = window.AV;
              if (!AV.applicationId) {
-                 // 修改点 2: 增加 serverURLs 支持，且做好错误兼容
                  AV.init({
                     appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
                     appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
-                    serverURLs: "https://api.sunlink-gipc.com" // 新版写法
+                    serverURLs: "https://api.sunlink-gipc.com"
                  });
              }
              setSdkReady(true);
           } catch (e) {
              console.error("AV Init failed:", e);
-             setSdkReady(true); // 即使失败也标记 Ready，后续 handle 错误
+             setSdkReady(true); 
           }
       };
       script.onerror = () => {
@@ -397,22 +398,18 @@ const GameEntryWrapper = ({ children }) => {
       if (!sdkReady || isOfflineMode) return;
       const AV = window.AV;
       if (!AV) return;
-      
       const fetchOnlineCount = async () => {
            try {
                const query = new AV.Query('GamePlayer');
                const count = await query.count();
                setOnlineCount(count);
-           } catch (e) {
-               // 忽略错误
-           }
+           } catch (e) {}
       };
       fetchOnlineCount();
       const timer = setInterval(fetchOnlineCount, 15000);
       return () => clearInterval(timer);
   }, [sdkReady, isOfflineMode]);
 
-  // 模拟本地存储，用于离线模式
   const mockStorage = useRef({
       players: [],
       actions: []
@@ -425,7 +422,6 @@ const GameEntryWrapper = ({ children }) => {
 
       if (isOfflineMode) {
           setLobbyStatus('waiting');
-          // 离线模式直接进入空房间
           setRoomPlayers([]);
           return;
       }
@@ -437,7 +433,6 @@ const GameEntryWrapper = ({ children }) => {
           setLobbyStatus('waiting');
           if (liveQuerySub) { liveQuerySub.unsubscribe(); setLiveQuerySub(null); }
 
-          // 尝试连接
           const query = new AV.Query('GamePlayer');
           query.equalTo('room', rNum); 
           query.ascending('createdAt');
@@ -463,14 +458,13 @@ const GameEntryWrapper = ({ children }) => {
 
       } catch (error) {
           console.error("LC Error:", error);
-          // 修改点 2: 错误处理，降级为离线模式
           if (error.code === 403) {
               const confirmOffline = window.confirm("无法连接云端服务器（403 跨域限制）。\n是否切换到【离线演示模式】？\n\n(注：离线模式下无法与其他玩家真实联机，但可以体验所有界面流程)");
               if (confirmOffline) {
                   setIsOfflineMode(true);
                   setLobbyStatus('waiting');
                   setRoomPlayers([]);
-                  alert("已切换到离线演示模式。所有数据将存储在本地内存中。");
+                  alert("已切换到离线演示模式。");
               } else {
                   setLobbyStatus('login');
               }
@@ -483,7 +477,6 @@ const GameEntryWrapper = ({ children }) => {
 
   const manualRefreshLobby = async () => {
       if (isOfflineMode) {
-          // 离线刷新：从 mockStorage 读取
           setRoomPlayers([...mockStorage.current.players]);
           return;
       }
@@ -501,8 +494,6 @@ const GameEntryWrapper = ({ children }) => {
 
   const selectRole = async (roleToSelect) => {
       if (myRole) return; 
-      
-      // 离线模式逻辑
       if (isOfflineMode) {
           if (mockStorage.current.players.find(p => p.role === roleToSelect)) {
               alert("角色已被占用(Mock)"); return;
@@ -513,7 +504,6 @@ const GameEntryWrapper = ({ children }) => {
           return;
       }
 
-      // 在线逻辑
       const AV = window.AV;
       const isTakenLocal = roomPlayers.some(p => p.role === roleToSelect);
       if (isTakenLocal) { alert("该角色已被抢先一步！"); return; }
@@ -523,20 +513,16 @@ const GameEntryWrapper = ({ children }) => {
           checkQuery.equalTo('room', parseInt(roomNumber));
           checkQuery.equalTo('role', roleToSelect);
           const existingRole = await checkQuery.first();
-
           if (existingRole) { alert("选角失败：云端显示该角色刚被占用。"); manualRefreshLobby(); return; }
-
           const GamePlayer = AV.Object.extend('GamePlayer');
           const player = new GamePlayer();
           player.set('room', parseInt(roomNumber));
           player.set('name', playerName);
           player.set('role', roleToSelect);
-          
           const acl = new AV.ACL();
           acl.setPublicReadAccess(true);
           acl.setPublicWriteAccess(true);
           player.setACL(acl);
-
           await player.save();
           setMyRole(roleToSelect);
           manualRefreshLobby(); 
@@ -573,12 +559,12 @@ const GameEntryWrapper = ({ children }) => {
                     </Button>
                 </div>
             </div>
-            {/* 修改点 1: 底部版权信息位置下移，由 mb-[20vh] 改为 mb-[10vh] */}
-            <div className="z-10 text-center space-y-1 opacity-80 w-full px-4 pb-4 mb-[10vh] text-slate-400">
-                <div className="text-sm font-light text-slate-300">开发单位：天津大学全球工程经营实验室</div>
-                <div className="text-xs font-light">Developed by Tianjin University Global Infrastructure Project Center</div>
-                <div className="text-xs font-mono">联系人：傅老师 yongcheng_fu@tju.edu.cn</div>
-                <div className="text-xs font-mono pt-1">© 2025 Tianjin University GIPC. All Rights Reserved.</div>
+            {/* 修改点 1: 首页海报底部开发单位、联系人和版权说明的字体增大20% */}
+            <div className="z-10 text-center space-y-2 opacity-80 w-full px-4 pb-4 mb-[10vh] text-slate-400">
+                <div className="text-base font-light text-slate-300">开发单位：天津大学全球工程经营实验室</div>
+                <div className="text-sm font-light">Developed by Tianjin University Global Infrastructure Project Center</div>
+                <div className="text-sm font-mono">联系人：傅老师 yongcheng_fu@tju.edu.cn</div>
+                <div className="text-sm font-mono pt-1">© 2025 Tianjin University GIPC. All Rights Reserved.</div>
             </div>
         </div>
       );
@@ -721,7 +707,7 @@ const CrisisContextBox = ({ crisis }) => {
 // 主游戏组件
 // ------------------------------------------------------------------
 
-function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, playerList, isOfflineMode }) {
+function SunLinkESGSimV7_36_Final({ assignedRole, mode, onExit, roomNumber, playerList, isOfflineMode }) {
   const [viewMode, setViewMode] = useState('intro'); 
   useEffect(() => { if (mode === 'multi') setViewMode('roles'); }, [mode]);
   const [gameTime, setGameTime] = useState(0);
@@ -828,7 +814,63 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
   useEffect(() => { if (s4State === 'construction_start' && s4Countdown > 0 && !isTransitioning) { const timer = setTimeout(() => setS4Countdown(c => c - 1), 1000); return () => clearTimeout(timer); } else if (s4State === 'construction_start' && s4Countdown === 0 && !isTransitioning) { startNextCrisis(crisisQueue, 0); } }, [s4State, s4Countdown, crisisQueue, isTransitioning]);
   useEffect(() => { if (activeRole !== 'all' && ['owner', 'gov', 'mdb', 'epc', 'ngo'].includes(activeRole)) { if (mode === 'single') setMobileTab(activeRole); } }, [activeRole, mode]);
 
-  // Mock Sync for Offline Mode
+  // --- 修改点 3: 离线模式机器人 (Auto-Play) ---
+  // 当 activeRole 不是自己时，等待 2 秒后自动行动
+  useEffect(() => {
+      if (mode === 'multi' && isOfflineMode && activeRole !== 'all' && activeRole !== assignedRole && !isTransitioning) {
+          const timer = setTimeout(() => {
+              simulateOfflineBotMove();
+          }, 1500);
+          return () => clearTimeout(timer);
+      }
+  }, [activeRole, isOfflineMode, mode, assignedRole, isTransitioning, s1State, s2State, s3State, s4State, protestState]);
+
+  const simulateOfflineBotMove = () => {
+      // S1
+      if (stage === 1) {
+          if (s1State === 'ngo_eval') s1NgoEval(false); // NGO 自动无异议
+          else if (s1State === 'gov_review') s1GovReview(true); // 政府自动批准
+          else if (s1State === 'owner_draft') s1OwnerSubmit(); // 业主自动提交
+      }
+      // S2
+      else if (stage === 2) {
+          if (s2State === 'risk_assess') s2MdbRisk('中风险'); // 银行自动评级
+          else if (s2State === 'owner_escp') s2OwnerEscp();
+          else if (s2State === 'gov_check') s2GovCheck(true);
+          else if (s2State === 'mdb_sign') s2MdbSign(true);
+      }
+      // S3
+      else if (stage === 3) {
+          if (s3State === 'owner_tender') { setTenderLimitPrice(2000); s3OwnerTender(); }
+          else if (s3State === 'epc_bid') { setEpcBid({price: 1800}); s3EpcBid(); }
+          else if (s3State === 'owner_eval') s3OwnerEval(true);
+          else if (s3State === 'epc_contract_sign') s3EpcSignConfirm();
+      }
+      // S4
+      else if (stage === 4) {
+          if (s4State === 's4_planning') s4EpcPlan();
+          else if (s4State === 's4_audit') s4OwnerAudit();
+          else if (s4State === 'epc_audit_pass_confirm') s4EpcConfirmAuditPass();
+          else if (s4State === 's4_resolution') { /* wait for transition */ }
+          else if (s4State.includes('crisis')) {
+               // 危机处理的自动流转较复杂，简化处理
+               if (protestState === 'ngo_decide') protestNgoDecide(false); // 默认不索赔跳过
+               else if (protestState === 'owner_route') protestOwnerRoute(true);
+               else if (protestState === 'party_negotiate') protestPartyNegotiate(50);
+               else if (protestState === 'ngo_response') protestNgoResponse(true);
+               else if (protestState === 'gov_ruling') protestGovRuling(50);
+               else if (protestState === 'bank_decision') protestBankDecision(false);
+               else if (protestState === 'owner_pay_decision') protestOwnerPayDecision(true);
+          }
+      }
+      // S5
+      else if (stage === 5) {
+          if (inspectionState === 'epc_apply') s5EpcApply();
+          else if (inspectionState === 'owner_decide_pay') { setOwnerPayProposal("100"); setOwnerFeedback("Good"); s5OwnerSubmitProposal(); }
+          else if (inspectionState === 'epc_review_proposal') s5EpcReview(true);
+      }
+  };
+
   const offlineSync = (type, payload) => {
      if (type === 'SYNC_LOG') setLogs(prev => [...prev, payload]);
      if (type === 'SYNC_STATE_FULL') {
@@ -842,7 +884,6 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
          if(data.s4State) setS4State(data.s4State);
          if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
          if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
-         // Fix: Sync appeal reasons
          if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
          if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
      }
@@ -876,7 +917,6 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
                   if(data.s4State) setS4State(data.s4State);
                   if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
                   if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
-                  // Fix: Sync appeal reasons
                   if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
                   if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
               }
@@ -905,7 +945,7 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
       if (mode !== 'multi') return;
       syncToCloud('SYNC_STATE_FULL', {
           stage, activeRole, playerState, s1State, s2State, s3State, s4State, lastActionInfo, govRulingHistory,
-          partyAppealReason, ngoAppealReason, // Fix: Include appeal reasons in sync
+          partyAppealReason, ngoAppealReason, 
           ...overrides
       });
   };
@@ -1368,13 +1408,11 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
      }
   };
 
-  // Fix: Included partyAppealReason and ngoAppealReason in broadcast
   const submitPartyReaction = (type, appealVal, appealReas) => {
       setPartyResponse(type); setOfferAmount(type === 'accept' ? Number(govRulingAmount) : Number(appealVal));
       if (type === 'appeal') { 
           setPartyAppealReason(appealReas); 
           if(appealReas) addLog(`责任方申诉理由: ${appealReas}`, 'blue');
-          // 确保在等待时状态已同步
           broadcastState({ partyAppealReason: appealReas });
       } else {
           broadcastState({});
@@ -1623,7 +1661,7 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
   const renderTopBar = () => (
     <div className="h-14 bg-white border-b border-slate-200 flex justify-between items-center px-4 shrink-0 shadow-sm z-20 relative">
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2"><Activity className="text-blue-600" /><span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.35</span>{mode === 'multi' && assignedRole && <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>}{isOfflineMode && <Badge variant="destructive" className="ml-2 text-xs"><WifiOff size={10} className="mr-1"/>离线演示</Badge>}</div>
+        <div className="flex items-center gap-2"><Activity className="text-blue-600" /><span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.36</span>{mode === 'multi' && assignedRole && <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>}{isOfflineMode && <Badge variant="destructive" className="ml-2 text-xs"><WifiOff size={10} className="mr-1"/>离线演示</Badge>}</div>
         <div className="hidden md:flex gap-1 overflow-x-auto">{[1,2,3,4,5].map(s => (<Badge key={s} variant={stage===s?"default":"outline"} className={stage===s?"bg-blue-600 hover:bg-blue-700 whitespace-nowrap":"text-slate-500 whitespace-nowrap"}>{s===1?"立项审批":s===2?"项目融资":s===3?"EPC合同谈判":s===4?"项目建设":"验收与后评价"}</Badge>))}</div>
       </div>
       <div className="flex items-center gap-4"><Button variant="outline" size="sm" onClick={() => setViewMode(viewMode==='roles'?'game':'roles')}>{viewMode==='roles' ? <Reply className="mr-2" size={16}/> : <BookOpen className="mr-2" size={16}/>}{viewMode==='roles' ? "返回游戏" : "档案"}</Button><div className="bg-slate-100 px-3 py-1 rounded flex items-center gap-2 border border-slate-200 text-xs"><Timer size={16} className="text-slate-500"/>{renderTimer()}</div></div>
@@ -1636,7 +1674,7 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
     let metricLabel = "", metricValue = "";
     if (roleKey === 'owner' || roleKey === 'epc') { metricLabel = "可用资金"; metricValue = `$${state.money.toFixed(1)}万`; } else if (roleKey === 'gov' || roleKey === 'mdb') { metricLabel = "监督成本"; metricValue = `$${state.cost}万`; } else if (roleKey === 'ngo') { metricLabel = "社会效益"; metricValue = `$${state.benefit}万`; }
     const isMe = assignedRole === roleKey;
-    // 修改点 3: UI优化 - 强制列容器 Flex-1 并允许内容 overflow-y-auto
+    // 修改点 2: 文字大小改为 text-sm，行高 leading-relaxed，并确保 overflow-y-auto
     return (
       <Card className={`flex flex-col border-l-4 ${colorClass} transition-all duration-300 shadow-sm rounded-sm h-full min-h-0 text-sm border-t border-b border-r border-slate-200 ${isActive ? 'bg-white ring-1 ring-slate-200' : 'bg-slate-50 md:opacity-60 md:grayscale-[0.5]'} ${mode === 'multi' && assignedRole && !isMe ? 'opacity-90' : ''}`}>
         <CardHeader className="py-2 px-2 bg-white border-b border-slate-100 shrink-0 relative">
@@ -1649,11 +1687,11 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
         <CardContent className="flex-1 p-0 overflow-hidden relative flex flex-col min-h-0"> 
            <div className="px-2 pt-2 space-y-1 shrink-0">{roleKey === 'owner' && <GentleAlert text={financialAlerts.owner} colorClass="bg-blue-50 text-blue-700 border border-blue-100" />}{roleKey === 'epc' && <GentleAlert text={financialAlerts.epc} colorClass="bg-orange-50 text-orange-700 border border-orange-100" />}</div>
            {isActive ? (
-               <div className={`flex-1 w-full overflow-y-auto p-2 pb-24 md:pb-2 ${mode==='multi' && assignedRole && !isMe ? 'pointer-events-none opacity-80' : ''}`}>
+               <div className={`flex-1 w-full overflow-y-auto p-2 pb-24 md:pb-2 text-sm leading-relaxed ${mode==='multi' && assignedRole && !isMe ? 'pointer-events-none opacity-80' : ''}`}>
                   {renderRoleContent(roleKey)}
                </div>
            ) : (
-             <div className="flex flex-col items-center justify-center h-full text-center p-2 space-y-2"><div className="bg-slate-100 p-2 rounded-md w-full border border-slate-200"><div className="text-[10px] text-slate-400 mb-1 uppercase tracking-wider">状态</div><div className="text-xs font-medium text-slate-600 leading-tight">{lastActionInfo[roleKey]}</div></div></div>
+             <div className="flex flex-col items-center justify-center h-full text-center p-2 space-y-2"><div className="bg-slate-100 p-2 rounded-md w-full border border-slate-200"><div className="text-[10px] text-slate-400 mb-1 uppercase tracking-wider">状态</div><div className="text-sm font-medium text-slate-600 leading-tight">{lastActionInfo[roleKey]}</div></div></div>
            )}
         </CardContent>
       </Card>
@@ -1662,26 +1700,25 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
 
   const renderRoleContent = (role) => {
       if (stage === 6) { if (isSummarySubmitted[role]) return <div className="text-center text-green-600 pt-4"><CheckCircle2 className="mx-auto mb-2"/> 已提交总结</div>; return <SummaryForm role={role} onSubmit={submitSummary} />; }
-      if (stage === 4 && s4State === 's4_resolution') return (<div className="h-full flex flex-col items-center justify-center bg-green-50 p-2 text-center animate-in fade-in space-y-3 border border-green-100 rounded-md"><div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center mb-1"><CheckCircle2 size={20} className="text-green-700"/></div><div className="font-bold text-sm text-green-800">本轮危机处理结束</div><div className="text-xs text-slate-700 bg-white p-2 rounded border border-green-100 shadow-sm">{resolutionMsg}</div><div className="text-xs text-slate-400 mt-4 animate-pulse">等待进入下一阶段...</div></div>);
+      if (stage === 4 && s4State === 's4_resolution') return (<div className="h-full flex flex-col items-center justify-center bg-green-50 p-2 text-center animate-in fade-in space-y-3 border border-green-100 rounded-md"><div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center mb-1"><CheckCircle2 size={20} className="text-green-700"/></div><div className="font-bold text-sm text-green-800">本轮危机处理结束</div><div className="text-sm text-slate-700 bg-white p-2 rounded border border-green-100 shadow-sm">{resolutionMsg}</div><div className="text-xs text-slate-400 mt-4 animate-pulse">等待进入下一阶段...</div></div>);
       if (stage === 4 && protestState === 'ruling_result_display') {
         if (role !== protestHandler && role !== 'ngo') return null;
         const confirmed = confirmedParties.includes(role);
-        return (<div className="h-full flex flex-col space-y-2 bg-purple-50 p-2 rounded border border-purple-200"><div className="font-bold text-purple-800 text-center text-sm mb-2"><Gavel size={14} className="inline mr-1"/>政府终局裁决结果</div><div className="bg-white p-2 rounded border border-purple-100 text-xs"><div className="flex justify-between mb-1"><span>裁决金额:</span><span className="font-bold text-red-600">${govRulingAmount}万</span></div>{govRulingReason && <div className="border-t pt-1 mt-1"><span className="font-bold text-slate-500">裁决理由:</span><p className="text-slate-700">{govRulingReason}</p></div>}</div>{confirmed ? <div className="text-center text-green-600 text-xs font-bold">已确认，等待对方...</div> : <Button size="sm" className="w-full bg-purple-600 h-10" onClick={()=>acknowledgeRulingResult(role)}>确认裁决</Button>}</div>);
+        return (<div className="h-full flex flex-col space-y-2 bg-purple-50 p-2 rounded border border-purple-200"><div className="font-bold text-purple-800 text-center text-sm mb-2"><Gavel size={14} className="inline mr-1"/>政府终局裁决结果</div><div className="bg-white p-2 rounded border border-purple-100 text-sm"><div className="flex justify-between mb-1"><span>裁决金额:</span><span className="font-bold text-red-600">${govRulingAmount}万</span></div>{govRulingReason && <div className="border-t pt-1 mt-1"><span className="font-bold text-slate-500">裁决理由:</span><p className="text-slate-700">{govRulingReason}</p></div>}</div>{confirmed ? <div className="text-center text-green-600 text-sm font-bold">已确认，等待对方...</div> : <Button size="sm" className="w-full bg-purple-600 h-10" onClick={()=>acknowledgeRulingResult(role)}>确认裁决</Button>}</div>);
       }
-      if (stage === 5 && inspectionState === 's5_ruling_result') { if (role !== 'owner' && role !== 'epc') return null; const confirmed = s5ConfirmedParties.includes(role); return (<div className="h-full flex flex-col space-y-2 bg-purple-50 p-2 rounded border border-purple-200"><div className="font-bold text-purple-800 text-center text-sm mb-2"><Gavel size={14} className="inline mr-1"/>S5 结算终局裁决</div><div className="bg-white p-2 rounded border border-purple-100 text-xs"><div className="flex justify-between mb-1"><span>支付比例:</span><span className="font-bold text-red-600">{s5GovRuling}%</span></div>{s5GovRulingReason && <div className="border-t pt-1 mt-1"><span className="font-bold text-slate-500">裁决理由:</span><p className="text-slate-700">{s5GovRulingReason}</p></div>}</div>{confirmed ? <div className="text-center text-green-600 text-xs font-bold mt-4">已确认，等待对方...</div> : <Button size="sm" className="w-full bg-purple-600 mt-4 h-10" onClick={()=>s5AcknowledgeRuling(role)}>确认裁决</Button>}</div>); }
+      if (stage === 5 && inspectionState === 's5_ruling_result') { if (role !== 'owner' && role !== 'epc') return null; const confirmed = s5ConfirmedParties.includes(role); return (<div className="h-full flex flex-col space-y-2 bg-purple-50 p-2 rounded border border-purple-200"><div className="font-bold text-purple-800 text-center text-sm mb-2"><Gavel size={14} className="inline mr-1"/>S5 结算终局裁决</div><div className="bg-white p-2 rounded border border-purple-100 text-sm"><div className="flex justify-between mb-1"><span>支付比例:</span><span className="font-bold text-red-600">{s5GovRuling}%</span></div>{s5GovRulingReason && <div className="border-t pt-1 mt-1"><span className="font-bold text-slate-500">裁决理由:</span><p className="text-slate-700">{s5GovRulingReason}</p></div>}</div>{confirmed ? <div className="text-center text-green-600 text-sm font-bold mt-4">已确认，等待对方...</div> : <Button size="sm" className="w-full bg-purple-600 mt-4 h-10" onClick={()=>s5AcknowledgeRuling(role)}>确认裁决</Button>}</div>); }
 
     if (role === 'owner') {
       if (stage === 1 && s1State === 'owner_draft') {
         const multiplier = 1.0 + (s1SubmissionCount - 1) * 0.2;
-        return (<div className="space-y-2 flex flex-col h-full">{s1Feedback && <Alert variant="destructive" className="text-xs p-2 bg-red-50 border-red-100 text-red-700"><AlertDescription>{s1Feedback}</AlertDescription></Alert>}<div className="font-bold text-blue-800 text-xs">{s1SubmissionCount > 1 ? "选择补充 (价格上涨" + Math.round((multiplier-1)*100) + "%):" : "请开展ESIA专项评价 (括号内为成本):"}</div><div className="border border-slate-200 rounded-sm shadow-inner bg-white flex-1 overflow-y-auto min-h-0">{ESIA_ITEMS.map(i => { const isConfirmed = confirmedEsiaSelection.includes(i.id); const currentCost = Math.round(i.cost * multiplier); return (<div key={i.id} className={`flex gap-2 py-2 md:py-1 px-2 border-b border-slate-100 last:border-0 items-center ${isConfirmed ? 'bg-slate-100 opacity-70' : 'hover:bg-slate-50'}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={ownerEsiaSelection.includes(i.id)} disabled={isConfirmed} onCheckedChange={(c)=>c?setOwnerEsiaSelection([...ownerEsiaSelection,i.id]):(!isConfirmed&&setOwnerEsiaSelection(ownerEsiaSelection.filter(x=>x!==i.id)))} /><div className="flex-1 flex flex-col justify-center"><span className="text-slate-700 text-sm leading-none">{i.label} <span className="text-slate-500 font-bold">(${currentCost}万)</span></span></div></div>) })}</div><Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s1OwnerSubmit}>开展ESIA专项评价</Button></div>);
+        return (<div className="space-y-2 flex flex-col h-full">{s1Feedback && <Alert variant="destructive" className="text-xs p-2 bg-red-50 border-red-100 text-red-700"><AlertDescription>{s1Feedback}</AlertDescription></Alert>}<div className="font-bold text-blue-800 text-sm">{s1SubmissionCount > 1 ? "选择补充 (价格上涨" + Math.round((multiplier-1)*100) + "%):" : "请开展ESIA专项评价 (括号内为成本):"}</div><div className="border border-slate-200 rounded-sm shadow-inner bg-white flex-1 overflow-y-auto min-h-0">{ESIA_ITEMS.map(i => { const isConfirmed = confirmedEsiaSelection.includes(i.id); const currentCost = Math.round(i.cost * multiplier); return (<div key={i.id} className={`flex gap-2 py-2 md:py-1 px-2 border-b border-slate-100 last:border-0 items-center ${isConfirmed ? 'bg-slate-100 opacity-70' : 'hover:bg-slate-50'}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={ownerEsiaSelection.includes(i.id)} disabled={isConfirmed} onCheckedChange={(c)=>c?setOwnerEsiaSelection([...ownerEsiaSelection,i.id]):(!isConfirmed&&setOwnerEsiaSelection(ownerEsiaSelection.filter(x=>x!==i.id)))} /><div className="flex-1 flex flex-col justify-center"><span className="text-slate-700 text-sm leading-none">{i.label} <span className="text-slate-500 font-bold">(${currentCost}万)</span></span></div></div>) })}</div><Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s1OwnerSubmit}>开展ESIA专项评价</Button></div>);
       }
       if (stage === 2 && s2State === 'owner_apply') return (<div className="flex flex-col items-center justify-center h-full space-y-4"><Banknote size={48} className="text-blue-300"/><div className="text-center text-sm text-slate-600">请向多边开发银行申请项目融资</div><Button className="bg-blue-600 hover:bg-blue-700 w-full h-12 md:h-9 font-bold" onClick={s2OwnerApply}>向多边开发银行以项目融资方式借款1500万</Button></div>);
       if (stage === 2 && s2State === 'owner_escp') {
         const multiplier = 1.0 + (s2SubmissionCount - 1) * 0.2;
-        return (<div className="space-y-2 flex flex-col h-full">{riskLevel && <Alert className="p-1 bg-purple-50 border-purple-200 text-xs text-purple-800 shrink-0"><AlertDescription>银行评级结果：{riskLevel}</AlertDescription></Alert>}<div className="font-bold text-purple-700 text-xs shrink-0">请选择贷款协议ESCP (括号内为成本):</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => { const isForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id); const isLocked = confirmedEscpSelection.includes(i.id) || isForced; const currentCost = Math.round(i.cost * multiplier); return (<div key={i.id} className={`flex gap-2 py-2 md:py-1 px-2 border-b items-center ${isLocked ? 'bg-slate-100 opacity-60' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isForced ? true : ownerEscpSelection.includes(i.id)} disabled={isLocked} onCheckedChange={c=>c?setOwnerEscpSelection([...ownerEscpSelection,i.id]):(!isLocked && setOwnerEscpSelection(ownerEscpSelection.filter(x=>x!==i.id)))}/><div className="flex flex-col justify-center"><span className="text-sm leading-none text-slate-700">{i.label} <span className="font-bold text-slate-500">(${currentCost}万)</span></span></div></div>) })}</div><Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s2OwnerEscp}>提交ESCP</Button>{renderS1ApprovedEsiaListFull()}</div>);
+        return (<div className="space-y-2 flex flex-col h-full">{riskLevel && <Alert className="p-1 bg-purple-50 border-purple-200 text-xs text-purple-800 shrink-0"><AlertDescription>银行评级结果：{riskLevel}</AlertDescription></Alert>}<div className="font-bold text-purple-700 text-sm shrink-0">请选择贷款协议ESCP (括号内为成本):</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => { const isForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id); const isLocked = confirmedEscpSelection.includes(i.id) || isForced; const currentCost = Math.round(i.cost * multiplier); return (<div key={i.id} className={`flex gap-2 py-2 md:py-1 px-2 border-b items-center ${isLocked ? 'bg-slate-100 opacity-60' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isForced ? true : ownerEscpSelection.includes(i.id)} disabled={isLocked} onCheckedChange={c=>c?setOwnerEscpSelection([...ownerEscpSelection,i.id]):(!isLocked && setOwnerEscpSelection(ownerEscpSelection.filter(x=>x!==i.id)))}/><div className="flex flex-col justify-center"><span className="text-sm leading-none text-slate-700">{i.label} <span className="font-bold text-slate-500">(${currentCost}万)</span></span></div></div>) })}</div><Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s2OwnerEscp}>提交ESCP</Button>{renderS1ApprovedEsiaListFull()}</div>);
       }
       if (stage === 3 && s3State === 'owner_tender') return (
-         // 修改点 5: 业主招标输入框增加颜色凸显 (bg-blue-50 border-2 border-blue-400)
          <div className="space-y-2 flex flex-col h-full">
            <Alert className="p-1 bg-green-50 border-green-200 text-xs text-green-800 shrink-0"><AlertDescription>1500万项目融资协议已签署，当前拨付300万（20%）</AlertDescription></Alert>
            <div className="p-2 bg-blue-50 border-2 border-blue-400 rounded space-y-2">
@@ -1692,7 +1729,7 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
                   <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">提前奖励(万/月)</span><Input type="number" min={0} defaultValue={0} onChange={e=>setEarlyBonus(Number(e.target.value))} className="h-8 text-sm bg-white border-blue-300"/></div>
               </div>
            </div>
-           <div className="font-bold text-xs mt-1 shrink-0 text-slate-700">业主自管ESMP (未选将由EPC负责):</div>
+           <div className="font-bold text-sm mt-1 shrink-0 text-slate-700">业主自管ESMP (未选将由EPC负责):</div>
            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => (<div key={i.id} className="flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" onCheckedChange={c=>c?setOwnerRespEsmp([...ownerRespEsmp,i.id]):setOwnerRespEsmp(ownerRespEsmp.filter(x=>x!==i.id))}/><span className="text-sm leading-none text-slate-700">{i.label}</span></div>))}</div>
            <Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold bg-blue-600 hover:bg-blue-700" onClick={s3OwnerTender} disabled={!tenderLimitPrice || tenderLimitPrice <= 0}>发布招标文件</Button>
          </div>
@@ -1707,26 +1744,24 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
           <EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} />
         </div>
       );
-      // ... (S4 Owner Audit logic same as before)
-      if (stage === 4 && (s4State === 's4_audit' || s4State === 's4_owner_reaudit')) return (<div className="space-y-2 flex flex-col h-full"><div className="font-bold flex items-center gap-1 text-xs shrink-0 text-slate-700"><Gavel size={12}/> {s4State==='s4_audit'?'抽查审计项':'整改复查项'}:</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(item => { const isOwnerResp = ownerRespEsmp.includes(item.id); const isViolation = s4State === 's4_owner_reaudit' && epcViolations.includes(item.id); return (<div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-50' : ''} ${isViolation ? 'bg-red-50' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={ownerAuditItems.includes(item.id)} disabled={isOwnerResp} onCheckedChange={c=>c?setOwnerAuditItems([...ownerAuditItems,item.id]):setOwnerAuditItems(ownerAuditItems.filter(x=>x!==item.id))}/><div className="flex flex-col justify-center"><span className="text-sm leading-none text-slate-700">{item.label}</span>{isOwnerResp && <span className="text-[10px] text-blue-500 leading-none">业主负责 (不可选)</span>}{isViolation && <span className="text-[10px] text-red-500 font-bold leading-none">重点复查对象</span>}</div></div>) })}</div>{s4State === 's4_audit' ? <Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s4OwnerAudit}>执行审计 (花费{ownerAuditItems.length*5}万)</Button> : <Button size="sm" className="w-full h-12 md:h-8 text-sm bg-orange-600 shrink-0 font-bold" onClick={s4OwnerReaudit}>执行复查 (确认漏项已修复)</Button>}</div>);
-      if (stage === 4 && s4State === 's4_punish_decide') return (<div className="space-y-2 bg-red-50 p-2 rounded border border-red-200 h-full flex flex-col"><div className="font-bold text-red-700 text-xs shrink-0">审计发现违规!</div><div className="text-xs mb-2 leading-tight flex-1 overflow-y-auto bg-white border border-red-100 p-2 rounded">EPC承包商未执行项目: <ul className="list-disc list-inside mt-1">{epcViolations.filter(id => !epcExecPlan.includes(id)).map(id=><li key={id}>{ESMP_LIBRARY.find(x=>x.id===id)?.label}</li>)}</ul></div><Button size="sm" className="w-full h-12 md:h-8 text-sm bg-blue-600 mb-1 shrink-0 font-bold" onClick={()=>s4OwnerPunishDecide('rectify')}>责令整改</Button><Button size="sm" variant="outline" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>s4OwnerPunishDecide('pass')}>直接通过 (有风险)</Button></div>);
-      if (stage === 4 && protestState === 'owner_route') return (<div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200 flex flex-col h-full"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-xs text-orange-800">收到公众/NGO索赔通知</div><div className="text-xs text-orange-700 mb-1 font-bold">NGO索赔: ${ngoDemandAmount}万</div>{ngoDemandReason && <div className="text-xs bg-white p-1 rounded text-red-600 border border-red-100 mb-2"><strong>索赔原因:</strong> {ngoDemandReason}</div>}<div className="space-y-1 border-t border-orange-200 pt-2"><div className="text-xs font-bold text-slate-700">责任在业主?</div><Button size="sm" className="w-full h-10 md:h-6 text-sm font-bold" onClick={()=>protestOwnerRoute(true)}>自行处理</Button></div><div className="space-y-1 border-t border-orange-200 pt-2"><div className="text-xs font-bold text-slate-700">责任在EPC承包商?</div><Button size="sm" variant="outline" className="w-full h-10 md:h-6 text-sm font-bold" onClick={()=>protestOwnerRoute(false)}>转交EPC承包商处理</Button></div><EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} /></div>);
-      // ... (Other Owner protest states similar, omitting for brevity but kept in final logic)
-      if (stage === 4 && protestState === 'party_negotiate' && protestHandler === 'owner') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="text-xs font-bold text-red-600">公众索赔: ${ngoDemandAmount}万</div>{ngoDemandReason && <div className="text-xs bg-white p-1 rounded text-red-600 mb-1">理由: {ngoDemandReason}</div>}<Input type="number" placeholder="输入主张金额($)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setOfferAmount(Number(e.target.value))}/><Input type="text" placeholder="理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setPartyOfferReason(e.target.value)}/><Button size="sm" className="w-full h-12 md:h-7 text-sm font-bold" onClick={()=>protestPartyNegotiate(offerAmount)} disabled={offerAmount < 0}>主张赔偿</Button></div>);
-      if (stage === 4 && protestState === 'parties_react_ruling' && protestHandler === 'owner') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-blue-800 flex items-center gap-1 text-xs"><Gavel size={12}/> 政府裁决: ${govRulingAmount}万</div>{govRulingReason && <div className="text-xs bg-white p-1 rounded text-purple-700 mb-1">理由: {govRulingReason}</div>}{!partyResponse ? (<><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>submitPartyReaction('accept')}>接受裁决</Button><div className="pt-2 mt-1 border-t border-blue-200 space-y-1"><Input type="number" placeholder="申诉主张金额($)" className="h-12 md:h-7 bg-white text-sm" value={partyAppealInput} onChange={e=>setPartyAppealInput(e.target.value)} /><Input type="text" placeholder="申诉理由(可选)" className="h-12 md:h-7 bg-white text-sm mt-1" value={partyAppealReason} onChange={e=>setPartyAppealReason(e.target.value)} /><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm mt-1 font-bold" onClick={()=>submitPartyReaction('appeal', partyAppealInput, partyAppealReason)} disabled={!partyAppealInput}>提交申诉</Button></div></>) : <div className="text-center text-gray-600 text-xs mt-2 italic">已提交，等待对方...</div>}</div>);
-      if (stage === 4 && protestState === 'owner_pay_decision') return (<div className="space-y-2 bg-purple-50 p-2 rounded border border-purple-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-purple-800 text-xs">银行决定: {bankFreezeDecision==='freeze'?'暂停拨付':'继续拨付'}</div><div className="text-xs mb-2 text-slate-700">是否继续支付EPC承包商进度款 ({currentCrisis?.index === 3 ? '15%' : '20%'})?</div><Input type="text" placeholder="理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setOwnerPayDecisionReason(e.target.value)}/><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerPayDecision(true)}>支付</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerPayDecision(false)}>暂停支付</Button></div>);
-      if (stage === 4 && protestState === 'owner_reconsider_pay') return (<div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200"><div className="font-bold text-orange-800 text-xs flex items-center gap-1"><AlertTriangle size={12}/> 承包商反对暂停支付</div><div className="text-xs mb-2 bg-white p-2 rounded border border-orange-100 text-slate-700">承包商要求业主支付进度款。{epcProtestReason && <div className="mt-1 font-bold">理由: {epcProtestReason}</div>}</div><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerReconsider(true)}>同意，支付进度款</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerReconsider(false)}>反对，暂停支付，留置争议</Button></div>);
-      if (stage === 5 && inspectionState === 'owner_decide_pay') return (<div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200"><div className="font-bold text-orange-800 flex items-center gap-1 text-xs"><ClipboardCheck size={12}/> 竣工验收决策</div><div className="grid grid-cols-2 gap-2 text-xs mb-2"><div className="bg-white p-1 rounded">银行拨付: {bankDisbursedPct}%</div><div className="bg-white p-1 rounded">业主已付: {ownerPaidPct}%</div></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">支付合同额比例至(%) (> {ownerPaidPct}%):</div><Input type="number" className="h-12 md:h-7 text-sm" min={ownerPaidPct} max={100} onChange={e=>setOwnerPayProposal(e.target.value)}/></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">反馈意见:</div><Textarea className="h-20 md:h-12 text-sm bg-white" onChange={e=>setOwnerFeedback(e.target.value)} placeholder="解释支付比例..."/></div><Button size="sm" className="w-full bg-green-600 mt-2 h-12 md:h-7 text-sm font-bold" onClick={s5OwnerSubmitProposal}>通过质量验收</Button></div>);
+      if (stage === 4 && (s4State === 's4_audit' || s4State === 's4_owner_reaudit')) return (<div className="space-y-2 flex flex-col h-full"><div className="font-bold flex items-center gap-1 text-sm shrink-0 text-slate-700"><Gavel size={12}/> {s4State==='s4_audit'?'抽查审计项':'整改复查项'}:</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(item => { const isOwnerResp = ownerRespEsmp.includes(item.id); const isViolation = s4State === 's4_owner_reaudit' && epcViolations.includes(item.id); return (<div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-50' : ''} ${isViolation ? 'bg-red-50' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={ownerAuditItems.includes(item.id)} disabled={isOwnerResp} onCheckedChange={c=>c?setOwnerAuditItems([...ownerAuditItems,item.id]):setOwnerAuditItems(ownerAuditItems.filter(x=>x!==item.id))}/><div className="flex flex-col justify-center"><span className="text-sm leading-none text-slate-700">{item.label}</span>{isOwnerResp && <span className="text-[10px] text-blue-500 leading-none">业主负责 (不可选)</span>}{isViolation && <span className="text-[10px] text-red-500 font-bold leading-none">重点复查对象</span>}</div></div>) })}</div>{s4State === 's4_audit' ? <Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s4OwnerAudit}>执行审计 (花费{ownerAuditItems.length*5}万)</Button> : <Button size="sm" className="w-full h-12 md:h-8 text-sm bg-orange-600 shrink-0 font-bold" onClick={s4OwnerReaudit}>执行复查 (确认漏项已修复)</Button>}</div>);
+      if (stage === 4 && s4State === 's4_punish_decide') return (<div className="space-y-2 bg-red-50 p-2 rounded border border-red-200 h-full flex flex-col"><div className="font-bold text-red-700 text-sm shrink-0">审计发现违规!</div><div className="text-sm mb-2 leading-tight flex-1 overflow-y-auto bg-white border border-red-100 p-2 rounded">EPC承包商未执行项目: <ul className="list-disc list-inside mt-1">{epcViolations.filter(id => !epcExecPlan.includes(id)).map(id=><li key={id}>{ESMP_LIBRARY.find(x=>x.id===id)?.label}</li>)}</ul></div><Button size="sm" className="w-full h-12 md:h-8 text-sm bg-blue-600 mb-1 shrink-0 font-bold" onClick={()=>s4OwnerPunishDecide('rectify')}>责令整改</Button><Button size="sm" variant="outline" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>s4OwnerPunishDecide('pass')}>直接通过 (有风险)</Button></div>);
+      if (stage === 4 && protestState === 'owner_route') return (<div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200 flex flex-col h-full"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-sm text-orange-800">收到公众/NGO索赔通知</div><div className="text-sm text-orange-700 mb-1 font-bold">NGO索赔: ${ngoDemandAmount}万</div>{ngoDemandReason && <div className="text-xs bg-white p-1 rounded text-red-600 border border-red-100 mb-2"><strong>索赔原因:</strong> {ngoDemandReason}</div>}<div className="space-y-1 border-t border-orange-200 pt-2"><div className="text-xs font-bold text-slate-700">责任在业主?</div><Button size="sm" className="w-full h-10 md:h-6 text-sm font-bold" onClick={()=>protestOwnerRoute(true)}>自行处理</Button></div><div className="space-y-1 border-t border-orange-200 pt-2"><div className="text-xs font-bold text-slate-700">责任在EPC承包商?</div><Button size="sm" variant="outline" className="w-full h-10 md:h-6 text-sm font-bold" onClick={()=>protestOwnerRoute(false)}>转交EPC承包商处理</Button></div><EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} /></div>);
+      if (stage === 4 && protestState === 'party_negotiate' && protestHandler === 'owner') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="text-sm font-bold text-red-600">公众索赔: ${ngoDemandAmount}万</div>{ngoDemandReason && <div className="text-xs bg-white p-1 rounded text-red-600 mb-1">理由: {ngoDemandReason}</div>}<Input type="number" placeholder="输入主张金额($)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setOfferAmount(Number(e.target.value))}/><Input type="text" placeholder="理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setPartyOfferReason(e.target.value)}/><Button size="sm" className="w-full h-12 md:h-7 text-sm font-bold" onClick={()=>protestPartyNegotiate(offerAmount)} disabled={offerAmount < 0}>主张赔偿</Button></div>);
+      if (stage === 4 && protestState === 'parties_react_ruling' && protestHandler === 'owner') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-blue-800 flex items-center gap-1 text-sm"><Gavel size={12}/> 政府裁决: ${govRulingAmount}万</div>{govRulingReason && <div className="text-xs bg-white p-1 rounded text-purple-700 mb-1">理由: {govRulingReason}</div>}{!partyResponse ? (<><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>submitPartyReaction('accept')}>接受裁决</Button><div className="pt-2 mt-1 border-t border-blue-200 space-y-1"><Input type="number" placeholder="申诉主张金额($)" className="h-12 md:h-7 bg-white text-sm" value={partyAppealInput} onChange={e=>setPartyAppealInput(e.target.value)} /><Input type="text" placeholder="申诉理由(可选)" className="h-12 md:h-7 bg-white text-sm mt-1" value={partyAppealReason} onChange={e=>setPartyAppealReason(e.target.value)} /><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm mt-1 font-bold" onClick={()=>submitPartyReaction('appeal', partyAppealInput, partyAppealReason)} disabled={!partyAppealInput}>提交申诉</Button></div></>) : <div className="text-center text-gray-600 text-xs mt-2 italic">已提交，等待对方...</div>}</div>);
+      if (stage === 4 && protestState === 'owner_pay_decision') return (<div className="space-y-2 bg-purple-50 p-2 rounded border border-purple-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-purple-800 text-sm">银行决定: {bankFreezeDecision==='freeze'?'暂停拨付':'继续拨付'}</div><div className="text-sm mb-2 text-slate-700">是否继续支付EPC承包商进度款 ({currentCrisis?.index === 3 ? '15%' : '20%'})?</div><Input type="text" placeholder="理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setOwnerPayDecisionReason(e.target.value)}/><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerPayDecision(true)}>支付</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerPayDecision(false)}>暂停支付</Button></div>);
+      if (stage === 4 && protestState === 'owner_reconsider_pay') return (<div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200"><div className="font-bold text-orange-800 text-sm flex items-center gap-1"><AlertTriangle size={12}/> 承包商反对暂停支付</div><div className="text-sm mb-2 bg-white p-2 rounded border border-orange-100 text-slate-700">承包商要求业主支付进度款。{epcProtestReason && <div className="mt-1 font-bold">理由: {epcProtestReason}</div>}</div><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerReconsider(true)}>同意，支付进度款</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerReconsider(false)}>反对，暂停支付，留置争议</Button></div>);
+      if (stage === 5 && inspectionState === 'owner_decide_pay') return (<div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200"><div className="font-bold text-orange-800 flex items-center gap-1 text-sm"><ClipboardCheck size={12}/> 竣工验收决策</div><div className="grid grid-cols-2 gap-2 text-xs mb-2"><div className="bg-white p-1 rounded">银行拨付: {bankDisbursedPct}%</div><div className="bg-white p-1 rounded">业主已付: {ownerPaidPct}%</div></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">支付合同额比例至(%) (> {ownerPaidPct}%):</div><Input type="number" className="h-12 md:h-7 text-sm" min={ownerPaidPct} max={100} onChange={e=>setOwnerPayProposal(e.target.value)}/></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">反馈意见:</div><Textarea className="h-20 md:h-12 text-sm bg-white" onChange={e=>setOwnerFeedback(e.target.value)} placeholder="解释支付比例..."/></div><Button size="sm" className="w-full bg-green-600 mt-2 h-12 md:h-7 text-sm font-bold" onClick={s5OwnerSubmitProposal}>通过质量验收</Button></div>);
     }
 
     if (role === 'gov') {
-       if (stage === 1 && s1State === 'gov_review') return (<div className="space-y-2 flex flex-col h-full">{hasProtested && <Alert className="p-1 bg-red-50 text-xs border-red-200 text-red-800 shrink-0"><AlertDescription>⚠️ 公众提出抗议</AlertDescription></Alert>}<div className="flex flex-col gap-2 shrink-0"><Button size="sm" className="w-full bg-green-600 hover:bg-green-700 h-12 md:h-8 text-sm font-bold" onClick={()=>s1GovReview(true)}>批准业主ESIA</Button><Button size="sm" className="w-full bg-red-600 hover:bg-red-700 h-12 md:h-8 text-sm font-bold" onClick={()=>s1GovReview(false)} disabled={!(govMandates.filter(id => !accumulatedGovMandates.includes(id)).length > 0)}>驳回业主ESIA</Button></div><div className="font-bold mt-1 text-xs text-slate-600 shrink-0">请选择政府监管部门要求补充的ESIA专项评价：</div><div className="bg-white border border-slate-200 rounded flex-1 overflow-y-auto min-h-0">{ESIA_ITEMS.map(i=> { const isOwnerSelected = confirmedEsiaSelection.includes(i.id); if (isOwnerSelected) return <div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center bg-slate-100 opacity-60 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked disabled /><span className="text-sm text-slate-500 leading-none">{i.label}</span></div>; return (<div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center hover:bg-slate-50 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" onCheckedChange={c=>c?setGovMandates([...govMandates,i.id]):setGovMandates(govMandates.filter(x=>x!==i.id))}/><div className="flex-1 flex items-center justify-between"><span className="text-sm text-slate-700 leading-none">{i.label}</span>{(accumulatedNgoReqs.includes(i.id) || ngoRequirements.includes(i.id)) && <Badge variant="outline" className="text-[10px] h-4 px-1 text-red-600 border-red-200 bg-red-50 leading-none">公众要求</Badge>}</div></div>) })}</div></div>);
-       if (stage === 2 && s2State === 'gov_check') return (<div className="space-y-2 flex flex-col h-full"><div className="font-bold text-xs text-slate-600 shrink-0">审核ESCP (勾选新增项以驳回):</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => { const isOwnerSelected = ownerEscpSelection.includes(i.id); const isForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id); return (<div key={i.id} className={`flex gap-2 py-2 md:py-1 px-2 border-b last:border-0 items-center ${isOwnerSelected || isForced ? 'bg-slate-100 opacity-60' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isOwnerSelected || isForced || govEscpMandates.includes(i.id)} disabled={isOwnerSelected || isForced} onCheckedChange={c=>c?setGovEscpMandates([...govEscpMandates,i.id]):setGovEscpMandates(govEscpMandates.filter(x=>x!==i.id))}/><span className="text-sm text-slate-700 leading-none">{i.label}</span></div>) })}</div><div className="flex gap-2 mt-1 shrink-0"><Button size="sm" className="flex-1 bg-green-600 h-12 md:h-8 text-sm font-bold" onClick={()=>s2GovCheck(true)}>通过</Button><Button size="sm" className="flex-1 bg-red-600 h-12 md:h-8 text-sm font-bold" onClick={()=>s2GovCheck(false)} disabled={!(govEscpMandates.filter(id => !accumulatedGovEscpReqs.includes(id)).length > 0)}>驳回</Button></div>{renderS1ApprovedEsiaListFull()}</div>);
+       if (stage === 1 && s1State === 'gov_review') return (<div className="space-y-2 flex flex-col h-full">{hasProtested && <Alert className="p-1 bg-red-50 text-xs border-red-200 text-red-800 shrink-0"><AlertDescription>⚠️ 公众提出抗议</AlertDescription></Alert>}<div className="flex flex-col gap-2 shrink-0"><Button size="sm" className="w-full bg-green-600 hover:bg-green-700 h-12 md:h-8 text-sm font-bold" onClick={()=>s1GovReview(true)}>批准业主ESIA</Button><Button size="sm" className="w-full bg-red-600 hover:bg-red-700 h-12 md:h-8 text-sm font-bold" onClick={()=>s1GovReview(false)} disabled={!(govMandates.filter(id => !accumulatedGovMandates.includes(id)).length > 0)}>驳回业主ESIA</Button></div><div className="font-bold mt-1 text-sm text-slate-600 shrink-0">请选择政府监管部门要求补充的ESIA专项评价：</div><div className="bg-white border border-slate-200 rounded flex-1 overflow-y-auto min-h-0">{ESIA_ITEMS.map(i=> { const isOwnerSelected = confirmedEsiaSelection.includes(i.id); if (isOwnerSelected) return <div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center bg-slate-100 opacity-60 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked disabled /><span className="text-sm text-slate-500 leading-none">{i.label}</span></div>; return (<div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center hover:bg-slate-50 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" onCheckedChange={c=>c?setGovMandates([...govMandates,i.id]):setGovMandates(govMandates.filter(x=>x!==i.id))}/><div className="flex-1 flex items-center justify-between"><span className="text-sm text-slate-700 leading-none">{i.label}</span>{(accumulatedNgoReqs.includes(i.id) || ngoRequirements.includes(i.id)) && <Badge variant="outline" className="text-[10px] h-4 px-1 text-red-600 border-red-200 bg-red-50 leading-none">公众要求</Badge>}</div></div>) })}</div></div>);
+       if (stage === 2 && s2State === 'gov_check') return (<div className="space-y-2 flex flex-col h-full"><div className="font-bold text-sm text-slate-600 shrink-0">审核ESCP (勾选新增项以驳回):</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => { const isOwnerSelected = ownerEscpSelection.includes(i.id); const isForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id); return (<div key={i.id} className={`flex gap-2 py-2 md:py-1 px-2 border-b last:border-0 items-center ${isOwnerSelected || isForced ? 'bg-slate-100 opacity-60' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isOwnerSelected || isForced || govEscpMandates.includes(i.id)} disabled={isOwnerSelected || isForced} onCheckedChange={c=>c?setGovEscpMandates([...govEscpMandates,i.id]):setGovEscpMandates(govEscpMandates.filter(x=>x!==i.id))}/><span className="text-sm text-slate-700 leading-none">{i.label}</span></div>) })}</div><div className="flex gap-2 mt-1 shrink-0"><Button size="sm" className="flex-1 bg-green-600 h-12 md:h-8 text-sm font-bold" onClick={()=>s2GovCheck(true)}>通过</Button><Button size="sm" className="flex-1 bg-red-600 h-12 md:h-8 text-sm font-bold" onClick={()=>s2GovCheck(false)} disabled={!(govEscpMandates.filter(id => !accumulatedGovEscpReqs.includes(id)).length > 0)}>驳回</Button></div>{renderS1ApprovedEsiaListFull()}</div>);
        if (stage === 4 && protestState === 'gov_ruling') return (
          <div className="space-y-2 border-t-4 border-red-500 pt-2 bg-red-50 p-2 rounded border border-red-100 flex flex-col h-full">
             <CrisisContextBox crisis={currentCrisis} />
-            <div className="font-bold text-red-700 text-center border-b border-red-200 pb-1 text-xs shrink-0">{govRulingCount >= 2 ? "第3次: 终局裁决" : `第${govRulingCount + 1}次裁决`}</div>
-            {/* 修改点 7: 修复政府裁决理由显示，使用同步后的数据 */}
+            <div className="font-bold text-red-700 text-center border-b border-red-200 pb-1 text-sm shrink-0">{govRulingCount >= 2 ? "第3次: 终局裁决" : `第${govRulingCount + 1}次裁决`}</div>
+            {/* 修改点 4: 强制显示双方申诉理由 */}
             {(partyAppealReason || ngoAppealReason) && (
                 <div className="bg-yellow-100 p-2 rounded border-l-4 border-yellow-500 text-xs mb-1 shrink-0 shadow-sm animate-in fade-in">
                     <div className="font-bold text-slate-700 mb-1 border-b border-yellow-200 pb-1">本轮申诉理由:</div>
@@ -1745,7 +1780,7 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
             <EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} />
          </div>
        );
-       if (stage === 5 && inspectionState === 'gov_s5_ruling') return (<div className="space-y-2 bg-purple-50 p-2 rounded border border-purple-200"><div className="font-bold text-purple-800 text-xs">S5 结算争议裁决</div><div className="grid grid-cols-2 gap-2 mb-2"><div className="bg-white p-2 rounded border border-purple-100 text-xs"><div className="font-bold text-blue-600">业主主张</div><div>比例: {ownerPayProposal}%</div><div className="text-slate-500">{ownerFeedback}</div></div><div className="bg-white p-2 rounded border border-purple-100 text-xs"><div className="font-bold text-orange-600">承包商主张</div><div>比例: {epcClaimProposal}%</div><div className="text-slate-500">{epcClaimReason}</div></div></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">最终裁决支付比例(%):</div><Input type="number" min={ownerPaidPct} max={100} className="h-12 md:h-7 text-sm" onChange={e=>setS5GovRuling(e.target.value)}/></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">裁决理由(可选):</div><Textarea className="h-20 md:h-10 text-sm" onChange={e=>setS5GovRulingReason(e.target.value)}/></div><Button size="sm" className="w-full bg-purple-600 h-12 md:h-7 text-sm font-bold" onClick={s5GovMakeRuling}>发布裁决</Button></div>);
+       if (stage === 5 && inspectionState === 'gov_s5_ruling') return (<div className="space-y-2 bg-purple-50 p-2 rounded border border-purple-200"><div className="font-bold text-purple-800 text-sm">S5 结算争议裁决</div><div className="grid grid-cols-2 gap-2 mb-2"><div className="bg-white p-2 rounded border border-purple-100 text-sm"><div className="font-bold text-blue-600">业主主张</div><div>比例: {ownerPayProposal}%</div><div className="text-slate-500">{ownerFeedback}</div></div><div className="bg-white p-2 rounded border border-purple-100 text-sm"><div className="font-bold text-orange-600">承包商主张</div><div>比例: {epcClaimProposal}%</div><div className="text-slate-500">{epcClaimReason}</div></div></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">最终裁决支付比例(%):</div><Input type="number" min={ownerPaidPct} max={100} className="h-12 md:h-7 text-sm" onChange={e=>setS5GovRuling(e.target.value)}/></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">裁决理由(可选):</div><Textarea className="h-20 md:h-10 text-sm" onChange={e=>setS5GovRulingReason(e.target.value)}/></div><Button size="sm" className="w-full bg-purple-600 h-12 md:h-7 text-sm font-bold" onClick={s5GovMakeRuling}>发布裁决</Button></div>);
     }
 
     if (role === 'mdb') {
@@ -1753,7 +1788,6 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
           <div className="flex flex-col h-full">
              <div className="text-xs bg-yellow-50 border border-yellow-200 p-2 rounded mb-2 text-slate-700 leading-tight shrink-0">请根据项目的类型、位置、敏感性和规模，判断项目的环境社会风险等级</div>
              <div className="text-xs border border-slate-200 rounded overflow-hidden mb-3 flex flex-col flex-1 overflow-y-auto min-h-0"><div className="grid grid-cols-4 bg-slate-100 font-bold p-1 border-b border-slate-200 shrink-0"><div>风险等级</div><div className="col-span-1">分类依据</div><div className="col-span-2 pl-1">管理要求</div></div><div className="overflow-y-auto flex-1">{RISK_TABLE.map((r,i) => (<div key={i} className="grid grid-cols-4 p-1 border-b border-slate-100 last:border-0 bg-white hover:bg-slate-50 leading-tight"><div className="font-bold text-blue-700">{r.level}</div><div className="col-span-1 text-[10px] text-slate-600">{r.basis}</div><div className="col-span-2 text-[10px] text-slate-600 pl-1">{r.req}</div></div>))}</div></div>
-             {/* 修改点 4: S2 风险评级按钮使用红黄绿颜色区分 */}
              <div className="grid grid-cols-3 gap-2 mb-4 shrink-0">
                 <Button variant="outline" size="sm" className="text-xs h-10 md:h-8 font-bold bg-red-100 hover:bg-red-200 text-red-900 border-red-300" onClick={()=>s2MdbRisk('高风险')}>高风险</Button>
                 <Button variant="outline" size="sm" className="text-xs h-10 md:h-8 font-bold bg-yellow-100 hover:bg-yellow-200 text-yellow-900 border-yellow-300" onClick={()=>s2MdbRisk('中风险')}>中风险</Button>
@@ -1763,15 +1797,14 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
           </div>
        );
        if (stage === 2 && s2State === 'mdb_sign') return (<div className="space-y-2 flex flex-col h-full"><Alert className="p-1 bg-green-50 border-green-200 text-xs text-green-800 shrink-0"><AlertDescription>政府已批准ESCP。请复核并签约。</AlertDescription></Alert><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => { const isOwnerSelected = ownerEscpSelection.includes(i.id); const isForced = accumulatedGovEscpReqs.includes(i.id) || accumulatedMdbEscpReqs.includes(i.id); const isMdbSelected = mdbEscpMandates.includes(i.id); return (<div key={i.id} className={`flex gap-2 py-2 md:py-1 px-2 border-b last:border-0 items-center ${isOwnerSelected || isForced ? 'bg-slate-100 opacity-60' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isOwnerSelected || isForced || isMdbSelected} disabled={isOwnerSelected || isForced} onCheckedChange={c=>c?setMdbEscpMandates([...mdbEscpMandates,i.id]):setMdbEscpMandates(mdbEscpMandates.filter(x=>x!==i.id))}/><span className="text-sm text-slate-700 leading-none">{i.label}</span></div>) })}</div><div className="flex gap-2 mt-1 shrink-0"><div className="flex-1"><Button size="sm" className="w-full bg-purple-600 h-12 md:h-8 text-sm font-bold" onClick={()=>s2MdbSign(true)}>签署1500万贷款协议</Button></div><Button size="sm" variant="outline" className="w-full flex-1 h-12 md:h-8 text-sm font-bold" onClick={()=>s2MdbSign(false)} disabled={!(mdbEscpMandates.filter(id => !accumulatedMdbEscpReqs.includes(id)).length > 0)}>驳回</Button></div><div className="text-[10px] text-slate-400 italic text-center shrink-0">监督成本+2万/项，政府声誉+2分/项</div></div>);
-       if (stage === 4 && protestState === 'bank_decision') return (<div className="space-y-2 bg-red-50 p-2 rounded border border-red-200 flex flex-col h-full"><div className="bg-white p-2 rounded border border-slate-200 text-xs mb-1 shrink-0"><div className="font-bold text-red-600 mb-0.5">相关事件: {currentCrisis?.title}</div><div className="text-slate-500 leading-tight">{currentCrisis?.desc}</div></div><div className="text-xs border-t border-slate-200 pt-1 mb-1 flex-1 overflow-y-auto min-h-0"><div className="font-bold text-slate-700">历次裁决记录:</div><div className="mt-0.5">{govRulingHistory.map(h => (<div key={h.count} className="grid grid-cols-3 gap-1 py-0.5 border-b border-slate-100"><span>第{h.count}轮</span><span>${h.ngoDemand}/${h.partyOffer}</span><span className="font-bold text-purple-700">=> ${h.amount}</span></div>))}</div></div><div className="font-bold text-red-700 flex items-center gap-1 text-xs shrink-0"><ShieldAlert size={12}/> 政府终局裁决已出</div><div className="text-xs mb-1 shrink-0 text-slate-700">是否因危机暂停当前 {currentCrisis?.index === 3 ? '15%' : '20%'} 贷款拨付?</div><Button size="sm" className="w-full bg-red-700 text-white hover:bg-red-800 mb-1 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestBankDecision(true)}>暂停拨付</Button><Button size="sm" className="w-full bg-green-600 hover:bg-green-700 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestBankDecision(false)}>继续拨付</Button></div>);
+       if (stage === 4 && protestState === 'bank_decision') return (<div className="space-y-2 bg-red-50 p-2 rounded border border-red-200 flex flex-col h-full"><div className="bg-white p-2 rounded border border-slate-200 text-sm mb-1 shrink-0"><div className="font-bold text-red-600 mb-0.5">相关事件: {currentCrisis?.title}</div><div className="text-slate-500 leading-tight">{currentCrisis?.desc}</div></div><div className="text-xs border-t border-slate-200 pt-1 mb-1 flex-1 overflow-y-auto min-h-0"><div className="font-bold text-slate-700">历次裁决记录:</div><div className="mt-0.5">{govRulingHistory.map(h => (<div key={h.count} className="grid grid-cols-3 gap-1 py-0.5 border-b border-slate-100"><span>第{h.count}轮</span><span>${h.ngoDemand}/${h.partyOffer}</span><span className="font-bold text-purple-700">=> ${h.amount}</span></div>))}</div></div><div className="font-bold text-red-700 flex items-center gap-1 text-sm shrink-0"><ShieldAlert size={12}/> 政府终局裁决已出</div><div className="text-sm mb-1 shrink-0 text-slate-700">是否因危机暂停当前 {currentCrisis?.index === 3 ? '15%' : '20%'} 贷款拨付?</div><Button size="sm" className="w-full bg-red-700 text-white hover:bg-red-800 mb-1 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestBankDecision(true)}>暂停拨付</Button><Button size="sm" className="w-full bg-green-600 hover:bg-green-700 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestBankDecision(false)}>继续拨付</Button></div>);
     }
 
     if (role === 'epc') {
        if (stage === 3 && s3State === 'epc_bid') return (
-          // 修改点 6: EPC 报价框增加颜色凸显 (bg-orange-50 border-2 border-orange-400)
           <div className="space-y-2 flex flex-col h-full">
              {epcBidHistory.length > 0 && (<Alert className="p-1 bg-amber-50 border-amber-200 text-amber-800 mb-1 shrink-0"><AlertDescription className="text-xs leading-none">业主驳回了之前的报价。历史记录: {epcBidHistory.map(h=>`$${h.price}`).join(', ')}{ownerRejectReason && <div className="mt-1 text-red-600 font-bold">驳回理由: {ownerRejectReason}</div>}</AlertDescription></Alert>)}
-             <div className="font-bold text-xs mb-0.5 shrink-0 text-slate-700">责任划分 & 风险提示:</div>
+             <div className="font-bold text-sm mb-0.5 shrink-0 text-slate-700">责任划分 & 风险提示:</div>
              <div className="bg-white border rounded mb-1 flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(i => { const isOwnerResp = ownerRespEsmp.includes(i.id); return (<div key={i.id} className="flex justify-between items-center py-2 md:py-1 px-2 border-b last:border-0 text-xs"><span className="leading-none text-slate-700">{i.label}</span>{isOwnerResp ? <Badge className="text-[9px] h-4 bg-blue-100 text-blue-700 hover:bg-blue-200 border-0 leading-none">业主</Badge> : <Badge className="text-[9px] h-4 bg-orange-100 text-orange-700 hover:bg-orange-200 border-0 leading-none">EPC</Badge>}</div>) })}</div>
              <div className="space-y-2 p-2 bg-orange-50 border-2 border-orange-400 rounded shrink-0">
                 <div className="text-xs text-slate-600 font-bold leading-tight">工期:{tenderDuration}月 | 误期罚款:{delayPenalty}万/月 | 提前奖励:{earlyBonus}万/月</div>
@@ -1782,23 +1815,23 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
           </div>
        );
        if (stage === 3 && s3State === 'epc_contract_sign') return (<div className="space-y-2 bg-green-50 p-2 rounded border border-green-200 flex flex-col"><div className="font-bold text-center text-lg text-green-800 mb-2">业主接受报价</div><div className="bg-white p-2 rounded border border-green-100 text-sm space-y-1 text-slate-700"><div className="flex justify-between"><span>合同价格:</span> <span className="font-bold">${epcBid.price}万</span></div><div className="flex justify-between"><span>合同工期:</span> <span className="font-bold">{tenderDuration}个月</span></div></div><div className="text-xs text-center text-slate-500 mt-2">请确认签署合同，随后进入项目建设阶段。</div><Button size="sm" className="w-full bg-green-600 mt-2 h-12 md:h-7 font-bold" onClick={s3EpcSignConfirm}>签署确认 & 进入建设阶段</Button></div>);
-       if (stage === 4 && (s4State === 's4_planning' || s4State === 's4_epc_replan')) return (<div className="space-y-2 flex flex-col h-full"><div className="font-bold text-xs shrink-0 text-slate-700">ESMP执行方案:</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(item => { const isOwnerResp = ownerRespEsmp.includes(item.id); const isViolation = epcViolations.includes(item.id); const wasOriginallySelected = originalEpcExecPlan.includes(item.id); const isForced = s4State === 's4_epc_replan' && (isViolation || wasOriginallySelected); let displayCost = item.cost; if (s4State === 's4_epc_replan' && isViolation) displayCost = Math.round(item.cost * 1.2); return (<div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-50' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isOwnerResp ? false : (isForced ? true : epcExecPlan.includes(item.id))} disabled={isOwnerResp || isForced} onCheckedChange={c=>c?setEpcExecPlan([...epcExecPlan,item.id]):setEpcExecPlan(epcExecPlan.filter(x=>x!==item.id))}/><div className="flex flex-col justify-center"><span className="text-sm text-slate-700 leading-none">{item.label} (${displayCost}万)</span>{isViolation && <span className="text-[10px] text-red-600 font-bold leading-none">整改必选 (+20%)</span>}</div></div>) })}</div><div className="text-[10px] text-slate-400 italic text-center shrink-0">已提交选项不可撤回；若未执行且被业主审查发现，后续成本+20%，声誉-5分/项</div>{s4State === 's4_planning' ? <Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s4EpcPlan}>提交执行方案</Button> : <Button size="sm" className="w-full bg-orange-600 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s4EpcReplanSubmit}>提交整改方案</Button>}{renderS2ApprovedEscpListFull()}</div>);
+       if (stage === 4 && (s4State === 's4_planning' || s4State === 's4_epc_replan')) return (<div className="space-y-2 flex flex-col h-full"><div className="font-bold text-sm shrink-0 text-slate-700">ESMP执行方案:</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(item => { const isOwnerResp = ownerRespEsmp.includes(item.id); const isViolation = epcViolations.includes(item.id); const wasOriginallySelected = originalEpcExecPlan.includes(item.id); const isForced = s4State === 's4_epc_replan' && (isViolation || wasOriginallySelected); let displayCost = item.cost; if (s4State === 's4_epc_replan' && isViolation) displayCost = Math.round(item.cost * 1.2); return (<div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-50' : ''}`}><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isOwnerResp ? false : (isForced ? true : epcExecPlan.includes(item.id))} disabled={isOwnerResp || isForced} onCheckedChange={c=>c?setEpcExecPlan([...epcExecPlan,item.id]):setEpcExecPlan(epcExecPlan.filter(x=>x!==item.id))}/><div className="flex flex-col justify-center"><span className="text-sm text-slate-700 leading-none">{item.label} (${displayCost}万)</span>{isViolation && <span className="text-[10px] text-red-600 font-bold leading-none">整改必选 (+20%)</span>}</div></div>) })}</div><div className="text-[10px] text-slate-400 italic text-center shrink-0">已提交选项不可撤回；若未执行且被业主审查发现，后续成本+20%，声誉-5分/项</div>{s4State === 's4_planning' ? <Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s4EpcPlan}>提交执行方案</Button> : <Button size="sm" className="w-full bg-orange-600 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s4EpcReplanSubmit}>提交整改方案</Button>}{renderS2ApprovedEscpListFull()}</div>);
        if (stage === 4 && s4State === 'epc_audit_pass_confirm') return (<div className="space-y-2 bg-green-50 p-2 rounded border border-green-200 flex flex-col items-center justify-center h-full"><CheckCircle2 size={32} className="text-green-600 mb-2"/><div className="font-bold text-green-800 text-center">业主ESMP审计通过</div><div className="text-xs text-slate-600 text-center mb-4">您的执行方案已通过业主审查。点击确认开始施工。</div><Button size="sm" className="w-full bg-green-600 font-bold" onClick={s4EpcConfirmAuditPass}>确认 & 开始施工</Button></div>);
-       if (stage === 4 && protestState === 'epc_route_check') return (<div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200 flex flex-col h-full"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-orange-800 text-xs shrink-0">业主转交危机处理</div><div className="text-xs mb-1 shrink-0 text-orange-700">业主认为这是EPC承包商的责任，转交给你处理。是否接受?</div><Button size="sm" className="w-full bg-blue-600 mb-1 h-12 md:h-7 text-sm shrink-0 font-bold" onClick={()=>protestEpcRouteCheck(true)}>接受处理 (承担赔偿责任)</Button><Button size="sm" variant="outline" className="w-full h-12 md:h-7 text-sm shrink-0 font-bold" onClick={()=>protestEpcRouteCheck(false)}>拒绝 (非我方责任，退回)</Button><EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} /></div>);
-       if (stage === 4 && protestState === 'party_negotiate' && protestHandler === 'epc') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="text-xs font-bold text-red-600">公众索赔: ${ngoDemandAmount}万</div>{ngoDemandReason && <div className="text-xs bg-white p-1 rounded text-red-600 mb-1">理由: {ngoDemandReason}</div>}<Input type="number" placeholder="输入主张金额($)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setOfferAmount(Number(e.target.value))}/><Input type="text" placeholder="理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setPartyOfferReason(e.target.value)}/><Button size="sm" className="w-full h-12 md:h-7 text-sm font-bold" onClick={()=>protestPartyNegotiate(offerAmount)} disabled={offerAmount < 0}>主张赔偿</Button></div>);
-       if (stage === 4 && protestState === 'parties_react_ruling' && protestHandler === 'epc') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-blue-800 flex items-center gap-1 text-xs"><Gavel size={12}/> 政府裁决: ${govRulingAmount}万</div>{govRulingReason && <div className="text-xs bg-white p-1 rounded text-purple-700 mb-1">理由: {govRulingReason}</div>}{!partyResponse ? (<><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>submitPartyReaction('accept')}>接受裁决</Button><div className="pt-2 mt-1 border-t border-blue-200 space-y-1"><Input type="number" placeholder="申诉主张金额($)" className="h-12 md:h-7 bg-white text-sm" value={partyAppealInput} onChange={e=>setPartyAppealInput(e.target.value)} /><Input type="text" placeholder="申诉理由(可选)" className="h-12 md:h-7 bg-white text-sm mt-1" value={partyAppealReason} onChange={e=>setPartyAppealReason(e.target.value)} /><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm mt-1 font-bold" onClick={()=>submitPartyReaction('appeal', partyAppealInput, partyAppealReason)} disabled={!partyAppealInput}>提交申诉</Button></div></>) : <div className="text-center text-gray-600 text-xs mt-2 italic">已提交，等待对方...</div>}</div>);
-       if (stage === 4 && protestState === 'epc_notify_freeze') return (<div className="space-y-2 bg-red-50 p-2 rounded border border-red-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-red-800 text-xs flex items-center gap-1"><AlertTriangle size={12}/> 业主暂停支付</div><div className="text-xs mb-2 bg-white p-2 rounded border border-red-100 text-slate-700">业主已通知，暂停本阶段 {currentCrisis?.index === 3 ? '15%' : '20%'} 的进度款支付。{ownerPayDecisionReason && <div className="mt-1 font-bold">理由: {ownerPayDecisionReason}</div>}</div><Input type="text" placeholder="抗议理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setEpcProtestReason(e.target.value)}/><Button size="sm" className="w-full bg-slate-600 mb-1 h-12 md:h-7 text-sm font-bold" onClick={()=>protestEpcNotifyFreeze(false)}>知悉，继续项目</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestEpcNotifyFreeze(true)}>反对，要求业主支付</Button></div>);
-       if (stage === 5 && inspectionState === 'epc_apply') return (<div className="space-y-2"><div className="font-bold text-xs text-green-700">项目建设完成</div><div className="text-xs bg-slate-100 p-2 rounded text-slate-700">业主已支付: {ownerPaidPct}% 合同款</div><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={s5EpcApply}>发起竣工检验申请</Button></div>);
-       if (stage === 5 && inspectionState === 'epc_review_proposal') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><div className="font-bold text-blue-800 text-xs">业主通过验收</div><div className="bg-white p-2 rounded border border-blue-100 text-xs mb-2 text-slate-700"><div><span className="font-bold">拟支付比例:</span> {ownerPayProposal}%</div><div><span className="font-bold">业主意见:</span> {ownerFeedback}</div></div><Button size="sm" className="w-full bg-green-600 mb-1 h-12 md:h-7 text-sm font-bold" onClick={()=>s5EpcReview(true)}>接受，完成结算</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>s5EpcReview(false)}>申诉</Button></div>);
-       if (stage === 5 && inspectionState === 'epc_appeal_input') return (<div className="space-y-2 bg-red-50 p-2 rounded border border-red-200"><div className="font-bold text-red-800 text-xs">发起申诉</div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">主张支付比例(%):</div><Input type="number" min={ownerPaidPct} max={100} className="h-12 md:h-7 text-sm" onChange={e=>setEpcClaimProposal(e.target.value)}/></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">申诉理由:</div><Textarea className="h-20 md:h-12 text-sm bg-white" onChange={e=>setEpcClaimReason(e.target.value)}/></div><Button size="sm" className="w-full bg-red-600 mt-2 h-12 md:h-7 text-sm font-bold" onClick={s5EpcSubmitAppeal}>提交申诉 (政府介入)</Button></div>);
+       if (stage === 4 && protestState === 'epc_route_check') return (<div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200 flex flex-col h-full"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-orange-800 text-sm shrink-0">业主转交危机处理</div><div className="text-sm mb-1 shrink-0 text-orange-700">业主认为这是EPC承包商的责任，转交给你处理。是否接受?</div><Button size="sm" className="w-full bg-blue-600 mb-1 h-12 md:h-7 text-sm shrink-0 font-bold" onClick={()=>protestEpcRouteCheck(true)}>接受处理 (承担赔偿责任)</Button><Button size="sm" variant="outline" className="w-full h-12 md:h-7 text-sm shrink-0 font-bold" onClick={()=>protestEpcRouteCheck(false)}>拒绝 (非我方责任，退回)</Button><EsmpResponsibilityList ownerRespEsmp={ownerRespEsmp} /></div>);
+       if (stage === 4 && protestState === 'party_negotiate' && protestHandler === 'epc') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="text-sm font-bold text-red-600">公众索赔: ${ngoDemandAmount}万</div>{ngoDemandReason && <div className="text-xs bg-white p-1 rounded text-red-600 mb-1">理由: {ngoDemandReason}</div>}<Input type="number" placeholder="输入主张金额($)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setOfferAmount(Number(e.target.value))}/><Input type="text" placeholder="理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setPartyOfferReason(e.target.value)}/><Button size="sm" className="w-full h-12 md:h-7 text-sm font-bold" onClick={()=>protestPartyNegotiate(offerAmount)} disabled={offerAmount < 0}>主张赔偿</Button></div>);
+       if (stage === 4 && protestState === 'parties_react_ruling' && protestHandler === 'epc') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-blue-800 flex items-center gap-1 text-sm"><Gavel size={12}/> 政府裁决: ${govRulingAmount}万</div>{govRulingReason && <div className="text-xs bg-white p-1 rounded text-purple-700 mb-1">理由: {govRulingReason}</div>}{!partyResponse ? (<><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>submitPartyReaction('accept')}>接受裁决</Button><div className="pt-2 mt-1 border-t border-blue-200 space-y-1"><Input type="number" placeholder="申诉主张金额($)" className="h-12 md:h-7 bg-white text-sm" value={partyAppealInput} onChange={e=>setPartyAppealInput(e.target.value)} /><Input type="text" placeholder="申诉理由(可选)" className="h-12 md:h-7 bg-white text-sm mt-1" value={partyAppealReason} onChange={e=>setPartyAppealReason(e.target.value)} /><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm mt-1 font-bold" onClick={()=>submitPartyReaction('appeal', partyAppealInput, partyAppealReason)} disabled={!partyAppealInput}>提交申诉</Button></div></>) : <div className="text-center text-gray-600 text-xs mt-2 italic">已提交，等待对方...</div>}</div>);
+       if (stage === 4 && protestState === 'epc_notify_freeze') return (<div className="space-y-2 bg-red-50 p-2 rounded border border-red-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-red-800 text-sm flex items-center gap-1"><AlertTriangle size={12}/> 业主暂停支付</div><div className="text-sm mb-2 bg-white p-2 rounded border border-red-100 text-slate-700">业主已通知，暂停本阶段 {currentCrisis?.index === 3 ? '15%' : '20%'} 的进度款支付。{ownerPayDecisionReason && <div className="mt-1 font-bold">理由: {ownerPayDecisionReason}</div>}</div><Input type="text" placeholder="抗议理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setEpcProtestReason(e.target.value)}/><Button size="sm" className="w-full bg-slate-600 mb-1 h-12 md:h-7 text-sm font-bold" onClick={()=>protestEpcNotifyFreeze(false)}>知悉，继续项目</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestEpcNotifyFreeze(true)}>反对，要求业主支付</Button></div>);
+       if (stage === 5 && inspectionState === 'epc_apply') return (<div className="space-y-2"><div className="font-bold text-sm text-green-700">项目建设完成</div><div className="text-sm bg-slate-100 p-2 rounded text-slate-700">业主已支付: {ownerPaidPct}% 合同款</div><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={s5EpcApply}>发起竣工检验申请</Button></div>);
+       if (stage === 5 && inspectionState === 'epc_review_proposal') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><div className="font-bold text-blue-800 text-sm">业主通过验收</div><div className="bg-white p-2 rounded border border-blue-100 text-sm mb-2 text-slate-700"><div><span className="font-bold">拟支付比例:</span> {ownerPayProposal}%</div><div><span className="font-bold">业主意见:</span> {ownerFeedback}</div></div><Button size="sm" className="w-full bg-green-600 mb-1 h-12 md:h-7 text-sm font-bold" onClick={()=>s5EpcReview(true)}>接受，完成结算</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>s5EpcReview(false)}>申诉</Button></div>);
+       if (stage === 5 && inspectionState === 'epc_appeal_input') return (<div className="space-y-2 bg-red-50 p-2 rounded border border-red-200"><div className="font-bold text-red-800 text-sm">发起申诉</div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">主张支付比例(%):</div><Input type="number" min={ownerPaidPct} max={100} className="h-12 md:h-7 text-sm" onChange={e=>setEpcClaimProposal(e.target.value)}/></div><div className="space-y-1"><div className="text-xs font-bold text-slate-700">申诉理由:</div><Textarea className="h-20 md:h-12 text-sm bg-white" onChange={e=>setEpcClaimReason(e.target.value)}/></div><Button size="sm" className="w-full bg-red-600 mt-2 h-12 md:h-7 text-sm font-bold" onClick={s5EpcSubmitAppeal}>提交申诉 (政府介入)</Button></div>);
     }
 
     if (role === 'ngo') {
-      if (stage === 1 && s1State === 'ngo_eval') return (<div className="space-y-2 flex flex-col h-full"><div className="font-bold text-xs text-red-700 shrink-0">如对业主ESIA不满意，请勾选补充:</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESIA_ITEMS.map(i=> { const isOwnerSelected = confirmedEsiaSelection.includes(i.id); if (isOwnerSelected) return <div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center bg-slate-100 opacity-60 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked disabled /><span className="text-sm text-slate-500 leading-none">{i.label}</span></div>; return (<div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center hover:bg-slate-50 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={accumulatedNgoReqs.includes(i.id) || ngoRequirements.includes(i.id)} onCheckedChange={c=>c?setNgoRequirements([...ngoRequirements,i.id]):setNgoRequirements(ngoRequirements.filter(x=>x!==i.id))}/><span className="text-sm text-slate-700 leading-none">{i.label}</span>{accumulatedNgoReqs.includes(i.id) && <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1 text-red-500 bg-red-50 border-red-100 leading-none">公众</Badge>}</div>) })}</div><div className="text-[10px] text-slate-400 italic text-center shrink-0">监督成本+2万/项，声誉+2分/项</div><div className="flex gap-2 shrink-0"><Button size="sm" variant="destructive" className="flex-1 h-12 md:h-8 text-sm font-bold" onClick={()=>s1NgoEval(true)} disabled={!(ngoRequirements.filter(id => !accumulatedNgoReqs.includes(id)).length > 0)}>抗议</Button><Button size="sm" variant="outline" className="flex-1 h-12 md:h-8 text-sm font-bold" onClick={()=>s1NgoEval(false)}>无异议</Button></div></div>);
-      if (stage === 4 && protestState === 'ngo_decide') return (<div className="space-y-2 bg-yellow-50 p-2 rounded border border-yellow-200 flex flex-col h-full"><div className="font-bold text-red-600 text-xs shrink-0">危机爆发: {currentCrisis?.title}</div><div className="text-sm text-slate-700 mb-1 leading-snug overflow-y-auto flex-1 bg-white p-2 border rounded">{currentCrisis?.desc}</div><div className="text-[10px] text-slate-500 text-center italic mb-1 shrink-0">索赔需花费努力成本10万，声誉+10分; 不索赔声誉-10</div><Button size="sm" className="w-full bg-red-600 mb-1 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestNgoDecide(true)}>要求赔偿</Button><Button size="sm" variant="outline" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestNgoDecide(false)} disabled={ngoNoClaimDisabled}>不要求赔偿</Button></div>);
+      if (stage === 1 && s1State === 'ngo_eval') return (<div className="space-y-2 flex flex-col h-full"><div className="font-bold text-sm text-red-700 shrink-0">如对业主ESIA不满意，请勾选补充:</div><div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESIA_ITEMS.map(i=> { const isOwnerSelected = confirmedEsiaSelection.includes(i.id); if (isOwnerSelected) return <div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center bg-slate-100 opacity-60 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked disabled /><span className="text-sm text-slate-500 leading-none">{i.label}</span></div>; return (<div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center hover:bg-slate-50 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={accumulatedNgoReqs.includes(i.id) || ngoRequirements.includes(i.id)} onCheckedChange={c=>c?setNgoRequirements([...ngoRequirements,i.id]):setNgoRequirements(ngoRequirements.filter(x=>x!==i.id))}/><span className="text-sm text-slate-700 leading-none">{i.label}</span>{accumulatedNgoReqs.includes(i.id) && <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1 text-red-500 bg-red-50 border-red-100 leading-none">公众</Badge>}</div>) })}</div><div className="text-[10px] text-slate-400 italic text-center shrink-0">监督成本+2万/项，声誉+2分/项</div><div className="flex gap-2 shrink-0"><Button size="sm" variant="destructive" className="flex-1 h-12 md:h-8 text-sm font-bold" onClick={()=>s1NgoEval(true)} disabled={!(ngoRequirements.filter(id => !accumulatedNgoReqs.includes(id)).length > 0)}>抗议</Button><Button size="sm" variant="outline" className="flex-1 h-12 md:h-8 text-sm font-bold" onClick={()=>s1NgoEval(false)}>无异议</Button></div></div>);
+      if (stage === 4 && protestState === 'ngo_decide') return (<div className="space-y-2 bg-yellow-50 p-2 rounded border border-yellow-200 flex flex-col h-full"><div className="font-bold text-red-600 text-sm shrink-0">危机爆发: {currentCrisis?.title}</div><div className="text-sm text-slate-700 mb-1 leading-snug overflow-y-auto flex-1 bg-white p-2 border rounded">{currentCrisis?.desc}</div><div className="text-[10px] text-slate-500 text-center italic mb-1 shrink-0">索赔需花费努力成本10万，声誉+10分; 不索赔声誉-10</div><Button size="sm" className="w-full bg-red-600 mb-1 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestNgoDecide(true)}>要求赔偿</Button><Button size="sm" variant="outline" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestNgoDecide(false)} disabled={ngoNoClaimDisabled}>不要求赔偿</Button></div>);
       if (stage === 4 && protestState === 'ngo_input_demand') return (<div className="space-y-2"><CrisisContextBox crisis={currentCrisis} /><div className="space-y-0.5"><span className="text-xs font-bold text-slate-700">输入赔偿金额($万)</span><Input type="number" className="h-12 md:h-7 text-sm" onChange={e=>setNgoDemandAmount(Number(e.target.value))}/></div><div className="space-y-0.5"><span className="text-xs font-bold text-slate-700">索赔理由(可选)</span><Input type="text" className="h-12 md:h-7 text-sm" onChange={e=>setNgoDemandReason(e.target.value)}/></div><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={protestNgoSubmitDemand} disabled={!ngoDemandAmount || ngoDemandAmount <= 0}>提交索赔</Button></div>);
-      if (stage === 4 && protestState === 'ngo_response') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-center border-b border-blue-200 pb-1 mb-1 text-xs">对方主张</div><div className="flex justify-between text-xs mb-1"><div className="text-red-600 font-bold">我的诉求: ${ngoDemandAmount}</div><div className="text-green-600 font-bold">对方主张: ${offerAmount}</div></div>{partyOfferReason && <div className="text-xs bg-white p-1 rounded text-blue-600 mb-1">对方理由: {partyOfferReason}</div>}<Button size="sm" className="w-full bg-green-600 mb-1 h-12 md:h-7 text-sm font-bold" onClick={()=>protestNgoResponse(true)}>接受</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestNgoResponse(false)}>拒绝 (政府介入)</Button></div>);
-      if (stage === 4 && protestState === 'parties_react_ruling') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-blue-800 flex items-center gap-1 text-xs"><Gavel size={12}/> 政府裁决: ${govRulingAmount}万</div>{govRulingReason && <div className="text-xs bg-white p-1 rounded text-purple-700 mb-1">理由: {govRulingReason}</div>}{!ngoResponse ? (<><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>submitNgoReaction('accept')}>接受裁决</Button><div className="pt-2 mt-1 border-t border-blue-200 space-y-1"><Input type="number" placeholder="申诉赔偿金额($)" className="h-12 md:h-7 bg-white text-sm" value={ngoAppealInput} onChange={e=>setNgoAppealInput(e.target.value)} /><Input type="text" placeholder="申诉理由(可选)" className="h-12 md:h-7 bg-white text-sm mt-1" value={ngoAppealReason} onChange={e=>setNgoAppealReason(e.target.value)} /><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm mt-1 font-bold" onClick={()=>submitNgoReaction('appeal', ngoAppealInput, ngoAppealReason)} disabled={!ngoAppealInput}>提交申诉</Button></div></>) : <div className="text-center text-gray-600 text-xs mt-2 italic">已提交，等待对方...</div>}</div>);
+      if (stage === 4 && protestState === 'ngo_response') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-center border-b border-blue-200 pb-1 mb-1 text-sm">对方主张</div><div className="flex justify-between text-sm mb-1"><div className="text-red-600 font-bold">我的诉求: ${ngoDemandAmount}</div><div className="text-green-600 font-bold">对方主张: ${offerAmount}</div></div>{partyOfferReason && <div className="text-xs bg-white p-1 rounded text-blue-600 mb-1">对方理由: {partyOfferReason}</div>}<Button size="sm" className="w-full bg-green-600 mb-1 h-12 md:h-7 text-sm font-bold" onClick={()=>protestNgoResponse(true)}>接受</Button><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestNgoResponse(false)}>拒绝 (政府介入)</Button></div>);
+      if (stage === 4 && protestState === 'parties_react_ruling') return (<div className="space-y-2 bg-blue-50 p-2 rounded border border-blue-200"><CrisisContextBox crisis={currentCrisis} /><div className="font-bold text-blue-800 flex items-center gap-1 text-sm"><Gavel size={12}/> 政府裁决: ${govRulingAmount}万</div>{govRulingReason && <div className="text-xs bg-white p-1 rounded text-purple-700 mb-1">理由: {govRulingReason}</div>}{!ngoResponse ? (<><Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>submitNgoReaction('accept')}>接受裁决</Button><div className="pt-2 mt-1 border-t border-blue-200 space-y-1"><Input type="number" placeholder="申诉赔偿金额($)" className="h-12 md:h-7 bg-white text-sm" value={ngoAppealInput} onChange={e=>setNgoAppealInput(e.target.value)} /><Input type="text" placeholder="申诉理由(可选)" className="h-12 md:h-7 bg-white text-sm mt-1" value={ngoAppealReason} onChange={e=>setNgoAppealReason(e.target.value)} /><Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm mt-1 font-bold" onClick={()=>submitNgoReaction('appeal', ngoAppealInput, ngoAppealReason)} disabled={!ngoAppealInput}>提交申诉</Button></div></>) : <div className="text-center text-gray-600 text-xs mt-2 italic">已提交，等待对方...</div>}</div>);
     }
 
     return null;
@@ -1903,7 +1936,6 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
          </div>
 
          <div className="h-16 bg-white border-t border-slate-200 shrink-0 grid grid-cols-6 gap-1 p-1 pb-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-30">
-            {/* 修改点 8: 重写底部灯光逻辑。裁决结果展示时，只亮责任方和NGO */}
             <MobileNavBtn role="owner" label="业主" icon={User} active={mobileTab} onClick={setMobileTab} alert={financialAlerts.owner} 
               isTurn={ stage === 4 && protestState === 'ruling_result_display' ? (protestHandler === 'owner') : (activeRole === 'owner' || activeRole === 'all') } 
             />
@@ -1923,7 +1955,8 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
          </div>
       </div>
 
-      <div className="hidden md:grid h-48 grid-cols-12 gap-2 px-2 pb-2 shrink-0">
+      {/* 修改点 2: 底部区域上移，高度改为 h-[28vh] (约屏幕30%)，使公告栏更高 */}
+      <div className="hidden md:grid h-[28vh] grid-cols-12 gap-2 px-2 pb-2 shrink-0">
         <div className="col-span-4 bg-slate-800 rounded-sm relative overflow-hidden flex flex-col items-center justify-center text-white shadow-inner group border border-slate-600 hidden md:flex">
            {renderScene()}
            <div className="z-20 text-center p-2 relative bottom-0 w-full bg-black/40 backdrop-blur-sm mt-auto border-t border-white/10"><h3 className="font-bold text-sm flex items-center justify-center gap-2 mb-0.5 text-white drop-shadow-md"><MapPin size={14} className="text-blue-400"/> {stage===1 ? "项目规划与选址 (立项审批)" : stage===2 ? "项目融资 (ESCP签署)" : stage===3 ? "EPC合同谈判" : s4State.includes('crisis') ? "施工现场 (紧急状态)" : (stage===5 || stage===6) ? "验收总结阶段" : "建设现场"}</h3><div className="text-[10px] text-slate-200 inline-block">{s4State.includes('crisis') ? "⚠️ 警报: 危机处理中" : (stage===5 || stage===6) ? "状态: 验收总结" : "状态: 正常推进"}</div></div>
@@ -1947,17 +1980,17 @@ function SunLinkESGSimV7_35_Fixes({ assignedRole, mode, onExit, roomNumber, play
   );
 }
 
-function SunLinkV7_35_FinalFixes() {
+function SunLinkV7_36_Final() {
     return (
         <GameEntryWrapper>
-            <SunLinkESGSimV7_35_Fixes />
+            <SunLinkESGSimV7_36_Final />
         </GameEntryWrapper>
     );
 }
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_35_FinalFixes />
+      		    <SunLinkV7_36_Final />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
