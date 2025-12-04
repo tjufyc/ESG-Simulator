@@ -390,10 +390,11 @@ const GameEntryWrapper = ({ children }) => {
           return;
       }
       const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js';
+      // FIX: Modified to use 'av-live-query-min.js' to support Real-time subscription
+      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-live-query-min.js';
       script.async = true;
       script.onload = () => {
-          console.log("LeanCloud SDK Loaded via CDN");
+          console.log("LeanCloud LiveQuery SDK Loaded via CDN");
           try {
              const AV = window.AV;
              if (!AV.applicationId) {
@@ -407,6 +408,10 @@ const GameEntryWrapper = ({ children }) => {
           } catch (e) {
              console.error("AV Init failed:", e);
           }
+      };
+      // ADD: Alert when script blocked (e.g. by AdBlock)
+      script.onerror = () => {
+          alert("错误：SDK加载失败！请关闭广告拦截插件(AdBlock/uBlock)或切换网络后刷新重试。");
       };
       document.body.appendChild(script);
   }, []);
@@ -482,6 +487,7 @@ const GameEntryWrapper = ({ children }) => {
           console.error("LeanCloud Connection Error:", error);
           let errMsg = "网络连接失败，请重试。";
           if (error.code === 403) errMsg = "访问被拒绝 (403)。请检查 LeanCloud 后台域名白名单配置，或使用单机版。";
+          if (error.code === 101) errMsg = "Class not found (101)。请联系管理员在后台创建 GamePlayer 表并设置权限。";
           
           alert(errMsg + ` (Code: ${error.code || 'Unknown'})`);
           setLobbyStatus('login');
@@ -874,6 +880,18 @@ const CrisisContextBox = ({ crisis }) => {
 function SunLinkESGSimV7_38_S3Update({ assignedRole, mode, onExit, roomNumber, playerList }) {
   const [viewMode, setViewMode] = useState('intro'); 
   
+  // --- ADDED: Safe check for empty player list in multiplayer mode to prevent white screen ---
+  if (mode === 'multi' && (!playerList || playerList.length === 0)) {
+      return (
+          <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-900 text-white">
+              <Loader2 size={48} className="animate-spin text-blue-500 mb-4" />
+              <div className="text-lg font-light">正在同步房间数据...</div>
+              <div className="text-xs text-slate-500 mt-2">请稍候，若长时间未进入请尝试刷新</div>
+          </div>
+      );
+  }
+  // ------------------------------------------------------------------------------------
+
   useEffect(() => {
       if (mode === 'multi') {
           setViewMode('roles');
