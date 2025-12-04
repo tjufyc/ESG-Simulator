@@ -955,14 +955,10 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       if (mode === 'single' && !initialViewMode) setViewMode('intro');
   }, [mode, initialViewMode]);
 
-  if (mode === 'multi' && (!playerList || playerList.length === 0)) {
-      return (
-          <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-900 text-white">
-              <Loader2 size={48} className="animate-spin text-blue-500 mb-4" />
-              <div className="text-lg font-light">正在同步房间数据...</div>
-              <div className="text-xs text-slate-500 mt-2">请稍候，若长时间未进入请尝试刷新</div>
-          </div>
-      );
+  // FIX: 移除对 playerList 的强制非空检查，避免死锁
+  // 如果是 Multi 模式，且没有 assignedRole，则应该报错或返回
+  if (mode === 'multi' && !assignedRole) {
+      return <div className="p-8 text-white">Error: No Role Assigned</div>
   }
 
   const [gameTime, setGameTime] = useState(0);
@@ -2503,7 +2499,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.39</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.40</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
@@ -3435,7 +3431,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
       <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
         <CardHeader className="border-b border-slate-100 pb-4">
-          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.39</Badge></div>
+          <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">v7.40</Badge></div>
         </CardHeader>
         <CardContent className="space-y-8 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3616,7 +3612,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   );
 }
 
-function SunLinkV7_39_SyncFix() {
+function SunLinkV7_40_LoadingFix() {
     return (
         <GameEntryWrapper>
             <SunLinkESGSimV7_39_SyncFix />
@@ -3626,7 +3622,7 @@ function SunLinkV7_39_SyncFix() {
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_39_SyncFix />
+      		    <SunLinkV7_40_LoadingFix />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
