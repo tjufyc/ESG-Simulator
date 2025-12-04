@@ -984,7 +984,7 @@ function SunLinkESGSimV7_38_S3Update({ assignedRole, mode, onExit, roomNumber, p
   const [epcExecPlan, setEpcExecPlan] = useState([]);
   const [originalEpcExecPlan, setOriginalEpcExecPlan] = useState([]); 
   const [ownerAuditItems, setOwnerAuditItems] = useState([]);
-  const [s3Phase, setS3Phase] = useState('tender'); 
+  const [s3Phase, setS3Phase] = useState('planning'); 
   const [epcViolations, setEpcViolations] = useState([]); 
 
   const [s4State, setS4State] = useState('idle');
@@ -3031,7 +3031,6 @@ function SunLinkESGSimV7_38_S3Update({ assignedRole, mode, onExit, roomNumber, p
             <div className="text-sm text-slate-700 mb-1 leading-snug overflow-y-auto flex-1 bg-white p-2 border rounded">{currentCrisis?.desc}</div>
             <div className="text-[10px] text-slate-500 text-center italic mb-1 shrink-0">索赔需花费努力成本10万，声誉+10分; 不索赔声誉-10</div>
             <Button size="sm" className="w-full bg-red-600 mb-1 h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestNgoDecide(true)}>要求赔偿</Button>
-            {/* 修复点 3: 移除 ngoNoClaimDisabled 限制，允许公众选择不赔偿 */}
             <Button size="sm" variant="outline" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>protestNgoDecide(false)}>不要求赔偿</Button>
          </div>
       );
@@ -3225,7 +3224,15 @@ function SunLinkESGSimV7_38_S3Update({ assignedRole, mode, onExit, roomNumber, p
             })}
          </div>
          <div className="text-center pb-8">
-           {!isTimerRunning && <Button size="lg" className="bg-green-600 hover:bg-green-700 px-12 py-6 text-xl shadow-md font-bold rounded-full" onClick={startSim}>{mode === 'multi' ? "进入场景" : "开始模拟"}</Button>}
+           <Button size="lg" className="bg-green-600 hover:bg-green-700 px-12 py-6 text-xl shadow-md font-bold rounded-full" onClick={() => {
+               if (mode === 'multi' || isTimerRunning) {
+                   setViewMode('game');
+               } else {
+                   startSim();
+               }
+           }}>
+               {(mode === 'multi' || isTimerRunning) ? "进入游戏场景" : "开始模拟"}
+           </Button>
          </div>
        </div>
     </div>
