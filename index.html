@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title> 2 SunLink ESG Simulator by TJU GIPC</title>
+    <title> SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -561,39 +561,23 @@ const GameEntryWrapper = ({ children }) => {
   const [myRole, setMyRole] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0); 
   
+  // 使用轮询替代 LiveQuery 解决 403 问题
   const pollingRef = useRef(null);
 
-useEffect(() => {
+  // --- Init LeanCloud ---
+  useEffect(() => {
       if (window.AV) {
           setSdkReady(true);
           return;
       }
       const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; 
+      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; // 移除 live-query lib
       script.async = true;
       script.onload = () => {
           console.log("LeanCloud SDK Loaded via CDN");
           try {
              const AV = window.AV;
-             
-             // --- 修复开始：定义内存存储适配器 ---
-             // 这段代码能解决 "Tracking Prevention blocked access" 错误
-             const MemoryStorage = {
-                _data: {},
-                getItem: function(key) { return this._data[key] || null; },
-                setItem: function(key, value) { this._data[key] = value; },
-                removeItem: function(key) { delete this._data[key]; },
-                clear: function() { this._data = {}; }
-             };
-             
-             // 强制 SDK 使用内存存储，不再读写浏览器的 LocalStorage
-             // 这样浏览器就不会认为我们在“追踪用户”从而进行拦截
-             if (AV.setAdapters) {
-                 AV.setAdapters({ storage: MemoryStorage });
-             }
-             // --- 修复结束 ---
-
-             if (AV && !AV.applicationId) {
+             if (!AV.applicationId) {
                  AV.init({
                     appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
                     appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
@@ -606,13 +590,13 @@ useEffect(() => {
           }
       };
       script.onerror = () => {
-          console.warn("Failed to load AV SDK");
+          alert("错误：SDK加载失败！请关闭广告拦截插件(AdBlock/uBlock)或切换网络后刷新重试。");
       };
       document.body.appendChild(script);
   }, []);
 
   useEffect(() => {
-      if (!sdkReady || !window.AV) return;
+      if (!sdkReady) return;
       const AV = window.AV;
       
       const fetchOnlineCount = async () => {
@@ -625,10 +609,11 @@ useEffect(() => {
            }
       };
       fetchOnlineCount();
-      const timer = setInterval(fetchOnlineCount, 30000); // Reduced frequency
+      const timer = setInterval(fetchOnlineCount, 20000);
       return () => clearInterval(timer);
   }, [sdkReady]);
 
+  // --- Polling Logic for Lobby & Game Start ---
   useEffect(() => {
       if (lobbyStatus !== 'waiting' || !roomNumber || !sdkReady) {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -638,9 +623,10 @@ useEffect(() => {
       const AV = window.AV;
       const rNum = parseInt(roomNumber);
 
+      // 轮询函数：检查玩家列表 + 检查游戏开始信号
       const poll = async () => {
           try {
-              if (!AV) return;
+              // 1. 刷新玩家列表
               const pQuery = new AV.Query('GamePlayer');
               pQuery.equalTo('room', rNum);
               pQuery.ascending('createdAt');
@@ -651,6 +637,8 @@ useEffect(() => {
                   id: p.id
               })));
 
+              // 2. 检查是否有 Start Game 信号 (SYNC_STATE_FULL 且 stage=1)
+              // 为了性能，这里只查最新的一条 Action
               const aQuery = new AV.Query('GameAction');
               aQuery.equalTo('room', rNum);
               aQuery.equalTo('type', 'SYNC_STATE_FULL');
@@ -660,18 +648,21 @@ useEffect(() => {
 
               if (latestAction) {
                   const payload = latestAction.get('payload');
+                  // 如果发现有 stage 1 的记录，且当前在 waiting 状态，则进入游戏
                   if (payload && payload.stage === 1) {
                       console.log("Detected Game Start Signal via Polling!");
                       setAppState('playing');
                   }
               }
+
           } catch (e) {
               console.warn("Polling failed:", e);
           }
       };
 
+      // 立即执行一次，然后每 1.5 秒执行一次
       poll();
-      pollingRef.current = setInterval(poll, 3000);
+      pollingRef.current = setInterval(poll, 1500);
 
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -684,7 +675,7 @@ useEffect(() => {
 
       const rNum = parseInt(roomNumber); 
       if (!playerName.trim()) return alert("请输入昵称");
-      if (isNaN(rNum) || rNum < 1 || rNum > 100) return alert("请输入有效的房间号 (1-99)");
+      if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
 
       try {
           setLobbyStatus('waiting');
@@ -702,6 +693,7 @@ useEffect(() => {
              setMyRole(null); 
           }
           
+          // 初始列表
           setRoomPlayers(existingPlayers.map(p => ({
               name: p.get('name'),
               role: p.get('role'),
@@ -747,23 +739,28 @@ useEffect(() => {
 
           await player.save();
           setMyRole(roleToSelect);
+          // 轮询会更新列表，这里不用手动 refresh
       } catch (e) {
           console.error("选角失败", e);
           alert(`选角失败: ${e.message || "网络错误"}`);
       }
   };
 
+  // NEW: 进入项目简介
   const startMultiIntro = () => {
       setAppState('multi_intro');
   };
 
+  // NEW: 进入角色档案
   const startMultiRoles = () => {
       setAppState('multi_roles');
   };
 
+  // NEW: 开始游戏 (Owner 触发)
   const startGame = async () => {
       if (!myRole) return alert("请先选择一个角色！");
       
+      // 仅房主 Owner 初始化游戏状态
       if (myRole === 'owner' && mode === 'multi') {
           try {
              const AV = window.AV;
@@ -825,7 +822,7 @@ useEffect(() => {
                 
                 <div className="flex flex-col md:flex-row gap-6 justify-center w-full max-w-lg px-4">
                     <Button size="lg" className="flex-1 h-auto py-4 text-base bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
-                        <Award size={24} />
+                        <Smartphone size={24} />
                         <div className="flex flex-col items-center">
                             <span>单机体验版</span>
                             <span className="text-xs opacity-70 font-normal">一人分饰五角·自由探索</span>
@@ -851,7 +848,8 @@ useEffect(() => {
         </div>
       );
   }
-  
+
+  // 单机版简介页
   if (appState === 'single_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -860,6 +858,7 @@ useEffect(() => {
       );
   }
   
+  // 多人版项目简介 (复用 Intro View，传入模式)
   if (appState === 'multi_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -874,6 +873,7 @@ useEffect(() => {
       );
   }
 
+  // 多人版角色档案
   if (appState === 'multi_roles') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -907,7 +907,7 @@ useEffect(() => {
                            <Input placeholder="例如: Player1" value={playerName} onChange={e=>setPlayerName(e.target.value)} className="text-center text-lg h-12"/>
                         </div>
                         <div className="space-y-2">
-                           <span className="text-xs font-bold text-slate-600">房间号 (1-99)</span>
+                           <span className="text-xs font-bold text-slate-600">房间号 (1-20)</span>
                            <Input type="number" min={1} max={20} placeholder="请输入房间号" value={roomNumber} onChange={e=>setRoomNumber(e.target.value)} className="text-center text-lg h-12 font-mono"/>
                         </div>
                         <Button className="w-full h-12 text-lg font-bold bg-purple-600 hover:bg-purple-700" onClick={enterRoomReal}>
@@ -1011,7 +1011,7 @@ useEffect(() => {
   
   return null;
 };
-
+		
 const SummaryForm = ({ role, onSubmit }) => {
   const [pros, setPros] = useState("");
   const [cons, setCons] = useState("");
