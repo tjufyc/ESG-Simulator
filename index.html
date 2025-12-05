@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title> SunLink ESG Simulator by TJU GIPC</title>
+    <title> 3 SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -799,11 +799,13 @@ const GameEntryWrapper = ({ children }) => {
       )
   }
 
-  if (appState === 'cover') {
+   if (appState === 'cover') {
       return (
         <div className="min-h-screen flex flex-col justify-between bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=2000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-30" />
+            
             <div className="w-full h-10"></div>
+
             <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto z-10 relative -mt-20 md:-mt-32">
                 <div className="mb-8 flex justify-center relative">
                     <div className="w-24 h-24 bg-blue-500 rounded-full blur-[60px] absolute opacity-50 animate-pulse"></div>
@@ -814,32 +816,40 @@ const GameEntryWrapper = ({ children }) => {
                     <h1 className="text-4xl md:text-6xl font-black tracking-tight text-blue-300 drop-shadow-lg leading-tight">ESG Simulator</h1>
                     <div className="h-1 w-20 bg-blue-500 mx-auto mt-4 rounded-full"></div>
                 </div>
+                <div className="text-center space-y-2 mb-12">
+                    <h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide">国际工程项目ESG</h2>
+                    <h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide">多角色全流程模拟</h2>
+                </div>
                 
                 <div className="flex flex-col md:flex-row gap-6 justify-center w-full max-w-lg px-4">
-                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
-                        {/* 修复点：这里改回 Award，防止 Smartphone 未导入导致白屏 */}
-                        <Award size={24} />
+                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
+                        <Smartphone size={24} />
                         <div className="flex flex-col items-center">
                             <span>单机体验版</span>
-                            <span className="text-xs opacity-70 font-normal">一人分饰五角</span>
+                            <span className="text-xs opacity-70 font-normal">一人分饰五角·自由探索</span>
                         </div>
                     </Button>
                     
-                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
+                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
                         <Network size={24} />
                         <div className="flex flex-col items-center">
                             <span>多人互动版</span>
-                            <span className="text-xs opacity-70 font-normal">5人实时组队</span>
+                            <span className="text-xs opacity-70 font-normal">5人实时组队·真实决策</span>
                         </div>
                     </Button>
                 </div>
             </div>
+
             <div className="z-10 text-center space-y-1 opacity-80 w-full px-4 pb-4 mb-[10vh] text-slate-400">
-                <div className="text-xs font-light">Developed by Tianjin University GIPC</div>
+                <div className="text-sm font-light text-slate-300">开发单位：天津大学全球工程经营实验室</div>
+                <div className="text-xs font-light">Developed by Tianjin University Global Infrastructure Project Center</div>
+                <div className="text-xs font-mono">联系人：傅老师 yongcheng_fu@tju.edu.cn</div>
+                <div className="text-xs font-mono pt-1">© 2025 Tianjin University GIPC. All Rights Reserved.</div>
             </div>
         </div>
       );
   }
+
   
   if (appState === 'single_intro') {
       return (
@@ -1375,28 +1385,104 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
     
 const broadcastState = (overrides = {}) => {
-      if (mode !== 'multi') return;
-      const payload = {
-          stage: overrides.stage !== undefined ? overrides.stage : stage,
-          activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
-          playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
-          s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
-          s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
-          s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
-          s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
-          lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
-          govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
-          partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
-          ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
-          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
-          tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
-          delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
-          earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
-          logs: logs 
-      };
-      syncToCloud('SYNC_STATE_FULL', payload);
-  };
+    if (mode !== 'multi') return;
+    
+    // 如果 overrides 里有 logs，就用新的，否则用当前的 logs
+    const currentLogs = overrides.logs || logs;
 
+    const payload = {
+        // 1. 基础状态
+        stage: overrides.stage !== undefined ? overrides.stage : stage,
+        activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
+        playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
+        logs: currentLogs,
+        lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
+
+        // 2. 状态机
+        s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
+        s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
+        s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
+        s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
+        inspectionState: overrides.inspectionState !== undefined ? overrides.inspectionState : inspectionState,
+        protestState: overrides.protestState !== undefined ? overrides.protestState : protestState,
+
+        // 3. 详细业务数据 (使用 || 机制，优先使用 override 的值，否则使用当前 state 的值)
+        
+        // S1 & S2
+        ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
+        confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
+        ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
+        govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
+        accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
+        accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
+        
+        riskLevel: overrides.riskLevel !== undefined ? overrides.riskLevel : riskLevel,
+        ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
+        confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
+        govEscpMandates: overrides.govEscpMandates !== undefined ? overrides.govEscpMandates : govEscpMandates,
+        mdbEscpMandates: overrides.mdbEscpMandates !== undefined ? overrides.mdbEscpMandates : mdbEscpMandates,
+        accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs !== undefined ? overrides.accumulatedGovEscpReqs : accumulatedGovEscpReqs,
+        accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs !== undefined ? overrides.accumulatedMdbEscpReqs : accumulatedMdbEscpReqs,
+
+        // S3
+        ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
+        tenderLimitPrice: overrides.tenderLimitPrice !== undefined ? overrides.tenderLimitPrice : tenderLimitPrice,
+        tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
+        delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
+        earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
+        epcBid: overrides.epcBid !== undefined ? overrides.epcBid : epcBid,
+        epcBidHistory: overrides.epcBidHistory !== undefined ? overrides.epcBidHistory : epcBidHistory,
+        ownerRejectReason: overrides.ownerRejectReason !== undefined ? overrides.ownerRejectReason : ownerRejectReason,
+        
+        finalContractPrice: overrides.finalContractPrice !== undefined ? overrides.finalContractPrice : finalContractPrice,
+        finalContractDuration: overrides.finalContractDuration !== undefined ? overrides.finalContractDuration : finalContractDuration,
+
+        // S4
+        epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
+        ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
+        previousAuditItems: overrides.previousAuditItems !== undefined ? overrides.previousAuditItems : previousAuditItems,
+        epcViolations: overrides.epcViolations !== undefined ? overrides.epcViolations : epcViolations,
+
+        crisisQueue: overrides.crisisQueue !== undefined ? overrides.crisisQueue : crisisQueue,
+        currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
+        protestHandler: overrides.protestHandler !== undefined ? overrides.protestHandler : protestHandler,
+
+        ngoDemandAmount: overrides.ngoDemandAmount !== undefined ? overrides.ngoDemandAmount : ngoDemandAmount,
+        ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
+        offerAmount: overrides.offerAmount !== undefined ? overrides.offerAmount : offerAmount,
+        partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
+        govRulingAmount: overrides.govRulingAmount !== undefined ? overrides.govRulingAmount : govRulingAmount,
+        govRulingReason: overrides.govRulingReason !== undefined ? overrides.govRulingReason : govRulingReason,
+        govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
+        govRulingCount: overrides.govRulingCount !== undefined ? overrides.govRulingCount : govRulingCount,
+        
+        bankFreezeDecision: overrides.bankFreezeDecision !== undefined ? overrides.bankFreezeDecision : bankFreezeDecision,
+        ownerPayDecisionReason: overrides.ownerPayDecisionReason !== undefined ? overrides.ownerPayDecisionReason : ownerPayDecisionReason,
+        epcProtestReason: overrides.epcProtestReason !== undefined ? overrides.epcProtestReason : epcProtestReason,
+
+        partyResponse: overrides.partyResponse !== undefined ? overrides.partyResponse : partyResponse,
+        ngoResponse: overrides.ngoResponse !== undefined ? overrides.ngoResponse : ngoResponse,
+        partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
+        ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
+        confirmedParties: overrides.confirmedParties !== undefined ? overrides.confirmedParties : confirmedParties,
+
+        // S5
+        ownerPayProposal: overrides.ownerPayProposal !== undefined ? overrides.ownerPayProposal : ownerPayProposal,
+        ownerFeedback: overrides.ownerFeedback !== undefined ? overrides.ownerFeedback : ownerFeedback,
+        epcClaimProposal: overrides.epcClaimProposal !== undefined ? overrides.epcClaimProposal : epcClaimProposal,
+        epcClaimReason: overrides.epcClaimReason !== undefined ? overrides.epcClaimReason : epcClaimReason,
+        s5GovRuling: overrides.s5GovRuling !== undefined ? overrides.s5GovRuling : s5GovRuling,
+        s5GovRulingReason: overrides.s5GovRulingReason !== undefined ? overrides.s5GovRulingReason : s5GovRulingReason,
+        s5ConfirmedParties: overrides.s5ConfirmedParties !== undefined ? overrides.s5ConfirmedParties : s5ConfirmedParties,
+
+        // 进度
+        bankDisbursedPct: overrides.bankDisbursedPct !== undefined ? overrides.bankDisbursedPct : bankDisbursedPct,
+        ownerPaidPct: overrides.ownerPaidPct !== undefined ? overrides.ownerPaidPct : ownerPaidPct,
+    };
+    
+    syncToCloud('SYNC_STATE_FULL', payload);
+};
+	
   const addFloatEffect = (role, value) => {
     const key = `${role}-${value}-${Date.now()}`;
     setFloatEffects(prev => {
