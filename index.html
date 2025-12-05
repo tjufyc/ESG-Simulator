@@ -1020,9 +1020,9 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if (mode === 'single' && !initialViewMode) setViewMode('intro');
   }, [mode, initialViewMode]);
 
-  if (mode === 'multi' && !assignedRole) {
-      return <div className="p-8 text-white">Error: No Role Assigned</div>
-  }
+  if (mode === 'multi' && !assignedRole && initialViewMode !== 'intro_only' && initialViewMode !== 'roles_only') {
+    return <div className="text-white p-10">Error: No Role Assigned. Please restart.</div>;
+}
 
   const [gameTime, setGameTime] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -3629,7 +3629,16 @@ const applyStatePayload = (data) => {
   };
 
   const isResultDisplay = stage===4 && protestState==='ruling_result_display';
+  if (initialViewMode === 'intro_only') {
+      // 这里的 ProjectIntroView 是您代码里定义过的组件
+      return <ProjectIntroView onStart={onStart} />;
+  }
 
+  // 2. 如果处于“多人模式-档案阶段”
+  if (initialViewMode === 'roles_only') {
+      // 这里的 RoleSelectionView 也是您代码里定义过的组件
+      return <RoleSelectionView onSelect={onStartGame} />;
+  }
   return (
     <div className="h-full w-full bg-slate-100 flex flex-col font-sans overflow-hidden relative">
       {renderTopBar()}
