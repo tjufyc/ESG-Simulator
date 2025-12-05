@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title>SunLink ESG Simulator by TJU GIPC</title>
+    <title> 1 SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -1374,27 +1374,103 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
     
     const broadcastState = (overrides = {}) => {
-      if (mode !== 'multi') return;
-      const payload = {
-          stage: overrides.stage !== undefined ? overrides.stage : stage,
-          activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
-          playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
-          s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
-          s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
-          s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
-          s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
-          lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
-          govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
-          partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
-          ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
-          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
-          tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
-          delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
-          earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
-          logs: logs 
-      };
-      syncToCloud('SYNC_STATE_FULL', payload);
-  };
+    if (mode !== 'multi') return;
+    
+    // 如果 overrides 里有 logs，就用新的，否则用当前的 logs
+    const currentLogs = overrides.logs || logs;
+
+    const payload = {
+        // 1. 基础状态
+        stage: overrides.stage !== undefined ? overrides.stage : stage,
+        activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
+        playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
+        logs: currentLogs,
+        lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
+
+        // 2. 状态机
+        s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
+        s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
+        s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
+        s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
+        inspectionState: overrides.inspectionState !== undefined ? overrides.inspectionState : inspectionState,
+        protestState: overrides.protestState !== undefined ? overrides.protestState : protestState,
+
+        // 3. 详细业务数据 (使用 || 机制，优先使用 override 的值，否则使用当前 state 的值)
+        
+        // S1 & S2
+        ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
+        confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
+        ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
+        govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
+        accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
+        accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
+        
+        riskLevel: overrides.riskLevel !== undefined ? overrides.riskLevel : riskLevel,
+        ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
+        confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
+        govEscpMandates: overrides.govEscpMandates !== undefined ? overrides.govEscpMandates : govEscpMandates,
+        mdbEscpMandates: overrides.mdbEscpMandates !== undefined ? overrides.mdbEscpMandates : mdbEscpMandates,
+        accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs !== undefined ? overrides.accumulatedGovEscpReqs : accumulatedGovEscpReqs,
+        accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs !== undefined ? overrides.accumulatedMdbEscpReqs : accumulatedMdbEscpReqs,
+
+        // S3
+        ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
+        tenderLimitPrice: overrides.tenderLimitPrice !== undefined ? overrides.tenderLimitPrice : tenderLimitPrice,
+        tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
+        delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
+        earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
+        epcBid: overrides.epcBid !== undefined ? overrides.epcBid : epcBid,
+        epcBidHistory: overrides.epcBidHistory !== undefined ? overrides.epcBidHistory : epcBidHistory,
+        ownerRejectReason: overrides.ownerRejectReason !== undefined ? overrides.ownerRejectReason : ownerRejectReason,
+        
+        finalContractPrice: overrides.finalContractPrice !== undefined ? overrides.finalContractPrice : finalContractPrice,
+        finalContractDuration: overrides.finalContractDuration !== undefined ? overrides.finalContractDuration : finalContractDuration,
+
+        // S4
+        epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
+        ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
+        previousAuditItems: overrides.previousAuditItems !== undefined ? overrides.previousAuditItems : previousAuditItems,
+        epcViolations: overrides.epcViolations !== undefined ? overrides.epcViolations : epcViolations,
+
+        crisisQueue: overrides.crisisQueue !== undefined ? overrides.crisisQueue : crisisQueue,
+        currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
+        protestHandler: overrides.protestHandler !== undefined ? overrides.protestHandler : protestHandler,
+
+        ngoDemandAmount: overrides.ngoDemandAmount !== undefined ? overrides.ngoDemandAmount : ngoDemandAmount,
+        ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
+        offerAmount: overrides.offerAmount !== undefined ? overrides.offerAmount : offerAmount,
+        partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
+        govRulingAmount: overrides.govRulingAmount !== undefined ? overrides.govRulingAmount : govRulingAmount,
+        govRulingReason: overrides.govRulingReason !== undefined ? overrides.govRulingReason : govRulingReason,
+        govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
+        govRulingCount: overrides.govRulingCount !== undefined ? overrides.govRulingCount : govRulingCount,
+        
+        bankFreezeDecision: overrides.bankFreezeDecision !== undefined ? overrides.bankFreezeDecision : bankFreezeDecision,
+        ownerPayDecisionReason: overrides.ownerPayDecisionReason !== undefined ? overrides.ownerPayDecisionReason : ownerPayDecisionReason,
+        epcProtestReason: overrides.epcProtestReason !== undefined ? overrides.epcProtestReason : epcProtestReason,
+
+        partyResponse: overrides.partyResponse !== undefined ? overrides.partyResponse : partyResponse,
+        ngoResponse: overrides.ngoResponse !== undefined ? overrides.ngoResponse : ngoResponse,
+        partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
+        ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
+        confirmedParties: overrides.confirmedParties !== undefined ? overrides.confirmedParties : confirmedParties,
+
+        // S5
+        ownerPayProposal: overrides.ownerPayProposal !== undefined ? overrides.ownerPayProposal : ownerPayProposal,
+        ownerFeedback: overrides.ownerFeedback !== undefined ? overrides.ownerFeedback : ownerFeedback,
+        epcClaimProposal: overrides.epcClaimProposal !== undefined ? overrides.epcClaimProposal : epcClaimProposal,
+        epcClaimReason: overrides.epcClaimReason !== undefined ? overrides.epcClaimReason : epcClaimReason,
+        s5GovRuling: overrides.s5GovRuling !== undefined ? overrides.s5GovRuling : s5GovRuling,
+        s5GovRulingReason: overrides.s5GovRulingReason !== undefined ? overrides.s5GovRulingReason : s5GovRulingReason,
+        s5ConfirmedParties: overrides.s5ConfirmedParties !== undefined ? overrides.s5ConfirmedParties : s5ConfirmedParties,
+
+        // 进度
+        bankDisbursedPct: overrides.bankDisbursedPct !== undefined ? overrides.bankDisbursedPct : bankDisbursedPct,
+        ownerPaidPct: overrides.ownerPaidPct !== undefined ? overrides.ownerPaidPct : ownerPaidPct,
+    };
+    
+    syncToCloud('SYNC_STATE_FULL', payload);
+};
 
   const addFloatEffect = (role, value) => {
     const key = `${role}-${value}-${Date.now()}`;
