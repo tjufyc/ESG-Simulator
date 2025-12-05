@@ -1373,11 +1373,8 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       act.save();
   };
     
-  const broadcastState = (overrides = {}) => {
+    const broadcastState = (overrides = {}) => {
       if (mode !== 'multi') return;
-      
-      const currentLogs = overrides.logs || logs;
-
       const payload = {
           stage: overrides.stage !== undefined ? overrides.stage : stage,
           activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
@@ -1387,28 +1384,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
           s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
           lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
-          
-          govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
-          accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
-          accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
-          accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs !== undefined ? overrides.accumulatedGovEscpReqs : accumulatedGovEscpReqs,
-          accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs !== undefined ? overrides.accumulatedMdbEscpReqs : accumulatedMdbEscpReqs,
-          govEscpMandates: overrides.govEscpMandates !== undefined ? overrides.govEscpMandates : govEscpMandates,
-          mdbEscpMandates: overrides.mdbEscpMandates !== undefined ? overrides.mdbEscpMandates : mdbEscpMandates,
-          
-          ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
-          ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
-          ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
-          confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
-          confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
-
-          epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
-          ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
-          previousAuditItems: overrides.previousAuditItems !== undefined ? overrides.previousAuditItems : previousAuditItems,
-
-          ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
-          partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
-
           govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
           partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
           ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
@@ -1416,15 +1391,10 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
           delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
           earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
-          
-          crisisQueue: overrides.crisisQueue !== undefined ? overrides.crisisQueue : crisisQueue,
-          currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
-          
-          logs: currentLogs 
+          logs: logs 
       };
       syncToCloud('SYNC_STATE_FULL', payload);
   };
-
 
   const addFloatEffect = (role, value) => {
     const key = `${role}-${value}-${Date.now()}`;
