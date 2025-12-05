@@ -1742,7 +1742,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       broadcastState({ logs: newLogs, playerState: newState });
       
       // 恢复：进入Stage 2的过渡
-      triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程。");
+      triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程");
       
       return; 
       
@@ -2699,7 +2699,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       const newLogs = getUpdatedLogs(`结算完成。最终支付比例: ${finalPct}%。${bonusPenaltyText}`, 'green');
       broadcastState({logs: newLogs});
       
-      triggerStageTransition(6, "完工总结阶段", "项目已完成结算，顺利进入并网发电，请填写项目总结。");
+      triggerStageTransition(6, "完工总结阶段", "项目已完成结算，顺利进入并网发电，请填写项目总结");
   };
 
   const submitSummary = (role, data) => {
