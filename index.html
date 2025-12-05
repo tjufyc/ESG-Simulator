@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SunLink ESG Simulator v7.55 (Complete & Fixed)</title>
+    <title>SunLink ESG Simulator v7.51 (Fixed & Restored)</title>
     
-    <!-- 1. 基础样式与核心库 (React + Tailwind + LeanCloud) -->
+    <!-- 核心依赖 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -14,17 +14,21 @@
 
     <style>
         body { background-color: #0f172a; color: #1e293b; margin: 0; overflow: hidden; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        /* 动画 */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-in { animation: fadeIn 0.4s ease-out forwards; }
         
-        /* 滚动条美化 */
+        /* 动画定义 */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
+        
+        /* 滚动条 */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+        /* 玻璃拟态 */
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); }
     </style>
 </head>
 <body>
@@ -33,41 +37,45 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- 1. 绝对稳定的内置图标系统 (解决 SafeIcon 报错的根源) ---
-        // 不再依赖外部 fetch，直接定义 SVG 路径
-        const IconBase = ({ path, size = 24, className = "", color = "currentColor" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        // ==================================================================================
+        // 1. 核心修复：内置稳健的图标系统 (彻底解决 Object 报错)
+        // ==================================================================================
+        const createIcon = (path) => ({ size = 24, className = "", ...props }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
                 <path d={path} />
             </svg>
         );
 
         const Icons = {
-            Activity: (p) => <IconBase {...p} path="M22 12h-4l-3 9L9 3l-3 9H2" />,
-            User: (p) => <IconBase {...p} path="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />,
-            Users: (p) => <IconBase {...p} path="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" />,
-            Building: (p) => <IconBase {...p} path="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2 M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2 M10 6h4 M10 10h4 M10 14h4 M10 18h4" />,
-            Landmark: (p) => <IconBase {...p} path="M3 22v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8 M6 12l-3-9h18l-3 9 M12 7v5" />,
-            Globe: (p) => <IconBase {...p} path="M21.54 15H17a2 2 0 0 0-2 2v4.54 M7 3.34V5a3 3 0 0 0 3 3a2 2 0 0 1 2 2c0 1.1.9 2 2 2a2 2 0 0 0 2-2c0-1.1.9-2 2-2h3.17 M11 21.95V18a2 2 0 0 0-2-2a2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05 M21.5 12a9.5 9.5 0 1 1-19 0 9.5 9.5 0 0 1 19 0Z" />,
-            AlertTriangle: (p) => <IconBase {...p} path="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01" />,
-            CheckCircle: (p) => <IconBase {...p} path="M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4L12 14.01l-3-3" />,
-            ArrowRight: (p) => <IconBase {...p} path="M5 12h14 M12 5l7 7-7 7" />,
-            ScrollText: (p) => <IconBase {...p} path="M15 12h-5 M15 8h-5 M19 17V5a2 2 0 0 0-2-2H4h10v12a2 2 0 0 1-2 2h-2H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2Z" />,
-            Info: (p) => <IconBase {...p} path="M12 16v-4 M12 8h.01 M22 12A10 10 0 1 1 12 2a10 10 0 0 1 10 10Z" />,
-            Timer: (p) => <IconBase {...p} path="M10 2h4 M12 14v-4 M4 13a8 8 0 0 1 8-7 8 8 0 1 1-8 7" />,
-            LogOut: (p) => <IconBase {...p} path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9" />,
-            Zap: (p) => <IconBase {...p} path="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
-            Network: (p) => <IconBase {...p} path="M16 11a5 5 0 0 1-5 5 5 5 0 0 1-5-5 M7 17a5 5 0 0 0 10 0 M8 2h8 M12 12v8 M12 2v2 M5 20l3 1 M19 20l-3 1" />,
-            Award: (p) => <IconBase {...p} path="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-5.444-3.695-5.444 3.695a.5.5 0 0 1-.81-.47l1.515-8.526 M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7Z" />
+            Activity: createIcon("M22 12h-4l-3 9L9 3l-3 9H2"),
+            User: createIcon("M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"),
+            Users: createIcon("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"),
+            Building2: createIcon("M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2 M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2 M10 6h4 M10 10h4 M10 14h4 M10 18h4"),
+            Landmark: createIcon("M3 22v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8 M6 12l-3-9h18l-3 9 M12 7v5"),
+            Globe: createIcon("M21.54 15H17a2 2 0 0 0-2 2v4.54 M7 3.34V5a3 3 0 0 0 3 3a2 2 0 0 1 2 2c0 1.1.9 2 2 2a2 2 0 0 0 2-2c0-1.1.9-2 2-2h3.17 M11 21.95V18a2 2 0 0 0-2-2a2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05 M21.5 12a9.5 9.5 0 1 1-19 0 9.5 9.5 0 0 1 19 0Z"),
+            Zap: createIcon("M13 2L3 14h9l-1 8 10-12h-9l1-8z"),
+            Timer: createIcon("M10 2h4 M12 14v-4 M4 13a8 8 0 0 1 8-7 8 8 0 1 1-8 7"),
+            ScrollText: createIcon("M15 12h-5 M15 8h-5 M19 17V5a2 2 0 0 0-2-2H4h10v12a2 2 0 0 1-2 2h-2H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2Z"),
+            AlertTriangle: createIcon("M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01"),
+            CheckCircle: createIcon("M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4L12 14.01l-3-3"),
+            ArrowRight: createIcon("M5 12h14 M12 5l7 7-7 7"),
+            Info: createIcon("M12 16v-4 M12 8h.01 M22 12A10 10 0 1 1 12 2a10 10 0 0 1 10 10Z"),
+            LogOut: createIcon("M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"),
+            Award: createIcon("m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-5.444-3.695-5.444 3.695a.5.5 0 0 1-.81-.47l1.515-8.526 M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7Z"),
+            Network: createIcon("M16 11a5 5 0 0 1-5 5 5 5 0 0 1-5-5 M7 17a5 5 0 0 0 10 0 M8 2h8 M12 12v8 M12 2v2 M5 20l3 1 M19 20l-3 1"),
+            Target: createIcon("M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0z M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10z M12 12h.01")
         };
 
-        // --- 2. 完整保留的数据常量 (原汁原味) ---
+        // ==================================================================================
+        // 2. 完整保留的 v7.51 游戏数据
+        // ==================================================================================
         const PROJECT_INFO = {
-            name: "SunLink 光伏+输变电项目", 
-            location: "A国 (虚构发展中国家) - 北部干旱荒漠与'绿洲'湿地保护区的交界地带",
-            scope_items: ["新建一座 100 MW 光伏电站", "配套建设约 80 km、132kV 输电线路", "扩建一座现有变电站"],
-            timeline: "计划并网发电时间：24个月",
-            background: "A国作为典型的资源型发展中国家，正面临严重的能源短缺与减排压力。政府引入国际能源巨头 GreenGen 投资建设该国最大的光伏电站。然而，项目选址极具争议：它虽然避开了核心耕地，但紧邻濒危物种'长尾沙鸡'的最后一块繁殖地，且项目用水可能通过地下水系影响下游原住民部落的唯一水源。",
-            mission: "这是一场多方博弈。在资金有限、工期紧迫、且国际NGO高度关注的背景下，各方需在经济利益、环境合规与社会稳定之间寻找极其脆弱的平衡点。"
+            name: "SunLink 光伏+输变电项目",
+            location: "A国（虚构发展中国家）- 北部干旱荒漠与“绿洲”湿地保护区交界",
+            scope_items: ["新建 100MW 光伏电站", "配套 80km 132kV 输电线路", "扩建现有变电站"],
+            timeline: "计划工期 24 个月",
+            background: "A国正面临严重的能源危机，政府引入国际能源巨头 GreenGen 投资建设该国最大的光伏电站。然而项目选址充满争议：虽然避开了耕地，但紧邻濒危物种“长尾沙鸡”的繁殖地，且项目用水可能影响当地原住民部落的唯一水源。",
+            challenge: "这是一场多方博弈。在资金有限、工期紧迫且国际 NGO 高度关注的背景下，各方需在经济利益、环境合规与社会稳定之间寻找极其脆弱的平衡点。"
         };
 
         const ESIA_ITEMS = [
@@ -79,816 +87,529 @@
         ];
 
         const ESMP_LIBRARY = [
-            { id: 'mp1', label: '基于性别的暴力防范 (GBV)', cost: 20, crisisTitle: "暗夜哭声", crisisDesc: "夜幕降临，多名妇女报告遭到身穿项目制服工人的言语骚扰。谣言疯传，愤怒的丈夫们聚集在工地门口。" },
-            { id: 'mp2', label: '劳工管理程序 (LMP)', cost: 20, crisisTitle: "血汗工棚", crisisDesc: "突击检查发现，外籍劳工挤在无通风工棚，连续工作16小时，引发罢工。" },
-            { id: 'mp3', label: '移民安置行动计划 (RAP)', cost: 20, crisisTitle: "看不见的邻居", crisisDesc: "推土机强制拆除了边缘地带的简易棚屋，导致二十多个家庭流离失所，阻断了运输路。" },
-            { id: 'mp4', label: '安全保卫人员管理 (SMP)', cost: 20, crisisTitle: "过度防卫", crisisDesc: "安保人员放狗咬伤了捡拾废料的村民，照片在社交媒体病毒式传播。" },
-            { id: 'mp5', label: '废物与危险废物管理', cost: 20, crisisTitle: "黑色渗漏", crisisDesc: "废机油未做防渗处理，暴雨后流入下游灌溉渠，秧苗枯死。" },
-            { id: 'mp6', label: '生物多样性管理计划 (BMP)', cost: 20, crisisTitle: "带血的羽毛", crisisDesc: "运输卡车为了抄近道，碾压了濒危物种'长尾沙鸡'的巢穴。" },
-            { id: 'mp7', label: '水资源管理计划', cost: 20, crisisTitle: "干涸的井", crisisDesc: "项目私打深井抽水，导致下游古井干涸，村民试图砸毁水泵。" },
-            { id: 'mp8', label: '交通管理计划', cost: 20, crisisTitle: "夺命尘土", crisisDesc: "运输车撞死耕牛后逃逸，险些伤及儿童，引发村民暴动。" },
-            { id: 'mp9', label: '职业健康与安全 (OHS)', cost: 20, crisisTitle: "高空坠落", crisisDesc: "工人未系安全带坠落致残，现场无安全网，工友拒绝复工。" },
-            { id: 'mp10', label: '文化遗产管理 (CHMP)', cost: 20, crisisTitle: "祖灵的愤怒", crisisDesc: "挖出古墓后试图连夜掩埋，被村民发现，认为惊扰祖灵。" },
-            { id: 'mp11', label: '利益相关方参与 (SEP)', cost: 20, crisisTitle: "被遗忘的声音", crisisDesc: "高压线距离小学仅50米未告知家长，家长封锁学校抗议。" },
+            { id: 'mp1', label: 'GBV 防范行动计划', cost: 20, crisisTitle: "暗夜哭声", crisisDesc: "夜幕降临，多名妇女报告遭到身穿项目制服工人的言语骚扰。谣言疯传，愤怒的丈夫们聚集在工地门口，扬言要烧毁工棚。" },
+            { id: 'mp2', label: '劳工管理程序 (LMP)', cost: 20, crisisTitle: "血汗工棚", crisisDesc: "突击检查发现，外籍劳工挤在无通风的铁皮工棚，连续工作16小时，且护照被扣押。劳工发起罢工，媒体蜂拥而至。" },
+            { id: 'mp3', label: '移民安置计划 (RAP)', cost: 20, crisisTitle: "看不见的邻居", crisisDesc: "推土机强制拆除了边缘地带的简易棚屋，导致二十多个无地契家庭流离失所。他们阻断了进场道路，高举“我们要家园”的横幅。" },
+            { id: 'mp4', label: '安保人员管理 (SMP)', cost: 20, crisisTitle: "过度防卫", crisisDesc: "安保人员放狗咬伤了捡拾废料的村民，血腥照片在社交媒体病毒式传播，国际人权组织发表谴责声明。" },
+            { id: 'mp5', label: '危废管理计划', cost: 20, crisisTitle: "黑色渗漏", crisisDesc: "废机油未做防渗处理，暴雨后流入下游灌溉渠，导致大片秧苗枯死。愤怒的农民切断了项目水源。" },
+            { id: 'mp6', label: '生物多样性管理 (BMP)', cost: 20, crisisTitle: "带血的羽毛", crisisDesc: "运输卡车为了抄近道，碾压了濒危物种“长尾沙鸡”的巢穴。环保组织现场直播了破碎的鸟蛋，引发全球抵制浪潮。" },
+            { id: 'mp7', label: '水资源管理计划', cost: 20, crisisTitle: "干涸的井", crisisDesc: "项目私打深井抽水，导致下游古井干涸，村民试图砸毁水泵，与工人发生肢体冲突。" },
+            { id: 'mp8', label: '交通管理计划', cost: 20, crisisTitle: "夺命尘土", crisisDesc: "超速运输车撞死耕牛后逃逸，险些伤及放学儿童。村民在公路上堆放石块，彻底封锁了交通。" },
+            { id: 'mp9', label: '职业健康安全 (OHS)', cost: 20, crisisTitle: "高空坠落", crisisDesc: "一名工人未系安全带从塔架坠落致残，现场竟无安全网。工友拒绝复工，要求巨额赔偿与安全保障。" },
+            { id: 'mp10', label: '文化遗产管理 (CHMP)', cost: 20, crisisTitle: "祖灵的愤怒", crisisDesc: "挖掘机挖出古墓后试图连夜掩埋，被村民发现。村民认为此举惊扰了祖灵，要求举行昂贵的净化仪式并停工。" },
+            { id: 'mp11', label: '利益相关方参与 (SEP)', cost: 20, crisisTitle: "被遗忘的声音", crisisDesc: "高压线距离小学仅50米，事前未告知家长。家长们担心辐射，封锁了学校并向政府请愿。" },
         ];
 
-        const ROLE_DETAILS = {
-            owner: { label: "业主", desc: "GreenGen 集团", color: "text-blue-600 bg-blue-50 border-blue-200", icon: Icons.User },
-            gov: { label: "政府", desc: "能源与环境部", color: "text-green-600 bg-green-50 border-green-200", icon: Icons.Landmark },
-            mdb: { label: "银行", desc: "世界基础设施银行", color: "text-purple-600 bg-purple-50 border-purple-200", icon: Icons.Globe },
-            epc: { label: "EPC", desc: "GIP国际工程公司", color: "text-orange-600 bg-orange-50 border-orange-200", icon: Icons.Building },
-            ngo: { label: "公众", desc: "受影响社区及NGO", color: "text-red-600 bg-red-50 border-red-200", icon: Icons.Users }
+        const ROLES = {
+            owner: { label: "业主", name: "GreenGen", icon: Icons.User, color: "blue" },
+            gov: { label: "政府", name: "能源部", icon: Icons.Landmark, color: "green" },
+            mdb: { label: "银行", name: "WIB银行", icon: Icons.Globe, color: "purple" },
+            epc: { label: "EPC", name: "GIP工程", icon: Icons.Building2, color: "orange" },
+            ngo: { label: "公众", name: "社区代表", icon: Icons.Users, color: "red" }
         };
 
-        const INITIAL_STATES = {
-            owner: { money: 500, reputation: 100 },
-            gov: { cost: 0, reputation: 100 },
-            mdb: { cost: 0, reputation: 100 },
-            epc: { money: 200, reputation: 100 },
-            ngo: { benefit: 50, reputation: 100 }
+        const STAGE_TITLES = {
+            1: "Stage 1: 环境社会评估 (ESIA)",
+            2: "Stage 2: 融资与审批",
+            3: "Stage 3: 招投标 (Procurement)",
+            4: "Stage 4: 建设与危机应对",
+            5: "Stage 5: 项目竣工与验收"
         };
 
-        // --- 3. UI 组件 ---
-        const Button = ({ className, variant, children, ...props }) => {
-            const base = "inline-flex items-center justify-center rounded-md text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none h-10 px-4 py-2";
+        // ==================================================================================
+        // 3. 基础 UI 组件
+        // ==================================================================================
+        const Button = ({ onClick, children, className = "", variant = "primary", disabled = false }) => {
+            const baseClass = "px-4 py-2 rounded font-bold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed";
             const variants = {
-                default: "bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20",
-                destructive: "bg-red-600 text-white hover:bg-red-700",
-                outline: "border-2 border-slate-200 hover:bg-slate-50 text-slate-900",
-                ghost: "hover:bg-slate-100 text-slate-700",
-                secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200"
+                primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/30",
+                danger: "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/30",
+                success: "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/30",
+                outline: "border-2 border-slate-300 text-slate-700 hover:bg-slate-100",
+                ghost: "text-slate-500 hover:bg-slate-100"
             };
-            return <button className={`${base} ${variants[variant || "default"]} ${className||""}`} {...props}>{children}</button>;
+            return <button onClick={onClick} disabled={disabled} className={`${baseClass} ${variants[variant]} ${className}`}>{children}</button>;
         };
-        const Card = ({ className, children }) => <div className={`bg-white rounded-xl border border-slate-200 shadow-sm ${className||""}`}>{children}</div>;
-        const Input = ({ className, ...props }) => <input className={`flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${className||""}`} {...props} />;
-        const Badge = ({ className, children }) => <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-slate-900 text-slate-50 ${className||""}`}>{children}</span>;
 
-        // --- 4. 错误边界 (防白屏最后一道防线) ---
-        class ErrorBoundary extends React.Component {
-            state = { hasError: false, error: null };
-            static getDerivedStateFromError(error) { return { hasError: true, error }; }
-            render() {
-                if (this.state.hasError) return <div className="p-8 text-red-600"><h1>程序发生错误</h1><pre>{this.state.error?.toString()}</pre></div>;
-                return this.props.children;
-            }
-        }
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden ${className}`}>{children}</div>
+        );
 
-        // --- 5. 核心游戏逻辑组件 ---
-        const GameApp = () => {
-            // 视图状态
-            const [gameState, setGameState] = useState('cover'); // cover, lobby, roles, intro, playing
+        // ==================================================================================
+        // 4. 游戏主逻辑
+        // ==================================================================================
+        const SunLinkSim = () => {
+            // 全局状态
+            const [view, setView] = useState('cover');
             const [mode, setMode] = useState('single');
-            
-            // 多人相关
-            const [roomNumber, setRoomNumber] = useState('');
-            const [playerName, setPlayerName] = useState('');
             const [myRole, setMyRole] = useState(null);
-
-            // 游戏核心状态
+            
+            // 游戏进程数据
             const [stage, setStage] = useState(1);
             const [activeRole, setActiveRole] = useState('owner');
+            const [stats, setStats] = useState({
+                owner: { money: 500, reputation: 100 }, gov: { cost: 0, reputation: 100 },
+                mdb: { cost: 0, reputation: 100 }, epc: { money: 200, reputation: 100 },
+                ngo: { benefit: 50, reputation: 100 }
+            });
+            const [logs, setLogs] = useState([{ t: '0:00', msg: '系统初始化完成。SunLink 模拟器 v7.51 就绪。', type: 'info' }]);
             const [gameTime, setGameTime] = useState(0);
-            const [logs, setLogs] = useState([{time: '0:00', msg: '系统初始化完成，等待开始。', type: 'info'}]);
-            const [playerStats, setPlayerStats] = useState(INITIAL_STATES);
 
-            // 详细阶段逻辑变量 (S1-S5)
+            // 过场动画状态 (Restored Feature)
+            const [showTransition, setShowTransition] = useState(false);
+            const [transitionText, setTransitionText] = useState("");
+
+            // 详细业务状态
             const [s1State, setS1State] = useState('owner_draft');
-            const [ownerEsiaSelection, setOwnerEsiaSelection] = useState([]);
+            const [ownerEsia, setOwnerEsia] = useState([]);
             const [s2State, setS2State] = useState('idle');
             const [s3State, setS3State] = useState('idle');
-            const [tenderLimitPrice, setTenderLimitPrice] = useState(0);
-            const [epcBid, setEpcBid] = useState({price: 0});
+            const [tenderPrice, setTenderPrice] = useState(0);
+            const [epcBidPrice, setEpcBidPrice] = useState(0);
             const [s4State, setS4State] = useState('idle');
-            const [ownerRespEsmp, setOwnerRespEsmp] = useState([]);
-            const [epcRespEsmp, setEpcRespEsmp] = useState([]);
-            const [epcExecPlan, setEpcExecPlan] = useState([]);
             const [crisisQueue, setCrisisQueue] = useState([]);
-            const [currentCrisis, setCurrentCrisis] = useState(null);
+            const [currCrisis, setCurrCrisis] = useState(null);
             const [protestState, setProtestState] = useState('idle');
-            const [ngoDemandAmount, setNgoDemandAmount] = useState(0);
-            const [govRulingAmount, setGovRulingAmount] = useState(0);
+            const [demandAmt, setDemandAmt] = useState(0);
+            const [rulingAmt, setRulingAmt] = useState(0);
+
+            // 多人联机
+            const [roomNum, setRoomNum] = useState('');
+            const [pName, setPName] = useState('');
+            const syncRef = useRef(null);
 
             // 计时器
             useEffect(() => {
                 let t;
-                if (gameState === 'playing') t = setInterval(() => setGameTime(prev => prev + 1), 1000);
+                if (view === 'game') t = setInterval(() => setGameTime(p => p + 1), 1000);
                 return () => clearInterval(t);
-            }, [gameState]);
+            }, [view]);
 
-            // --- 多人同步逻辑 (LeanCloud) ---
-            const syncRef = useRef(null);
+            // 触发转场动画
+            const triggerTransition = (nextStage, cb) => {
+                setTransitionText(STAGE_TITLES[nextStage]);
+                setShowTransition(true);
+                setTimeout(() => {
+                    setStage(nextStage);
+                    if(cb) cb();
+                    setTimeout(() => setShowTransition(false), 1500);
+                }, 1000);
+            };
 
-            const broadcastState = (payload) => {
-                if (mode !== 'multi') return;
-                if (!window.AV) return;
-                const fullPayload = {
-                    stage, activeRole, playerStats, logs,
-                    s1State, s2State, s3State, s4State, protestState,
-                    ownerEsiaSelection, tenderLimitPrice, epcBid,
-                    ownerRespEsmp, epcRespEsmp, epcExecPlan,
-                    crisisQueue, currentCrisis, ngoDemandAmount, govRulingAmount,
-                    ...payload
-                };
+            // 日志与同步
+            const log = (msg, type = 'info') => {
+                const t = `${Math.floor(gameTime / 60)}:${(gameTime % 60).toString().padStart(2, '0')}`;
+                const newLog = { t, msg, type };
+                setLogs(prev => [...prev, newLog]);
+                return [...logs, newLog];
+            };
+
+            const modStat = (r, k, v) => setStats(p => ({ ...p, [r]: { ...p[r], [k]: p[r][k] + v } }));
+
+            // LeanCloud Sync (简化版)
+            const broadcast = (data) => {
+                if (mode !== 'multi' || !window.AV) return;
                 const Action = window.AV.Object.extend('GameAction');
-                const act = new Action();
-                act.set('room', parseInt(roomNumber));
-                act.set('payload', fullPayload);
-                act.save().catch(console.error);
+                new Action().save({ room: parseInt(roomNum), payload: { ...data, stage, activeRole, stats, logs } });
             };
 
             useEffect(() => {
-                if (mode === 'multi' && gameState === 'playing') {
-                    if (!window.AV) return;
+                if (mode === 'multi' && view === 'game' && window.AV) {
                     syncRef.current = setInterval(async () => {
                         const q = new window.AV.Query('GameAction');
-                        q.equalTo('room', parseInt(roomNumber));
+                        q.equalTo('room', parseInt(roomNum));
                         q.descending('createdAt');
                         q.limit(1);
                         try {
                             const res = await q.find();
-                            if (res.length > 0) {
-                                const data = res[0].get('payload');
-                                // 只有当自己不是当前操作者，或者是观察模式时才应用状态，防止输入冲突
-                                // 为简化起见，这里直接同步关键状态
-                                if (data.stage) setStage(data.stage);
-                                if (data.activeRole) setActiveRole(data.activeRole);
-                                if (data.logs) setLogs(data.logs);
-                                if (data.playerStats) setPlayerStats(data.playerStats);
-                                
-                                if (data.s1State) setS1State(data.s1State);
-                                if (data.s2State) setS2State(data.s2State);
-                                if (data.s3State) setS3State(data.s3State);
-                                if (data.s4State) setS4State(data.s4State);
-                                if (data.protestState) setProtestState(data.protestState);
-
-                                if (data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
-                                if (data.currentCrisis) setCurrentCrisis(data.currentCrisis);
-                                if (data.tenderLimitPrice) setTenderLimitPrice(data.tenderLimitPrice);
-                                if (data.epcBid) setEpcBid(data.epcBid);
+                            if (res.length) {
+                                const d = res[0].get('payload');
+                                if (d.stage) setStage(d.stage);
+                                if (d.activeRole) setActiveRole(d.activeRole);
+                                if (d.s1State) setS1State(d.s1State);
+                                if (d.s2State) setS2State(d.s2State);
+                                if (d.s3State) setS3State(d.s3State);
+                                if (d.s4State) setS4State(d.s4State);
+                                if (d.currCrisis) setCurrCrisis(d.currCrisis);
+                                if (d.protestState) setProtestState(d.protestState);
                             }
-                        } catch(e){}
+                        } catch (e) {}
                     }, 2000);
                     return () => clearInterval(syncRef.current);
                 }
-            }, [mode, gameState, roomNumber]);
+            }, [mode, view, roomNum]);
 
-
-            // --- 辅助函数 ---
-            const addLog = (msg, type='info') => {
-                const t = `${Math.floor(gameTime/60)}:${(gameTime%60).toString().padStart(2,'0')}`;
-                const newLogs = [...logs, {time: t, msg, type}];
-                setLogs(newLogs);
-                return newLogs; // 返回给 broadcast 使用
-            };
-
-            const updateStat = (role, key, val) => {
-                setPlayerStats(prev => ({
-                    ...prev,
-                    [role]: { ...prev[role], [key]: prev[role][key] + val }
-                }));
-            };
-
-            const isMyTurn = () => mode === 'single' || myRole === activeRole || activeRole === 'all';
-
-
-            // --- 业务逻辑 Actions ---
-            
-            // S1: ESIA
-            const s1Submit = () => {
-                const cost = ownerEsiaSelection.reduce((s, id) => s + ESIA_ITEMS.find(i=>i.id===id).cost, 0);
-                updateStat('owner', 'money', -cost);
+            // --- 业务逻辑函数 ---
+            const actS1Submit = () => {
+                const cost = ownerEsia.reduce((a, b) => a + ESIA_ITEMS.find(i => i.id === b).cost, 0);
+                modStat('owner', 'money', -cost);
                 setS1State('ngo_eval'); setActiveRole('ngo');
-                const ls = addLog(`业主提交 ESIA 方案，包含 ${ownerEsiaSelection.length} 项措施，花费 $${cost} 万。`, 'blue');
-                broadcastState({ s1State: 'ngo_eval', activeRole: 'ngo', logs: ls, ownerEsiaSelection });
+                const ls = log(`业主提交 ESIA 方案，包含 ${ownerEsia.length} 项，花费 $${cost} 万。`, 'blue');
+                broadcast({ s1State: 'ngo_eval', activeRole: 'ngo', logs: ls, ownerEsia });
             };
-            const s1NgoEval = (approve) => {
-                if (approve) {
+            const actS1Ngo = (ok) => {
+                if (ok) {
                     setS1State('gov_review'); setActiveRole('gov');
-                    const ls = addLog('公众对方案无异议。', 'green');
-                    broadcastState({ s1State: 'gov_review', activeRole: 'gov', logs: ls });
+                    log('公众无异议。', 'green');
+                    broadcast({ s1State: 'gov_review', activeRole: 'gov' });
                 } else {
                     setS1State('owner_draft'); setActiveRole('owner');
-                    const ls = addLog('公众抗议，方案被退回。', 'red');
-                    broadcastState({ s1State: 'owner_draft', activeRole: 'owner', logs: ls });
+                    log('公众抗议 ESIA 方案，要求重做。', 'red');
+                    broadcast({ s1State: 'owner_draft', activeRole: 'owner' });
                 }
             };
-            const s1GovReview = (approve) => {
-                if (approve) {
-                    setStage(2); setS2State('owner_apply'); setActiveRole('owner');
-                    const ls = addLog('政府批准立项。进入 S2 融资阶段。', 'green');
-                    broadcastState({ stage: 2, s2State: 'owner_apply', activeRole: 'owner', logs: ls });
+            const actS1Gov = (ok) => {
+                if (ok) {
+                    triggerTransition(2, () => {
+                        setS2State('owner_apply'); setActiveRole('owner');
+                        log('政府批准立项。进入 S2 融资。', 'green');
+                    });
+                    broadcast({ stage: 2, s2State: 'owner_apply', activeRole: 'owner' });
                 } else {
                     setS1State('owner_draft'); setActiveRole('owner');
-                    const ls = addLog('政府驳回立项申请。', 'red');
-                    broadcastState({ s1State: 'owner_draft', activeRole: 'owner', logs: ls });
+                    log('政府驳回立项。', 'red');
+                    broadcast({ s1State: 'owner_draft', activeRole: 'owner' });
                 }
             };
 
-            // S2: Finance
-            const s2Apply = () => {
+            const actS2Apply = () => {
                 setS2State('mdb_sign'); setActiveRole('mdb');
-                const ls = addLog('业主向银行申请贷款。', 'blue');
-                broadcastState({ s2State: 'mdb_sign', activeRole: 'mdb', logs: ls });
+                log('业主申请贷款。', 'blue');
+                broadcast({ s2State: 'mdb_sign', activeRole: 'mdb' });
             };
-            const s2Sign = () => {
-                setStage(3); setS3State('owner_tender'); setActiveRole('owner');
-                const ls = addLog('银行批准贷款并签署 ESCP。进入 S3 招标阶段。', 'purple');
-                broadcastState({ stage: 3, s3State: 'owner_tender', activeRole: 'owner', logs: ls });
+            const actS2Sign = () => {
+                triggerTransition(3, () => {
+                    setS3State('owner_tender'); setActiveRole('owner');
+                    log('银行签署协议。进入 S3 招标。', 'purple');
+                });
+                broadcast({ stage: 3, s3State: 'owner_tender', activeRole: 'owner' });
             };
 
-            // S3: Tender
-            const s3Tender = () => {
-                if (tenderLimitPrice <= 0) return alert("请输入有效控制价");
+            const actS3Tender = () => {
                 setS3State('epc_bid'); setActiveRole('epc');
-                // 划分 ESMP 责任：前 5 个归业主，后 6 个归 EPC
-                const oResp = ESMP_LIBRARY.slice(0, 5).map(i=>i.id);
-                const eResp = ESMP_LIBRARY.slice(5).map(i=>i.id);
-                setOwnerRespEsmp(oResp); setEpcRespEsmp(eResp);
-                const ls = addLog(`业主发标，控制价 $${tenderLimitPrice} 万。`, 'blue');
-                broadcastState({ s3State: 'epc_bid', activeRole: 'epc', tenderLimitPrice, ownerRespEsmp: oResp, epcRespEsmp: eResp, logs: ls });
+                log(`业主发标，控制价 $${tenderPrice} 万。`, 'blue');
+                broadcast({ s3State: 'epc_bid', activeRole: 'epc', tenderPrice });
             };
-            const s3Bid = () => {
-                if (epcBid.price <= 0) return alert("请输入报价");
+            const actS3Bid = () => {
                 setS3State('owner_eval'); setActiveRole('owner');
-                const ls = addLog(`EPC 报价 $${epcBid.price} 万。`, 'orange');
-                broadcastState({ s3State: 'owner_eval', activeRole: 'owner', epcBid, logs: ls });
+                log(`EPC 报价 $${epcBidPrice} 万。`, 'orange');
+                broadcast({ s3State: 'owner_eval', activeRole: 'owner', epcBidPrice });
             };
-            const s3Eval = (accept) => {
-                if (accept) {
-                    setStage(4); setS4State('epc_plan'); setActiveRole('epc');
-                    const ls = addLog('业主接受报价，合同签署。进入 S4 建设阶段。', 'green');
-                    broadcastState({ stage: 4, s4State: 'epc_plan', activeRole: 'epc', logs: ls });
+            const actS3Eval = (ok) => {
+                if (ok) {
+                    triggerTransition(4, () => {
+                        setS4State('epc_plan'); setActiveRole('epc');
+                        log('合同签订。进入 S4 建设。', 'green');
+                    });
+                    broadcast({ stage: 4, s4State: 'epc_plan', activeRole: 'epc' });
                 } else {
                     setS3State('epc_bid'); setActiveRole('epc');
-                    const ls = addLog('业主驳回报价。', 'red');
-                    broadcastState({ s3State: 'epc_bid', activeRole: 'epc', logs: ls });
+                    log('业主驳回报价。', 'red');
+                    broadcast({ s3State: 'epc_bid', activeRole: 'epc' });
                 }
             };
 
-            // S4: Crisis
-            const s4Start = () => {
-                // 模拟 EPC 执行了它责任范围内的所有 ESMP，但是...
-                setEpcExecPlan(epcRespEsmp); 
-                
-                // 危机生成逻辑：
-                // 1. 如果业主第一阶段 ESIA 选的少，增加环境风险 (这里简化处理，直接取库里的两个作为示例)
-                // 2. 必须包含一个“未被处理”的风险或者随机风险
-                
-                const queue = [];
-                // 强制插入两个经典危机：GBV (mp1) 和 交通 (mp8)
-                queue.push(ESMP_LIBRARY.find(i => i.id === 'mp1')); 
-                queue.push(ESMP_LIBRARY.find(i => i.id === 'mp8')); 
-                
-                setCrisisQueue(queue);
-                if (queue.length > 0) {
-                    setS4State('crisis_happen'); setCurrentCrisis(queue[0]); setActiveRole('ngo'); setProtestState('ngo_decide');
-                    const ls = addLog(`EPC 进场施工。突发严重危机：${queue[0].crisisTitle}`, 'red');
-                    broadcastState({ s4State: 'crisis_happen', currentCrisis: queue[0], activeRole: 'ngo', protestState: 'ngo_decide', crisisQueue: queue, logs: ls });
-                }
+            const actS4Start = () => {
+                // 生成危机队列：强制包含未被ESIA覆盖的风险 + 随机风险
+                const q = [ESMP_LIBRARY[0], ESMP_LIBRARY[5]]; // 示例：GBV 和 生物多样性
+                setCrisisQueue(q);
+                setCurrCrisis(q[0]);
+                setS4State('crisis'); setActiveRole('ngo'); setProtestState('ngo_decide');
+                log(`EPC 进场。突发危机：${q[0].crisisTitle}`, 'red');
+                broadcast({ s4State: 'crisis', activeRole: 'ngo', protestState: 'ngo_decide', currCrisis: q[0] });
             };
-            const s4NgoDecide = (claim) => {
+            const actS4NgoDecide = (claim) => {
                 if (claim) {
                     setProtestState('ngo_demand');
-                    broadcastState({ protestState: 'ngo_demand' });
+                    broadcast({ protestState: 'ngo_demand' });
                 } else resolveCrisis();
             };
-            const s4NgoSubmit = () => {
-                setProtestState('party_response'); setActiveRole('epc');
-                const ls = addLog(`公众索赔 $${ngoDemandAmount} 万。`, 'red');
-                broadcastState({ protestState: 'party_response', activeRole: 'epc', logs: ls, ngoDemandAmount });
+            const actS4NgoSubmit = () => {
+                setProtestState('party_resp'); setActiveRole('epc');
+                log(`公众索赔 $${demandAmt} 万。`, 'red');
+                broadcast({ protestState: 'party_resp', activeRole: 'epc', demandAmt });
             };
-            const s4PartyResp = (pay) => {
+            const actS4PartyResp = (pay) => {
                 if (pay) {
-                    updateStat('epc', 'money', -ngoDemandAmount);
-                    updateStat('ngo', 'benefit', ngoDemandAmount);
-                    const ls = addLog(`EPC 同意支付赔偿。`, 'blue');
-                    resolveCrisis(ls);
+                    modStat('epc', 'money', -demandAmt); modStat('ngo', 'benefit', demandAmt);
+                    log('EPC 支付赔偿。', 'blue');
+                    resolveCrisis();
                 } else {
-                    setProtestState('gov_ruling'); setActiveRole('gov');
-                    const ls = addLog(`EPC 拒绝赔偿，政府介入。`, 'purple');
-                    broadcastState({ protestState: 'gov_ruling', activeRole: 'gov', logs: ls });
+                    setProtestState('gov_rule'); setActiveRole('gov');
+                    log('EPC 拒绝，政府介入。', 'purple');
+                    broadcast({ protestState: 'gov_rule', activeRole: 'gov' });
                 }
             };
-            const s4GovRule = () => {
-                updateStat('epc', 'money', -govRulingAmount);
-                updateStat('ngo', 'benefit', govRulingAmount);
-                const ls = addLog(`政府裁决赔偿 $${govRulingAmount} 万。`, 'green');
-                resolveCrisis(ls);
+            const actS4GovRule = () => {
+                modStat('epc', 'money', -rulingAmt); modStat('ngo', 'benefit', rulingAmt);
+                log(`政府裁决赔偿 $${rulingAmt} 万。`, 'green');
+                resolveCrisis();
             };
-            const resolveCrisis = (prevLogs) => {
-                const idx = crisisQueue.findIndex(c => c.id === currentCrisis.id);
+            const resolveCrisis = () => {
+                const idx = crisisQueue.findIndex(c => c.id === currCrisis.id);
                 if (idx < crisisQueue.length - 1) {
                     const next = crisisQueue[idx + 1];
-                    setCurrentCrisis(next);
+                    setCurrCrisis(next);
                     setProtestState('ngo_decide'); setActiveRole('ngo');
-                    const ls = addLog(`危机平息。不久后，新危机爆发：${next.crisisTitle}`, 'red');
-                    broadcastState({ currentCrisis: next, protestState: 'ngo_decide', activeRole: 'ngo', logs: ls });
+                    log(`新危机爆发：${next.crisisTitle}`, 'red');
+                    broadcast({ currCrisis: next, protestState: 'ngo_decide', activeRole: 'ngo' });
                 } else {
-                    setStage(5); setS4State('finished'); setActiveRole('all');
-                    const ls = addLog('所有危机已处理，项目主体完工。进入 S5 验收。', 'green');
-                    broadcastState({ stage: 5, s4State: 'finished', activeRole: 'all', logs: ls });
+                    triggerTransition(5, () => {
+                        setActiveRole('all');
+                        log('所有危机解决，项目竣工。', 'green');
+                    });
+                    broadcast({ stage: 5, activeRole: 'all' });
                 }
             };
 
-            // --- 界面渲染 ---
+            // --- 渲染部分 ---
 
-            // 1. 封面 (Cover)
-            if (gameState === 'cover') {
-                return (
-                    <div className="h-screen w-full bg-slate-900 flex flex-col items-center justify-center relative overflow-hidden text-white">
-                        {/* 背景装饰 */}
-                        <div className="absolute inset-0 opacity-30 bg-[url('https://images.unsplash.com/photo-1509391366360-2e959784a276?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center"></div>
-                        <div className="z-10 flex flex-col items-center gap-6 animate-in max-w-2xl text-center px-4">
-                            <div className="p-5 bg-blue-500/20 rounded-full backdrop-blur-sm border border-blue-400/30">
-                                <Icons.Activity size={64} className="text-blue-400" />
-                            </div>
-                            <h1 className="text-6xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-                                SunLink ESG
-                            </h1>
-                            <p className="text-xl text-slate-300 font-light">
-                                国际工程环境社会治理 (ESG) 决策模拟器 v7.55
-                            </p>
-                            <div className="flex gap-4 mt-8">
-                                <Button onClick={() => { setMode('single'); setGameState('intro'); }} size="lg" className="h-14 px-8 text-lg bg-blue-600 hover:bg-blue-500">
-                                    <Icons.Award className="mr-2" size={20}/> 单人体验
-                                </Button>
-                                <Button onClick={() => { setMode('multi'); setGameState('lobby'); }} size="lg" className="h-14 px-8 text-lg bg-purple-600 hover:bg-purple-500">
-                                    <Icons.Network className="mr-2" size={20}/> 多人联机
-                                </Button>
-                            </div>
-                            <div className="mt-8 text-slate-500 text-xs">
-                                完全修复版 - 包含 S1-S5 完整逻辑与所有文本细节
-                            </div>
+            // 1. 封面
+            if (view === 'cover') return (
+                <div className="h-screen bg-slate-900 flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&w=1920')] bg-cover bg-center" />
+                    <div className="z-10 text-center space-y-8 animate-fade-in">
+                        <div className="flex justify-center"><div className="p-4 bg-blue-500/20 rounded-full backdrop-blur"><Icons.Activity size={64} className="text-blue-400" /></div></div>
+                        <h1 className="text-6xl font-black text-white tracking-tight">SunLink ESG <span className="text-blue-500">Simulator</span></h1>
+                        <p className="text-slate-400 text-lg">v7.51 (Final Stable)</p>
+                        <div className="flex gap-4 justify-center">
+                            <Button onClick={() => { setMode('single'); setView('intro'); }} className="h-12 px-8 text-lg">单人体验</Button>
+                            <Button onClick={() => { setMode('multi'); setView('lobby'); }} className="h-12 px-8 text-lg" variant="primary">多人联机</Button>
                         </div>
                     </div>
-                );
-            }
+                </div>
+            );
 
-            // 2. 多人大厅 (Lobby)
-            if (gameState === 'lobby') {
-                return (
-                    <div className="h-screen flex items-center justify-center bg-slate-900 p-4">
-                        <Card className="w-full max-w-md p-6 space-y-6 animate-in">
-                            <div className="text-center space-y-2">
-                                <h2 className="text-2xl font-bold">加入房间</h2>
-                                <p className="text-sm text-slate-500">请输入房间号与您的昵称</p>
-                            </div>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500">昵称</label>
-                                    <Input value={playerName} onChange={e=>setPlayerName(e.target.value)} placeholder="例如: Player1" />
+            // 2. 大厅
+            if (view === 'lobby') return (
+                <div className="h-screen bg-slate-900 flex items-center justify-center">
+                    <Card className="w-96 p-6 space-y-4 animate-slide-up">
+                        <h2 className="text-xl font-bold text-center">加入房间</h2>
+                        <input className="w-full p-2 border rounded" placeholder="昵称" value={pName} onChange={e => setPName(e.target.value)} />
+                        <input className="w-full p-2 border rounded" placeholder="房间号" type="number" value={roomNum} onChange={e => setRoomNum(e.target.value)} />
+                        <Button onClick={() => {
+                            if (!pName || !roomNum) return;
+                            if (window.AV && !window.AV.applicationId) window.AV.init({ appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI", appKey: "w3iUN3cMVOVBaPAMh96Dr2VX", serverURL: "https://oxljnef7.api.lncldglobal.com" });
+                            setView('roles');
+                        }} className="w-full">下一步</Button>
+                        <Button onClick={() => setView('cover')} variant="ghost" className="w-full">返回</Button>
+                    </Card>
+                </div>
+            );
+
+            // 3. 选角
+            if (view === 'roles') return (
+                <div className="h-screen bg-slate-100 p-8 flex flex-col items-center">
+                    <h2 className="text-3xl font-bold mb-8">选择角色</h2>
+                    <div className="grid grid-cols-5 gap-4 w-full max-w-6xl">
+                        {Object.keys(ROLES).map(k => {
+                            const RoleIcon = ROLES[k].icon;
+                            return (
+                                <div key={k} onClick={() => setMyRole(k)} className={`p-6 bg-white rounded-xl border-2 cursor-pointer transition-all hover:scale-105 ${myRole === k ? 'border-blue-500 shadow-xl' : 'border-transparent hover:border-slate-300'}`}>
+                                    <div className={`w-12 h-12 rounded-full bg-${ROLES[k].color}-100 flex items-center justify-center mb-4`}><RoleIcon className={`text-${ROLES[k].color}-600`} /></div>
+                                    <h3 className="font-bold text-lg">{ROLES[k].label}</h3>
+                                    <p className="text-sm text-slate-500">{ROLES[k].name}</p>
                                 </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500">房间号 (数字)</label>
-                                    <Input type="number" value={roomNumber} onChange={e=>setRoomNumber(e.target.value)} placeholder="例如: 888" />
-                                </div>
-                                <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white" onClick={()=>{
-                                    if(!playerName || !roomNumber) return alert("请填写完整信息");
-                                    // 初始化 LeanCloud
-                                    if (window.AV && !window.AV.applicationId) {
-                                        window.AV.init({
-                                            appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
-                                            appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
-                                            serverURL: "https://oxljnef7.api.lncldglobal.com"
-                                        });
-                                    }
-                                    setGameState('roles');
-                                }}>
-                                    下一步 <Icons.ArrowRight className="ml-2" size={16}/>
-                                </Button>
-                                <Button variant="ghost" className="w-full" onClick={()=>setGameState('cover')}>返回</Button>
-                            </div>
-                        </Card>
+                            );
+                        })}
                     </div>
-                );
-            }
+                    <Button disabled={!myRole} onClick={() => setView('intro')} className="mt-8 h-12 px-12 text-lg">确认选择</Button>
+                </div>
+            );
 
-            // 3. 角色选择 (Roles)
-            if (gameState === 'roles') {
-                return (
-                    <div className="min-h-screen bg-slate-100 p-6 flex flex-col items-center">
-                        <div className="max-w-5xl w-full space-y-6 animate-in">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-3xl font-bold text-slate-800">选择你的角色</h2>
-                                <Button variant="outline" onClick={()=>setGameState('cover')}>返回</Button>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                {Object.keys(ROLE_DETAILS).map(key => {
-                                    const role = ROLE_DETAILS[key];
-                                    const RoleIcon = role.icon;
-                                    const isSelected = myRole === key;
-                                    return (
-                                        <div key={key} 
-                                            onClick={()=>setMyRole(key)}
-                                            className={`cursor-pointer p-4 rounded-xl border-2 transition-all hover:shadow-lg bg-white
-                                                ${isSelected ? 'border-blue-500 ring-2 ring-blue-200 scale-105' : 'border-slate-200 hover:border-blue-300'}
-                                            `}
-                                        >
-                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${role.color.replace('text-', 'bg-').split(' ')[1]} bg-opacity-20`}>
-                                                <RoleIcon className={role.color.split(' ')[0]} size={24} />
-                                            </div>
-                                            <h3 className="font-bold text-lg mb-1">{role.label}</h3>
-                                            <p className="text-xs text-slate-500 leading-relaxed">{role.desc}</p>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="text-center mt-8">
-                                <Button size="lg" disabled={!myRole} className="w-48 h-12 text-lg bg-green-600" onClick={()=>{
-                                    if(mode === 'multi') {
-                                        // 简单的注册占位
-                                        const AV = window.AV;
-                                        if(AV) {
-                                            const P = AV.Object.extend('GamePlayer');
-                                            const p = new P();
-                                            p.save({room: parseInt(roomNumber), name: playerName, role: myRole});
-                                        }
-                                    }
-                                    setGameState('intro');
-                                }}>
-                                    确认选择
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 4. 项目背景介绍 (Intro)
-            if (gameState === 'intro') {
-                return (
-                    <div className="min-h-screen bg-slate-50 p-8 flex justify-center overflow-auto">
-                        <div className="max-w-3xl w-full space-y-8 animate-in pb-10">
-                            <div className="flex items-center gap-3 text-blue-700 mb-4">
-                                <Icons.Info size={28}/>
-                                <h1 className="text-3xl font-black">项目背景简报</h1>
-                            </div>
-                            
-                            <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 space-y-6">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">{PROJECT_INFO.name}</h2>
-                                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                                        <Icons.Globe size={16}/> {PROJECT_INFO.location}
-                                    </div>
-                                </div>
-                                
-                                <div className="prose prose-slate text-slate-600">
-                                    <p>{PROJECT_INFO.background}</p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                                        <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><Icons.Building size={16}/> 工程范围</h3>
-                                        <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
-                                            {PROJECT_INFO.scope_items.map((it, i) => <li key={i}>{it}</li>)}
-                                        </ul>
-                                    </div>
-                                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
-                                        <h3 className="font-bold text-orange-800 mb-2 flex items-center gap-2"><Icons.AlertTriangle size={16}/> 核心挑战</h3>
-                                        <p className="text-sm text-orange-700 leading-relaxed">{PROJECT_INFO.mission}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Button onClick={() => setGameState('playing')} className="w-full h-14 text-lg bg-slate-900 shadow-xl">
-                                进入模拟系统 <Icons.ArrowRight className="ml-2" />
-                            </Button>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 5. 游戏主界面 (Playing)
-            const CurrentRoleIcon = ROLE_DETAILS[activeRole]?.icon || Icons.User;
-            
-            return (
-                <div className="h-screen w-full bg-slate-100 flex flex-col overflow-hidden font-sans">
-                    
-                    {/* 顶部导航栏 */}
-                    <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm z-20">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-blue-600 text-white p-2 rounded-lg shadow-blue-200 shadow-lg">
-                                <Icons.Activity size={20} />
-                            </div>
+            // 4. Intro
+            if (view === 'intro') return (
+                <div className="h-screen bg-slate-50 p-8 overflow-auto flex justify-center">
+                    <div className="max-w-4xl w-full space-y-8 animate-slide-up pb-10">
+                        <div className="flex items-center gap-4 border-b pb-4">
+                            <Icons.Info size={40} className="text-blue-600" />
                             <div>
-                                <h1 className="font-bold text-slate-800 text-lg leading-tight">SunLink ESG</h1>
-                                <div className="text-xs text-slate-500 flex gap-2">
-                                    <span>{mode==='single'?'单人模式':`房间: ${roomNumber}`}</span>
-                                    {mode==='multi' && <span className="text-blue-600 font-bold">{playerName} ({ROLE_DETAILS[myRole]?.label})</span>}
+                                <h1 className="text-3xl font-black text-slate-900">{PROJECT_INFO.name}</h1>
+                                <p className="text-slate-500 flex items-center gap-2"><Icons.Globe size={16} /> {PROJECT_INFO.location}</p>
+                            </div>
+                        </div>
+                        <div className="bg-white p-8 rounded-xl shadow-sm space-y-6 text-slate-700 leading-relaxed">
+                            <div><h3 className="font-bold text-slate-900 mb-2">项目背景</h3><p>{PROJECT_INFO.background}</p></div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="bg-blue-50 p-4 rounded">
+                                    <h3 className="font-bold text-blue-800 mb-2">工程范围</h3>
+                                    <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">{PROJECT_INFO.scope_items.map(i => <li key={i}>{i}</li>)}</ul>
+                                </div>
+                                <div className="bg-orange-50 p-4 rounded">
+                                    <h3 className="font-bold text-orange-800 mb-2">核心挑战</h3>
+                                    <p className="text-sm text-orange-700">{PROJECT_INFO.challenge}</p>
                                 </div>
                             </div>
                         </div>
-
-                        <div className="flex items-center gap-4">
-                            <div className="bg-slate-100 px-4 py-2 rounded-full flex items-center gap-2 border border-slate-200">
-                                <Icons.Timer size={16} className="text-slate-500"/>
-                                <span className="font-mono font-bold text-slate-700 text-lg">
-                                    {Math.floor(gameTime/60)}:{(gameTime%60).toString().padStart(2,'0')}
-                                </span>
-                            </div>
-                            <Button variant="ghost" onClick={()=>setGameState('cover')} className="text-red-500 hover:bg-red-50">
-                                <Icons.LogOut size={20}/>
-                            </Button>
-                        </div>
+                        <Button onClick={() => setView('game')} className="w-full h-16 text-xl shadow-xl">进入模拟系统 <Icons.ArrowRight className="ml-2" /></Button>
                     </div>
+                </div>
+            );
 
-                    {/* 主内容区域 */}
+            // 5. 游戏主界面
+            return (
+                <div className="h-screen w-full bg-slate-100 flex flex-col relative overflow-hidden">
+                    {/* 过场动画层 (v7.51 特有) */}
+                    {showTransition && (
+                        <div className="absolute inset-0 z-50 bg-black flex items-center justify-center animate-fade-in">
+                            <h1 className="text-4xl font-black text-white tracking-widest animate-slide-up">{transitionText}</h1>
+                        </div>
+                    )}
+
+                    {/* 顶栏 */}
+                    <header className="h-16 bg-white border-b px-6 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-4 font-bold text-slate-800">
+                            <Icons.Activity className="text-blue-600" /> SunLink ESG
+                            {mode === 'multi' && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">{pName} ({ROLES[myRole]?.label})</span>}
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="bg-slate-100 px-3 py-1 rounded flex items-center gap-2 text-slate-600 font-mono"><Icons.Timer size={16} /> {Math.floor(gameTime / 60)}:{(gameTime % 60).toString().padStart(2, '0')}</div>
+                            <Button variant="ghost" onClick={() => setView('cover')}><Icons.LogOut size={20} /></Button>
+                        </div>
+                    </header>
+
                     <div className="flex-1 flex overflow-hidden">
-                        
-                        {/* 左侧：操作台 (占据主要空间) */}
-                        <div className="flex-1 flex flex-col min-w-0 bg-slate-50 p-4 md:p-6 overflow-y-auto gap-6">
-                            
-                            {/* 阶段进度条 */}
-                            <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center px-8">
-                                {[1,2,3,4,5].map(s => (
-                                    <div key={s} className={`flex flex-col items-center gap-2 transition-all duration-500 ${stage===s ? 'scale-110' : 'opacity-50'}`}>
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 ${stage===s ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : (stage > s ? 'bg-green-100 border-green-200 text-green-600' : 'bg-slate-100 border-slate-200 text-slate-400')}`}>
-                                            {stage > s ? <Icons.CheckCircle size={20}/> : s}
-                                        </div>
-                                        <span className={`text-xs font-bold ${stage===s?'text-blue-600':'text-slate-400'}`}>
-                                            Stage {s}
-                                        </span>
+                        {/* 左侧：操作区 */}
+                        <main className="flex-1 p-6 overflow-y-auto flex flex-col gap-6">
+                            {/* 进度条 */}
+                            <div className="bg-white p-4 rounded-xl shadow-sm flex justify-between px-8">
+                                {[1, 2, 3, 4, 5].map(s => (
+                                    <div key={s} className={`flex flex-col items-center ${stage === s ? 'text-blue-600 font-bold scale-110 transition-transform' : 'text-slate-300'}`}>
+                                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center mb-1 ${stage === s ? 'border-blue-600 bg-blue-50' : 'border-slate-200'}`}>{stage > s ? <Icons.CheckCircle size={16} /> : s}</div>
+                                        <span className="text-xs">S{s}</span>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* 核心交互卡片 */}
-                            <div className="flex-1 flex flex-col">
-                                <Card className="flex-1 flex flex-col overflow-hidden relative shadow-lg border-0 ring-1 ring-slate-200">
-                                    {/* 卡片标题栏 */}
-                                    <div className={`h-16 px-6 flex items-center justify-between border-b ${isMyTurn() ? 'bg-white' : 'bg-slate-50'}`}>
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-lg ${isMyTurn() ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
-                                                <Icons.Zap size={20}/>
+                            {/* 主卡片 */}
+                            <Card className="flex-1 flex flex-col relative min-h-[400px]">
+                                <div className={`absolute top-0 left-0 w-full h-1 ${mode === 'single' || myRole === activeRole ? 'bg-green-500' : 'bg-slate-200'}`} />
+                                <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
+                                    <h2 className="font-bold text-lg flex items-center gap-2">
+                                        <Icons.Zap className={mode === 'single' || myRole === activeRole ? "text-green-600" : "text-slate-400"} />
+                                        {stage === 4 && currCrisis ? "危机处理中" : `当前阶段：${STAGE_TITLES[stage].split(':')[1]}`}
+                                    </h2>
+                                    <span className="text-xs text-slate-500">当前行动方: {ROLES[activeRole].label}</span>
+                                </div>
+
+                                <div className="flex-1 p-8 overflow-y-auto bg-white">
+                                    {/* S1 内容 */}
+                                    {stage === 1 && activeRole === 'owner' && s1State === 'owner_draft' && (
+                                        <div className="space-y-6 animate-slide-up">
+                                            <div className="bg-blue-50 p-4 rounded text-blue-800 text-sm"><Icons.Info className="inline mr-1" size={14} /> 请勾选要纳入 ESIA 报告的评估项目。这将影响初始成本与后续风险。</div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {ESIA_ITEMS.map(i => (
+                                                    <div key={i.id} onClick={() => (mode === 'single' || myRole === 'owner') && setOwnerEsia(p => p.includes(i.id) ? p.filter(x => x !== i.id) : [...p, i.id])}
+                                                        className={`p-3 rounded border cursor-pointer flex justify-between ${ownerEsia.includes(i.id) ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white hover:bg-slate-50'}`}>
+                                                        <span className="text-sm">{i.label}</span><span className="text-xs opacity-80">${i.cost}</span>
+                                                    </div>
+                                                ))}
                                             </div>
-                                            <div>
-                                                <h2 className="font-bold text-lg text-slate-800">
-                                                    {isMyTurn() ? '当前行动' : `等待 ${ROLE_DETAILS[activeRole]?.label} 行动...`}
-                                                </h2>
-                                                <p className="text-xs text-slate-500">
-                                                    当前角色: <span className="font-bold">{ROLE_DETAILS[activeRole]?.label}</span>
-                                                </p>
-                                            </div>
+                                            {(mode === 'single' || myRole === 'owner') && <div className="flex justify-end"><Button onClick={actS1Submit}>提交方案</Button></div>}
                                         </div>
-                                        {stage === 4 && currentCrisis && <Badge className="bg-red-100 text-red-600 border-red-200 animate-pulse pl-1 pr-3"><Icons.AlertTriangle size={14} className="mr-1"/> 危机处理中</Badge>}
-                                    </div>
+                                    )}
+                                    {stage === 1 && activeRole === 'ngo' && (
+                                        <div className="text-center space-y-6 animate-slide-up">
+                                            <Icons.ScrollText size={64} className="mx-auto text-slate-300" />
+                                            <h3 className="text-xl font-bold">公众评议</h3>
+                                            <p>业主提交了 ESIA 方案，总预算 ${ownerEsia.reduce((a, b) => a + ESIA_ITEMS.find(i => i.id === b).cost, 0)} 万。社区是否满意？</p>
+                                            {(mode === 'single' || myRole === 'ngo') && <div className="flex justify-center gap-4"><Button variant="success" onClick={() => actS1Ngo(true)}>无异议</Button><Button variant="danger" onClick={() => actS1Ngo(false)}>抗议</Button></div>}
+                                        </div>
+                                    )}
+                                    {stage === 1 && activeRole === 'gov' && (
+                                        <div className="text-center space-y-6 animate-slide-up">
+                                            <Icons.Landmark size={64} className="mx-auto text-slate-300" />
+                                            <h3 className="text-xl font-bold">行政审批</h3>
+                                            <p>请审核业主的立项申请材料。</p>
+                                            {(mode === 'single' || myRole === 'gov') && <div className="flex justify-center gap-4"><Button variant="success" onClick={() => actS1Gov(true)}>批准立项</Button><Button variant="danger" onClick={() => actS1Gov(false)}>驳回</Button></div>}
+                                        </div>
+                                    )}
 
-                                    {/* 卡片内容区 */}
-                                    <div className="flex-1 p-6 overflow-y-auto bg-slate-50/50">
-                                        
-                                        {/* S1: 立项界面 */}
-                                        {stage === 1 && activeRole === 'owner' && s1State === 'owner_draft' && (
-                                            <div className="max-w-4xl mx-auto space-y-6 animate-in">
-                                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-blue-800 text-sm">
-                                                    <h4 className="font-bold mb-1">任务目标</h4>
-                                                    <p>请选择要纳入 <span className="font-bold">环境社会影响评估 (ESIA)</span> 的具体项目。这决定了初期成本和后续风险。</p>
+                                    {/* S2 内容 */}
+                                    {stage === 2 && activeRole === 'owner' && (
+                                        <div className="text-center py-10 animate-slide-up"><Icons.Building2 size={64} className="mx-auto text-blue-300 mb-4" /><p className="mb-6">立项已获批。现在需要向世界银行申请贷款。</p>{(mode === 'single' || myRole === 'owner') && <Button onClick={actS2Apply}>申请贷款</Button>}</div>
+                                    )}
+                                    {stage === 2 && activeRole === 'mdb' && (
+                                        <div className="text-center py-10 animate-slide-up"><Icons.Globe size={64} className="mx-auto text-purple-300 mb-4" /><p className="mb-6">审核项目的环境社会承诺计划 (ESCP)。</p>{(mode === 'single' || myRole === 'mdb') && <Button onClick={actS2Sign} variant="success">签署协议</Button>}</div>
+                                    )}
+
+                                    {/* S3 内容 */}
+                                    {stage === 3 && activeRole === 'owner' && s3State === 'owner_tender' && (
+                                        <div className="max-w-md mx-auto space-y-4 animate-slide-up"><h3 className="text-center font-bold">设定招标控制价</h3><input type="number" className="w-full p-3 border rounded text-lg" placeholder="金额 ($万)" onChange={e => setTenderPrice(Number(e.target.value))} />{(mode === 'single' || myRole === 'owner') && <Button className="w-full" onClick={actS3Tender}>发布招标文件</Button>}</div>
+                                    )}
+                                    {stage === 3 && activeRole === 'epc' && (
+                                        <div className="max-w-md mx-auto space-y-4 animate-slide-up"><h3 className="text-center font-bold">提交投标文件</h3><div className="text-center text-sm text-slate-500">控制价: ${tenderPrice}</div><input type="number" className="w-full p-3 border rounded text-lg" placeholder="报价 ($万)" onChange={e => setEpcBidPrice(Number(e.target.value))} />{(mode === 'single' || myRole === 'epc') && <Button className="w-full" variant="primary" onClick={actS3Bid}>投标</Button>}</div>
+                                    )}
+                                    {stage === 3 && activeRole === 'owner' && s3State === 'owner_eval' && (
+                                        <div className="text-center space-y-6 animate-slide-up"><h3 className="text-xl font-bold">评标</h3><p className="text-2xl font-black">${epcBidPrice} 万</p>{(mode === 'single' || myRole === 'owner') && <div className="flex justify-center gap-4"><Button variant="success" onClick={() => actS3Eval(true)}>接受报价</Button><Button variant="danger" onClick={() => actS3Eval(false)}>驳回</Button></div>}</div>
+                                    )}
+
+                                    {/* S4 内容 */}
+                                    {stage === 4 && activeRole === 'epc' && s4State === 'epc_plan' && (
+                                        <div className="text-center py-10 animate-slide-up"><Icons.Building2 size={64} className="mx-auto text-orange-300 mb-4" /><h3 className="text-xl font-bold mb-2">施工准备就绪</h3><p className="mb-6">人员设备已集结，准备进场。</p>{(mode === 'single' || myRole === 'epc') && <Button onClick={actS4Start} variant="primary">进场施工</Button>}</div>
+                                    )}
+                                    {stage === 4 && currCrisis && (
+                                        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg animate-slide-up">
+                                            <div className="flex items-center gap-2 text-red-800 font-bold text-xl mb-4"><Icons.AlertTriangle /> {currCrisis.crisisTitle}</div>
+                                            <p className="text-red-900 mb-6 leading-relaxed">{currCrisis.crisisDesc}</p>
+                                            {activeRole === 'ngo' && protestState === 'ngo_decide' && (
+                                                <div className="border-t border-red-200 pt-4">
+                                                    <p className="mb-4 font-bold text-red-800">社区行动决策：</p>
+                                                    {(mode === 'single' || myRole === 'ngo') && <div className="flex gap-4"><Button variant="danger" onClick={() => actS4NgoDecide(true)}>发起索赔</Button><Button variant="outline" onClick={() => actS4NgoDecide(false)}>息事宁人</Button></div>}
                                                 </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {ESIA_ITEMS.map(item => {
-                                                        const active = ownerEsiaSelection.includes(item.id);
-                                                        return (
-                                                            <div key={item.id} 
-                                                                onClick={() => isMyTurn() && setOwnerEsiaSelection(prev => active ? prev.filter(x=>x!==item.id) : [...prev, item.id])}
-                                                                className={`p-4 rounded-lg border cursor-pointer flex justify-between items-center transition-all ${active ? 'bg-blue-600 text-white shadow-md border-blue-600' : 'bg-white hover:bg-slate-50 text-slate-700'}`}
-                                                            >
-                                                                <span className="font-medium">{item.label}</span>
-                                                                <span className={`text-xs px-2 py-1 rounded ${active?'bg-blue-500 text-white':'bg-slate-100 text-slate-500'}`}>${item.cost}万</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                <div className="flex justify-end pt-4 border-t">
-                                                    {isMyTurn() && <Button size="lg" onClick={s1Submit} className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto">提交 ESIA 方案</Button>}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {stage === 1 && activeRole === 'ngo' && (
-                                            <div className="flex flex-col items-center justify-center h-full space-y-6 animate-in text-center">
-                                                <Icons.ScrollText size={64} className="text-slate-300"/>
-                                                <h3 className="text-2xl font-bold text-slate-800">审核 ESIA 方案</h3>
-                                                <p className="text-slate-600 max-w-md">
-                                                    业主已提交评估方案，共包含 <span className="font-bold">{ownerEsiaSelection.length}</span> 项措施。
-                                                    作为受影响社区代表，您是否接受此方案？
-                                                </p>
-                                                {isMyTurn() && <div className="flex gap-4 w-full max-w-md">
-                                                    <Button onClick={()=>s1NgoEval(true)} className="flex-1 bg-green-600 h-12 text-lg">无异议</Button>
-                                                    <Button onClick={()=>s1NgoEval(false)} className="flex-1 bg-red-600 h-12 text-lg">抗议</Button>
-                                                </div>}
-                                            </div>
-                                        )}
-
-                                        {stage === 1 && activeRole === 'gov' && (
-                                            <div className="flex flex-col items-center justify-center h-full space-y-6 animate-in text-center">
-                                                <Icons.Landmark size={64} className="text-slate-300"/>
-                                                <h3 className="text-2xl font-bold text-slate-800">立项审批</h3>
-                                                <p className="text-slate-600">请审核业主的立项申请材料与公众反馈。</p>
-                                                {isMyTurn() && <div className="flex gap-4 w-full max-w-md">
-                                                    <Button onClick={()=>s1GovReview(true)} className="flex-1 bg-green-600 h-12 text-lg">批准立项</Button>
-                                                    <Button onClick={()=>s1GovReview(false)} className="flex-1 bg-red-600 h-12 text-lg">驳回申请</Button>
-                                                </div>}
-                                            </div>
-                                        )}
-
-                                        {/* S2: 融资界面 */}
-                                        {stage === 2 && activeRole === 'owner' && (
-                                            <div className="text-center py-12 animate-in">
-                                                <Icons.CheckCircle size={64} className="text-green-500 mx-auto mb-6"/>
-                                                <h3 className="text-2xl font-bold mb-4">立项已获批</h3>
-                                                <p className="text-slate-500 mb-8">现在需要向世界基础设施银行申请项目贷款。</p>
-                                                {isMyTurn() && <Button onClick={s2Apply} size="lg" className="bg-purple-600 h-14 px-10 text-lg">提交贷款申请</Button>}
-                                            </div>
-                                        )}
-                                        {stage === 2 && activeRole === 'mdb' && (
-                                            <div className="text-center py-12 animate-in">
-                                                <Icons.Globe size={64} className="text-purple-500 mx-auto mb-6"/>
-                                                <h3 className="text-2xl font-bold mb-4">贷款审核</h3>
-                                                <p className="text-slate-500 mb-8">审核项目环境社会风险，签署环境社会承诺计划 (ESCP)。</p>
-                                                {isMyTurn() && <Button onClick={s2Sign} size="lg" className="bg-green-600 h-14 px-10 text-lg">批准并签署</Button>}
-                                            </div>
-                                        )}
-
-                                        {/* S3: 招标界面 */}
-                                        {stage === 3 && activeRole === 'owner' && s3State === 'owner_tender' && (
-                                            <div className="max-w-md mx-auto mt-10 space-y-6 p-8 bg-white rounded-xl shadow-sm border animate-in">
-                                                <h3 className="text-xl font-bold text-center">发布招标文件</h3>
-                                                <div>
-                                                    <label className="block text-sm font-bold text-slate-700 mb-2">设置招标控制价 ($万)</label>
-                                                    <Input type="number" value={tenderLimitPrice} onChange={e=>setTenderLimitPrice(Number(e.target.value))} className="h-12 text-lg" />
-                                                </div>
-                                                {isMyTurn() && <Button onClick={s3Tender} className="w-full h-12 bg-blue-600 text-lg">发布招标</Button>}
-                                            </div>
-                                        )}
-                                        {stage === 3 && activeRole === 'epc' && (
-                                            <div className="max-w-md mx-auto mt-10 space-y-6 p-8 bg-white rounded-xl shadow-sm border animate-in">
-                                                <h3 className="text-xl font-bold text-center">提交投标文件</h3>
-                                                <div className="bg-slate-100 p-4 rounded text-center text-sm text-slate-500">
-                                                    业主控制价: <span className="font-bold text-slate-900">${tenderLimitPrice} 万</span>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-bold text-slate-700 mb-2">您的报价 ($万)</label>
-                                                    <Input type="number" value={epcBid.price} onChange={e=>setEpcBid({...epcBid, price: Number(e.target.value)})} className="h-12 text-lg" />
-                                                </div>
-                                                {isMyTurn() && <Button onClick={s3Bid} className="w-full h-12 bg-orange-600 text-lg">提交标书</Button>}
-                                            </div>
-                                        )}
-                                        {stage === 3 && activeRole === 'owner' && s3State === 'owner_eval' && (
-                                            <div className="text-center py-12 animate-in">
-                                                <h3 className="text-2xl font-bold mb-6">收到 EPC 报价</h3>
-                                                <div className="text-5xl font-black text-slate-800 mb-8 tracking-tighter">
-                                                    ${epcBid.price} <span className="text-lg font-normal text-slate-500">万</span>
-                                                </div>
-                                                {isMyTurn() && <div className="flex gap-4 justify-center">
-                                                    <Button onClick={()=>s3Eval(true)} className="bg-green-600 h-12 px-8">接受报价</Button>
-                                                    <Button onClick={()=>s3Eval(false)} className="bg-red-600 h-12 px-8">驳回重报</Button>
-                                                </div>}
-                                            </div>
-                                        )}
-
-                                        {/* S4: 建设与危机界面 */}
-                                        {stage === 4 && activeRole === 'epc' && s4State === 'epc_plan' && (
-                                            <div className="text-center py-12 animate-in">
-                                                <Icons.Building size={64} className="text-orange-500 mx-auto mb-6"/>
-                                                <h3 className="text-2xl font-bold mb-4">准备进场施工</h3>
-                                                <p className="text-slate-500 mb-8">已制定施工执行计划。点击下方按钮开始施工。</p>
-                                                {isMyTurn() && <Button onClick={s4Start} size="lg" className="bg-orange-600 h-14 px-10 text-lg">进场施工</Button>}
-                                            </div>
-                                        )}
-
-                                        {stage === 4 && currentCrisis && (
-                                            <div className="max-w-2xl mx-auto bg-red-50 border-l-4 border-red-500 rounded-r-xl p-8 shadow-sm animate-in">
-                                                <div className="flex items-center gap-3 mb-4 text-red-700">
-                                                    <Icons.AlertTriangle size={32} />
-                                                    <h3 className="text-2xl font-bold">突发危机：{currentCrisis.crisisTitle}</h3>
-                                                </div>
-                                                <p className="text-lg text-red-900 mb-8 leading-relaxed bg-white/50 p-4 rounded border border-red-100">
-                                                    {currentCrisis.crisisDesc}
-                                                </p>
-                                                
-                                                {/* 危机交互逻辑 */}
-                                                {activeRole === 'ngo' && protestState === 'ngo_decide' && (
-                                                    <div className="border-t border-red-200 pt-6">
-                                                        <p className="font-bold text-red-800 mb-4">作为公众代表，您决定：</p>
-                                                        {isMyTurn() ? (
-                                                            <div className="flex gap-4">
-                                                                <Button onClick={()=>s4NgoDecide(true)} className="bg-red-600 text-white">发起索赔与抗议</Button>
-                                                                <Button onClick={()=>s4NgoDecide(false)} variant="outline" className="border-red-300 text-red-700 hover:bg-red-100">放弃追究</Button>
-                                                            </div>
-                                                        ) : <p className="text-sm text-slate-500">等待公众决策...</p>}
-                                                    </div>
-                                                )}
-
-                                                {activeRole === 'ngo' && protestState === 'ngo_demand' && (
-                                                    <div className="border-t border-red-200 pt-6">
-                                                        <p className="font-bold text-red-800 mb-2">输入索赔金额 ($万):</p>
-                                                        {isMyTurn() && <div className="flex gap-2">
-                                                            <Input type="number" value={ngoDemandAmount} onChange={e=>setNgoDemandAmount(Number(e.target.value))} className="max-w-[200px] bg-white" />
-                                                            <Button onClick={s4NgoSubmit} className="bg-red-600">提交索赔</Button>
-                                                        </div>}
-                                                    </div>
-                                                )}
-
-                                                {activeRole === 'epc' && protestState === 'party_response' && (
-                                                    <div className="border-t border-red-200 pt-6">
-                                                        <p className="mb-4">公众索赔金额: <span className="font-bold text-xl text-red-700">${ngoDemandAmount} 万</span></p>
-                                                        {isMyTurn() && <div className="flex gap-4">
-                                                            <Button onClick={()=>s4PartyResp(true)} className="bg-blue-600">同意支付</Button>
-                                                            <Button onClick={()=>s4PartyResp(false)} className="bg-red-600">拒绝赔偿</Button>
-                                                        </div>}
-                                                    </div>
-                                                )}
-
-                                                {activeRole === 'gov' && protestState === 'gov_ruling' && (
-                                                    <div className="border-t border-red-200 pt-6">
-                                                        <p className="mb-4 font-bold text-purple-800">政府裁决金额:</p>
-                                                        {isMyTurn() && <div className="flex gap-2">
-                                                            <Input type="number" value={govRulingAmount} onChange={e=>setGovRulingAmount(Number(e.target.value))} className="max-w-[200px] bg-white" />
-                                                            <Button onClick={s4GovRule} className="bg-purple-600">发布裁决</Button>
-                                                        </div>}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {stage === 5 && (
-                                            <div className="h-full flex flex-col items-center justify-center text-center animate-in">
-                                                <Icons.Award size={80} className="text-yellow-500 mb-6"/>
-                                                <h2 className="text-4xl font-black text-slate-900 mb-4">模拟结束</h2>
-                                                <p className="text-xl text-slate-600 max-w-xl">
-                                                    项目已完成建设。请在右侧查看各方最终的资金结余与声誉状况。
-                                                </p>
-                                                <Button onClick={()=>window.location.reload()} className="mt-8" variant="outline">重新开始</Button>
-                                            </div>
-                                        )}
-
-                                    </div>
-                                </Card>
-                            </div>
-                        </div>
-
-                        {/* 右侧：信息面板 */}
-                        <div className="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 z-10 shadow-xl">
-                            {/* 角色状态列表 */}
-                            <div className="p-4 bg-slate-50 border-b">
-                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">玩家状态</h3>
-                                <div className="space-y-2">
-                                    {Object.keys(ROLE_DETAILS).map(key => {
-                                        const role = ROLE_DETAILS[key];
-                                        const stats = playerStats[key];
-                                        const isActive = activeRole === key;
-                                        return (
-                                            <div key={key} className={`p-3 rounded-lg border flex items-center justify-between transition-all ${isActive ? 'bg-white border-blue-400 shadow-md transform scale-105' : 'bg-slate-50 border-slate-200 opacity-70'}`}>
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`p-1.5 rounded-md ${role.color.replace('text-','bg-').split(' ')[1]} bg-opacity-20`}>
-                                                        <role.icon size={14} className={role.color.split(' ')[0]}/>
-                                                    </div>
-                                                    <span className="text-sm font-bold text-slate-700">{role.label}</span>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-xs font-mono font-bold text-slate-900">
-                                                        ${stats.money || stats.cost || stats.benefit || 0}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                            )}
+                                            {activeRole === 'ngo' && protestState === 'ngo_demand' && (
+                                                <div className="flex gap-2 mt-4">{(mode === 'single' || myRole === 'ngo') && <><input type="number" className="border p-2 rounded w-32" placeholder="索赔额" onChange={e => setDemandAmt(Number(e.target.value))} /><Button variant="danger" onClick={actS4NgoSubmit}>提交</Button></>}</div>
+                                            )}
+                                            {activeRole === 'epc' && protestState === 'party_resp' && (
+                                                <div className="mt-4 space-y-4"><p>索赔金额: <span className="font-bold">${demandAmt}万</span></p>{(mode === 'single' || myRole === 'epc') && <div className="flex gap-4"><Button variant="primary" onClick={() => actS4PartyResp(true)}>同意赔偿</Button><Button variant="danger" onClick={() => actS4PartyResp(false)}>拒绝</Button></div>}</div>
+                                            )}
+                                            {activeRole === 'gov' && protestState === 'gov_rule' && (
+                                                <div className="mt-4 flex gap-2">{(mode === 'single' || myRole === 'gov') && <><input type="number" className="border p-2 rounded w-32" placeholder="裁决额" onChange={e => setRulingAmt(Number(e.target.value))} /><Button variant="success" onClick={actS4GovRule}>裁决</Button></>}</div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {stage === 5 && (
+                                        <div className="text-center py-12 animate-slide-up"><Icons.Award size={80} className="mx-auto text-yellow-500 mb-6" /><h2 className="text-4xl font-black mb-4">模拟结束</h2><p>项目已竣工。请查看右侧各方最终得分。</p><Button onClick={() => window.location.reload()} className="mt-8" variant="outline">重新开始</Button></div>
+                                    )}
                                 </div>
-                            </div>
+                            </Card>
+                        </main>
 
-                            {/* 日志区域 */}
-                            <div className="flex-1 flex flex-col overflow-hidden">
-                                <div className="p-3 border-b bg-slate-100 text-xs font-bold text-slate-500 flex items-center gap-2">
-                                    <Icons.ScrollText size={14}/> 事件日志
-                                </div>
-                                <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50">
-                                    {logs.slice().reverse().map((log, i) => (
-                                        <div key={i} className={`p-3 rounded-lg border text-xs leading-relaxed shadow-sm ${
-                                            log.type === 'red' ? 'bg-red-50 border-red-100 text-red-800' :
-                                            log.type === 'green' ? 'bg-green-50 border-green-100 text-green-800' :
-                                            log.type === 'blue' ? 'bg-blue-50 border-blue-100 text-blue-800' :
-                                            log.type === 'purple' ? 'bg-purple-50 border-purple-100 text-purple-800' :
-                                            'bg-white border-slate-200 text-slate-600'
-                                        }`}>
-                                            <div className="flex items-center gap-2 mb-1 opacity-50 text-[10px]">
-                                                <Icons.Timer size={10}/> {log.time}
+                        {/* 右侧：信息栏 */}
+                        <aside className="w-80 bg-white border-l flex flex-col shadow-xl z-10">
+                            <div className="p-4 border-b bg-slate-50">
+                                <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">各方状态</h3>
+                                <div className="space-y-3">
+                                    {Object.keys(ROLES).map(k => (
+                                        <div key={k} className={`flex items-center justify-between p-2 rounded ${activeRole === k ? 'bg-white shadow ring-1 ring-blue-200' : 'opacity-70'}`}>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`p-1 rounded bg-${ROLES[k].color}-100 text-${ROLES[k].color}-600`}><ROLES[k].icon size={14} /></div>
+                                                <span className="text-sm font-bold">{ROLES[k].label}</span>
                                             </div>
-                                            {log.msg}
+                                            <span className="text-xs font-mono font-bold">${stats[k].money || stats[k].cost || stats[k].benefit || 0}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        </div>
-
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="p-3 border-b text-xs font-bold text-slate-500 flex items-center gap-2"><Icons.ScrollText size={14} /> 事件日志</div>
+                                <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50">
+                                    {logs.slice().reverse().map((l, i) => (
+                                        <div key={i} className={`text-xs p-2 rounded border-l-2 bg-white ${l.type === 'red' ? 'border-red-500 text-red-800' : l.type === 'green' ? 'border-green-500 text-green-800' : l.type === 'purple' ? 'border-purple-500 text-purple-800' : 'border-blue-400 text-slate-600'}`}>
+                                            <span className="opacity-50 mr-1">[{l.t}]</span>{l.msg}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </aside>
                     </div>
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ErrorBoundary><GameApp /></ErrorBoundary>);
+        root.render(<SunLinkSim />);
     </script>
 </body>
 </html>
