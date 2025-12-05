@@ -503,7 +503,7 @@ const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame }) => {
                              <CardTitle className="text-xl mt-4">知情同意书</CardTitle>
                          </CardHeader>
                          <CardContent className="text-sm text-slate-600 space-y-3">
-                             <p className="font-medium text-slate-700">您即将参与的是一项关于国际工程项目ESG管理的决策行为实验，由天津大学全球工程经营实验室开发。</p>
+                             <p className="font-medium text-slate-700">您即将参与的是一项关于国际工程项目ESG管理的行为实验，由天津大学全球工程经营实验室开发。</p>
                              <ul className="space-y-2 text-xs bg-white p-3 rounded border border-slate-200">
                                  <li><strong className="text-slate-800">自愿性：</strong>参与本实验完全自愿，您有权在任何时候关闭页面退出。</li>
                                  <li><strong className="text-slate-800">无风险：</strong>本实验不涉及任何商业利益或个人隐私风险。</li>
@@ -666,7 +666,7 @@ const GameEntryWrapper = ({ children }) => {
 
       const rNum = parseInt(roomNumber); 
       if (!playerName.trim()) return alert("请输入昵称");
-      if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
+      if (isNaN(rNum) || rNum < 1 || rNum > 100) return alert("请输入有效的房间号 (1-99)");
 
       try {
           setLobbyStatus('waiting');
@@ -889,7 +889,7 @@ const GameEntryWrapper = ({ children }) => {
                            <Input placeholder="例如: Player1" value={playerName} onChange={e=>setPlayerName(e.target.value)} className="text-center text-lg h-12"/>
                         </div>
                         <div className="space-y-2">
-                           <span className="text-xs font-bold text-slate-600">房间号 (1-20)</span>
+                           <span className="text-xs font-bold text-slate-600">房间号 (1-99)</span>
                            <Input type="number" min={1} max={20} placeholder="请输入房间号" value={roomNumber} onChange={e=>setRoomNumber(e.target.value)} className="text-center text-lg h-12 font-mono"/>
                         </div>
                         <Button className="w-full h-12 text-lg font-bold bg-purple-600 hover:bg-purple-700" onClick={enterRoomReal}>
@@ -1005,7 +1005,7 @@ const SummaryForm = ({ role, onSubmit }) => {
 
   const handleSubmit = () => {
      const allScoresFilled = Object.keys(INITIAL_STATES).every(k => scores[k] && scores[k] !== "");
-     if(!pros || !cons || !allScoresFilled) { alert("请填写优点、不足，并完成所有满意度评价"); return; }
+     if(!pros || !cons || !allScoresFilled) { alert("请填写优点/不足，并完成所有满意度评价"); return; }
      onSubmit(role, { pros, cons, scores });
   };
 
@@ -2012,7 +2012,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       triggerStageTransition(
           4, 
           "项目建设阶段", 
-          `合同签约完成。\n合同价: $${epcBid.price}万\n工期: ${tenderDuration}个月\n误期罚款: ${delayPenalty}万/月\n提前奖励: ${earlyBonus}万/月`
+          `合同签约完成\n合同价: $${epcBid.price}万\n工期: ${tenderDuration}个月\n误期罚款: ${delayPenalty}万/月\n提前奖励: ${earlyBonus}万/月`
       );
   };
 
