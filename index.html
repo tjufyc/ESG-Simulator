@@ -575,7 +575,7 @@ const GameEntryWrapper = ({ children }) => {
           console.log("LeanCloud SDK Loaded via CDN");
           try {
              const AV = window.AV;
-             if (AV && !AV.applicationId) {
+             if (!AV.applicationId) {
                  AV.init({
                     appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
                     appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
@@ -588,13 +588,13 @@ const GameEntryWrapper = ({ children }) => {
           }
       };
       script.onerror = () => {
-          console.warn("Failed to load AV SDK");
+          alert("错误：SDK加载失败！请关闭广告拦截插件(AdBlock/uBlock)或切换网络后刷新重试。");
       };
       document.body.appendChild(script);
   }, []);
 
   useEffect(() => {
-      if (!sdkReady || !window.AV) return;
+      if (!sdkReady) return;
       const AV = window.AV;
       
       const fetchOnlineCount = async () => {
@@ -607,7 +607,7 @@ const GameEntryWrapper = ({ children }) => {
            }
       };
       fetchOnlineCount();
-      const timer = setInterval(fetchOnlineCount, 30000); // Reduced frequency
+      const timer = setInterval(fetchOnlineCount, 20000);
       return () => clearInterval(timer);
   }, [sdkReady]);
 
@@ -622,7 +622,6 @@ const GameEntryWrapper = ({ children }) => {
 
       const poll = async () => {
           try {
-              if (!AV) return;
               const pQuery = new AV.Query('GamePlayer');
               pQuery.equalTo('room', rNum);
               pQuery.ascending('createdAt');
@@ -653,7 +652,7 @@ const GameEntryWrapper = ({ children }) => {
       };
 
       poll();
-      pollingRef.current = setInterval(poll, 3000);
+      pollingRef.current = setInterval(poll, 1500);
 
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -666,7 +665,7 @@ const GameEntryWrapper = ({ children }) => {
 
       const rNum = parseInt(roomNumber); 
       if (!playerName.trim()) return alert("请输入昵称");
-      if (isNaN(rNum) || rNum < 1 || rNum > 100) return alert("请输入有效的房间号 (1-99)");
+      if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
 
       try {
           setLobbyStatus('waiting');
@@ -869,39 +868,8 @@ const GameEntryWrapper = ({ children }) => {
          </div>
       );
   }
-
-  if (appState === 'multi_lobby') {
-      if (lobbyStatus === 'login') {
-          return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans relative overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1526304640152-929666d766a6?auto=format&fit=crop&w=1000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-20"/>
-                <div className="absolute top-4 right-4 text-white/60 text-xs flex items-center gap-2"><Users2 size={14}/> 平台玩家: {onlineCount}</div>
-                <Card className="w-full max-w-md bg-white/95 backdrop-blur relative z-10 border-t-4 border-purple-500 shadow-2xl">
-                    <div className="absolute top-4 left-4"><Button variant="ghost" size="sm" onClick={()=>setAppState('cover')}>&lt; 返回</Button></div>
-                    <CardHeader className="text-center pt-10">
-                        <div className="mx-auto bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mb-2"><Network size={32} className="text-purple-600"/></div>
-                        <CardTitle className="text-2xl font-black text-slate-800">多人互动大厅</CardTitle>
-                        <p className="text-sm text-slate-500">请输入房间号加入</p>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-2">
-                           <span className="text-xs font-bold text-slate-600">游戏昵称</span>
-                           <Input placeholder="例如: Player1" value={playerName} onChange={e=>setPlayerName(e.target.value)} className="text-center text-lg h-12"/>
-                        </div>
-                        <div className="space-y-2">
-                           <span className="text-xs font-bold text-slate-600">房间号 (1-99)</span>
-                           <Input type="number" min={1} max={20} placeholder="请输入房间号" value={roomNumber} onChange={e=>setRoomNumber(e.target.value)} className="text-center text-lg h-12 font-mono"/>
-                        </div>
-                        <Button className="w-full h-12 text-lg font-bold bg-purple-600 hover:bg-purple-700" onClick={enterRoomReal}>
-                            <LogIn className="mr-2" size={20}/> 进入房间
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-          )
-      }
-
-      if (lobbyStatus === 'waiting') {
+	
+if (lobbyStatus === 'waiting') {
           return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
                <Card className="w-full max-w-2xl border-t-4 border-purple-500 shadow-2xl">
@@ -1282,6 +1250,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   
   const applyStatePayload = (data) => {
       if(!data) return;
+      // !!! IMPORTANT FIX ISSUE 1: Do not overwrite local selection state if it is my turn !!!
       const isMyTurn = assignedRole && assignedRole === data.activeRole;
 
       if(data.stage) setStage(data.stage);
@@ -1293,11 +1262,14 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.s4State) setS4State(data.s4State);
       if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
       
+      // Sync Mandates
       if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
       if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
       if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
       if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
       
+      // PROTECT LOCAL STATE: Only update these if it is NOT my turn (or I am not assigned)
+      // This prevents the checkbox from unchecking itself when polling happens.
       if (!isMyTurn || !assignedRole) {
           if(data.govMandates) setGovMandates(data.govMandates);
           if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
@@ -1308,12 +1280,13 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
           if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
           if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
-          if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
       }
 
+      // Always sync confirmed/history lists
       if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
       if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
 
+      // Sync Crisis Reasons
       if(data.ngoDemandReason !== undefined) setNgoDemandReason(data.ngoDemandReason);
       if(data.partyOfferReason !== undefined) setPartyOfferReason(data.partyOfferReason);
       
@@ -1321,19 +1294,18 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
       if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
       
-      if(data.ownerRespEsmp !== undefined) setOwnerRespEsmp(data.ownerRespEsmp); // Fix for multi
       if(data.tenderDuration) setTenderDuration(data.tenderDuration);
       if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
       if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
-      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); 
-      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); 
+      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); // Sync Crisis Queue
+      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); // Sync Current Crisis
       
       if(data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);
       }
       if (data.stage >= 1) setIsTimerRunning(true);
   };
-
+	
   useEffect(() => {
       if (mode !== 'multi' || !roomNumber) return;
 
@@ -1366,14 +1338,14 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
               console.warn("Game state polling failed", e);
           }
       };
-
+	  
       pollState();
       pollingRef.current = setInterval(pollState, 3000);
       
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
       }
-  }, [mode, roomNumber, assignedRole]); 
+  }, [mode, roomNumber, assignedRole]); // Add assignedRole dependency
 
   const syncToCloud = (type, payload) => {
       if (mode !== 'multi') return;
@@ -1403,6 +1375,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
           lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
           
+          // Explicitly broadcast all selection states to ensure latest state is saved
           govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
           accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
           accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
@@ -1419,8 +1392,8 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
           epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
           ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
-          previousAuditItems: overrides.previousAuditItems !== undefined ? overrides.previousAuditItems : previousAuditItems,
 
+          // Broadcast Reasons
           ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
           partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
 
@@ -1440,7 +1413,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       syncToCloud('SYNC_STATE_FULL', payload);
   };
 
-
   const addFloatEffect = (role, value) => {
     const key = `${role}-${value}-${Date.now()}`;
     setFloatEffects(prev => {
@@ -1452,20 +1424,18 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     });
   };
 
-  const updateStat = (role, key, val, baseState = null) => {
-    if (val === 0) return baseState || playerState;
-    const stateToUse = baseState || playerState;
-    const newPlayerState = { 
-        ...stateToUse, 
-        [role]: { 
-            ...stateToUse[role], 
-            [key]: stateToUse[role][key] + val 
-        } 
-    };
-    
-    if (!baseState) {
-        setPlayerState(newPlayerState);
-    }
+	useEffect(() => {
+      const timer = setInterval(() => {
+          const now = Date.now();
+          setFloatEffects(prev => prev.filter(e => now - e.timestamp < 3000));
+      }, 1000);
+      return () => clearInterval(timer);
+  }, []);
+	
+ const updateStat = (role, key, val) => {
+    if (val === 0) return;
+    const newPlayerState = { ...playerState, [role]: { ...playerState[role], [key]: playerState[role][key] + val } };
+    setPlayerState(newPlayerState); 
     addFloatEffect(role, val);
     return newPlayerState; 
   };
@@ -1495,7 +1465,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
 
   const triggerStageTransition = (targetStage, title, extraText="", crisisIndex=null) => {
-      // 强制进入过渡状态
       setIsTransitioning(true);
       setTransitionContext({
           targetStage,
@@ -2957,6 +2926,42 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           </div>
         </CardHeader>
         
+        return (
+      <Card className={`
+          flex flex-col border-l-4 ${colorClass} transition-all duration-300 shadow-sm rounded-sm
+          md:h-full
+          h-full border-t border-b border-r border-slate-200
+          ${isActive ? 'bg-white ring-1 ring-slate-200' : 'bg-slate-50 md:opacity-60 md:grayscale-[0.5]'}
+          ${mode === 'multi' && assignedRole && !isMe ? 'opacity-90' : ''}
+      `}>
+        <CardHeader className="py-2 px-2 md:py-2 md:px-2 bg-white border-b border-slate-100 shrink-0 relative">
+          <CardTitle className="text-sm md:text-xs font-bold flex items-center gap-2 text-slate-700">
+            <Icon size={16} className={`md:w-3.5 md:h-3.5 ${colorClass.replace('border-','text-')}`} />
+            <span className="truncate">{title}</span>
+            {isMe && <Badge className="text-[9px] h-4 px-1 bg-slate-800 ml-auto">我</Badge>}
+            {mode === 'multi' && !isMe && playerList && <span className="text-[9px] text-slate-400 ml-auto truncate max-w-[60px]">{playerList.find(p=>p.role===roleKey)?.name}</span>}
+          </CardTitle>
+          <div className="grid grid-cols-1 gap-1 mt-1">
+             <div className="text-xs md:text-[10px] bg-slate-50 border border-slate-200 px-2 md:px-1 py-1 md:py-0.5 rounded-sm flex justify-between relative overflow-visible">
+                <span className="text-slate-500">{metricLabel}</span>
+                <span className={`font-bold ${state.money<0||state.cost>500?'text-red-500':'text-slate-700'}`}>
+                    {metricValue}
+                </span>
+                {floatEffects.filter(e => e.role === roleKey).map(e => (
+                   <FloatingText key={e.id} value={e.value} />
+                ))}
+             </div>
+             <div className="text-[10px] flex justify-between text-slate-400 px-1 md:hidden">
+                <span>声誉</span>
+                <span>{state.reputation}分</span>
+             </div>
+             <div className="hidden md:flex md:hidden text-[9px] justify-between text-slate-400">
+                <span>声誉</span>
+                <span>{state.reputation}分</span>
+             </div>
+          </div>
+        </CardHeader>
+        
         <CardContent className="flex-1 p-0 overflow-hidden relative min-h-0 flex flex-col"> 
            <div className="px-2 pt-2 space-y-1 shrink-0">
               {roleKey === 'owner' && <GentleAlert text={financialAlerts.owner} colorClass="bg-blue-50 text-blue-700 border border-blue-100" />}
@@ -2988,7 +2993,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
         </CardContent>
       </Card>
     );
-  };
+  };		  
 
   const renderRoleContent = (role) => {
       // ... (Role Content Logic from previous version, unchanged)
@@ -3739,7 +3744,134 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
        </div>
     );
   };
+if (viewMode === 'intro_only' || viewMode === 'intro') {
+      const isMulti = viewMode === 'intro_only';
+      
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
+            <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                    <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">{isMulti ? "多人模式" : "v7.44"}</Badge></div>
+                </CardHeader>
+                <CardContent className="space-y-8 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-2 space-y-4">
+                            <div className="space-y-2"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><FileText size={20} className="text-blue-500"/> 项目背景</h3><p className="text-slate-600 leading-relaxed text-justify text-sm">{PROJECT_INFO.background}</p></div>
+                            <div className="space-y-2"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Target size={20} className="text-red-500"/> 挑战与使命</h3><p className="text-slate-600 leading-relaxed text-justify text-sm font-medium bg-slate-50 p-3 rounded border-l-4 border-slate-300">{PROJECT_INFO.mission}</p></div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm"><h3 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Zap size={18}/> 工程范围</h3><ul className="space-y-2 text-xs text-blue-900">{PROJECT_INFO.scope_items.map((item, i) => (<li key={i} className="flex gap-2 items-start"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span><span>{item}</span></li>))}</ul></div>
+                            <div className="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm"><h3 className="font-bold text-green-800 mb-2 flex items-center gap-2"><Clock size={18}/> 并网发电进度目标</h3><div className="text-2xl font-black text-green-600">24个月</div><div className="text-xs text-green-700 mt-1 opacity-80">游戏中 1分钟 ≈ 现实 1个月</div></div>
+                        </div>
+                    </div>
+                    <div className="space-y-4"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Scale size={20} className="text-purple-500"/> 模拟阶段概览</h3><div className="grid grid-cols-2 md:grid-cols-5 gap-2">{PROJECT_INFO.stages_visual.map((s) => (<div key={s.id} className={`border p-3 rounded-lg text-center hover:shadow-md transition-all group ${s.color}`}><div className="w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm flex items-center justify-center text-sm font-bold mb-2 mx-auto shadow-sm">{s.id}</div><div className="font-bold text-xs mb-1">{s.title}</div><div className="text-[10px] opacity-80 leading-tight">{s.task}</div></div>))}</div></div>
+                    
+                    <div className="pt-4 flex justify-center gap-4">
+                        <Button size="lg" variant="outline" onClick={onExit}>返回主菜单</Button>
+                        {isMulti ? (
+                             <Button size="lg" className="w-full md:w-1/3 bg-slate-900 hover:bg-slate-800 text-white shadow-xl" onClick={onNext}>下一步: 查阅角色档案</Button>
+                        ) : (
+                             <Button size="lg" className="w-full md:w-1/3 bg-slate-900 hover:bg-slate-800 text-white shadow-xl transform hover:-translate-y-1 transition-all" onClick={()=>setViewMode('roles')}>下一步: 查阅角色档案</Button>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+      );
+  }
 
+  if (viewMode === 'roles_only') {
+    return (
+        <div className="min-h-screen bg-slate-50 p-4 font-sans overflow-y-auto">
+           <div className="max-w-6xl mx-auto">
+             <div className="flex justify-between items-center mb-6">
+               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                   角色档案 <Badge variant="secondary">多人模式</Badge>
+               </h2>
+               <div className="flex gap-2">
+                  <Button onClick={onExit} variant="outline">返回大厅</Button>
+               </div>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {Object.entries(ROLE_DETAILS).map(([key, info]) => {
+                   const Icon = key==='owner'?User: key==='gov'?Landmark : key==='mdb'?Globe : key==='epc'?Building2 : Users;
+                   const styles = key==='owner'? 'border-blue-500 bg-blue-50/30' : key==='gov'? 'border-green-600 bg-green-50/30' : key==='mdb'? 'border-purple-600 bg-purple-50/30' : key==='epc'? 'border-orange-500 bg-orange-50/30' : 'border-red-500 bg-red-50/30';
+                   const iconColor = key==='owner'?'text-blue-600':key==='gov'?'text-green-600':key==='mdb'?'text-purple-600':key==='epc'?'text-orange-500':'text-red-600';
+                   const descBg = key==='owner'?'bg-blue-100 text-blue-900':key==='gov'?'bg-green-100 text-green-900':key==='mdb'?'bg-purple-100 text-purple-900':key==='epc'?'bg-orange-100 text-orange-900':'bg-red-100 text-red-900';
+                   const statBg = key==='owner'?'bg-blue-50 border-blue-200':key==='gov'?'bg-green-50 border-green-200':key==='mdb'?'bg-purple-50 border-purple-200':key==='epc'?'bg-orange-50 border-orange-200':'bg-red-50 border-red-200';
+                   
+                   const isAssigned = assignedRole === key;
+                   const isBlurred = assignedRole && assignedRole !== key;
+    
+                   return (
+                     <Card key={key} className={`border-t-8 hover:shadow-xl transition-all bg-white ${styles} min-h-[320px] ${isAssigned ? 'ring-4 ring-offset-2 ring-green-500 transform scale-105 z-10' : ''} ${isBlurred ? 'opacity-60 grayscale' : ''}`}>
+                         <CardHeader className="pb-4 relative">
+                             <CardTitle className={`flex items-center gap-3 text-xl ${iconColor}`}><div className="p-2 bg-white rounded-full shadow-sm"><Icon size={24}/></div> {INITIAL_STATES[key].label}</CardTitle>
+                             {isAssigned && <Badge className="absolute top-0 right-0 bg-green-600">您的身份</Badge>}
+                         </CardHeader>
+                         <CardContent className="space-y-5 text-base text-slate-700"><div className={`p-3 rounded-md font-bold text-sm ${descBg}`}>{info.desc}</div><div className="bg-white p-4 rounded-md text-sm italic border-l-4 border-slate-400 shadow-sm leading-relaxed">{info.task}</div><div className="grid grid-cols-2 gap-4 pt-2"><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">{key==='owner' ? "初始资金" : key==='epc' ? "初始资金" : (key==='gov'||key==='mdb') ? "初始监督成本" : "社会效益"}</span><span className="text-xl">${key==='owner' ? INITIAL_STATES[key].money : key==='epc' ? INITIAL_STATES[key].money : (key==='gov'||key==='mdb') ? INITIAL_STATES[key].cost : INITIAL_STATES[key].benefit}万</span></div><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">初始声誉</span><span className="text-xl">{INITIAL_STATES[key].reputation}分</span></div></div></CardContent>
+                     </Card>
+                   )
+                })}
+             </div>
+             <div className="text-center pb-8">
+               {assignedRole === 'owner' ? (
+                 <Button size="lg" className="bg-green-600 hover:bg-green-700 px-12 py-6 text-xl shadow-md font-bold rounded-full" onClick={onNext}>
+                     开始游戏
+                 </Button>
+               ) : (
+                 <div className="flex flex-col items-center gap-2">
+                    <Button disabled size="lg" className="bg-slate-300 text-slate-500 px-12 py-6 text-xl font-bold rounded-full">
+                       <Loader2 className="mr-2 animate-spin"/> 等待房主(业主)开始...
+                    </Button>
+                    <div className="text-xs text-slate-400">提示：房主点击开始后，您将自动进入游戏</div>
+                 </div>
+               )}
+             </div>
+           </div>
+        </div>
+      );
+  }
+
+  if (viewMode === 'roles') return (
+    <div className="min-h-screen bg-slate-50 p-4 font-sans overflow-y-auto">
+       <div className="max-w-6xl mx-auto">
+         <div className="flex justify-between items-center mb-6">
+           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+               角色档案 
+           </h2>
+           <Button onClick={()=>setViewMode('game')} variant="outline"><Reply className="mr-2" size={16}/>返回游戏</Button>
+         </div>
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <Card className="border-t-8 border-slate-600 bg-white hover:shadow-xl transition-all min-h-[320px]"><CardHeader className="pb-4"><CardTitle className="flex items-center gap-3 text-xl text-slate-700"><div className="p-2 bg-slate-100 rounded-full shadow-sm"><ScrollText size={24}/></div> 知情同意书</CardTitle></CardHeader><CardContent className="text-sm text-slate-600 space-y-3 leading-relaxed"><p>您即将参与的是一项关于国际工程项目ESG管理的决策行为实验，由天津大学全球工程经营实验室开发。</p><p>匿名性：您的所有回答将被严格保密，系统仅记录去标识化的决策数据用于科研统计分析。</p><p>自愿性：参与本实验完全自愿，您有权在任何时候关闭页面退出。</p><p>无风险：本实验不涉及任何商业利益或个人隐私风险。</p></CardContent></Card>
+            {Object.entries(ROLE_DETAILS).map(([key, info]) => {
+               const Icon = key==='owner'?User : key==='gov'?Landmark : key==='mdb'?Globe : key==='epc'?Building2 : Users;
+               const styles = key==='owner'? 'border-blue-500 bg-blue-50/30' : key==='gov'? 'border-green-600 bg-green-50/30' : key==='mdb'? 'border-purple-600 bg-purple-50/30' : key==='epc'? 'border-orange-500 bg-orange-50/30' : 'border-red-500 bg-red-50/30';
+               const iconColor = key==='owner'?'text-blue-600':key==='gov'?'text-green-600':key==='mdb'?'text-purple-600':key==='epc'?'text-orange-500':'text-red-600';
+               const descBg = key==='owner'?'bg-blue-100 text-blue-900':key==='gov'?'bg-green-100 text-green-900':key==='mdb'?'bg-purple-100 text-purple-900':key==='epc'?'bg-orange-100 text-orange-900':'bg-red-100 text-red-900';
+               const statBg = key==='owner'?'bg-blue-50 border-blue-200':key==='gov'?'bg-green-50 border-green-200':key==='mdb'?'bg-purple-50 border-purple-200':key==='epc'?'bg-orange-50 border-orange-200':'bg-red-50 border-red-200';
+               
+               return (
+                 <Card key={key} className={`border-t-8 hover:shadow-xl transition-all bg-white ${styles} min-h-[320px]`}>
+                     <CardHeader className="pb-4 relative">
+                         <CardTitle className={`flex items-center gap-3 text-xl ${iconColor}`}><div className="p-2 bg-white rounded-full shadow-sm"><Icon size={24}/></div> {INITIAL_STATES[key].label}</CardTitle>
+                     </CardHeader>
+                     <CardContent className="space-y-5 text-base text-slate-700"><div className={`p-3 rounded-md font-bold text-sm ${descBg}`}>{info.desc}</div><div className="bg-white p-4 rounded-md text-sm italic border-l-4 border-slate-400 shadow-sm leading-relaxed">{info.task}</div><div className="grid grid-cols-2 gap-4 pt-2"><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">{key==='owner' ? "初始资金" : key==='epc' ? "初始资金" : (key==='gov'||key==='mdb') ? "初始监督成本" : "社会效益"}</span><span className="text-xl">${key==='owner' ? INITIAL_STATES[key].money : key==='epc' ? INITIAL_STATES[key].money : (key==='gov'||key==='mdb') ? INITIAL_STATES[key].cost : INITIAL_STATES[key].benefit}万</span></div><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">初始声誉</span><span className="text-xl">{INITIAL_STATES[key].reputation}分</span></div></div></CardContent>
+                 </Card>
+               )
+            })}
+         </div>
+         <div className="text-center pb-8">
+           <Button size="lg" className="bg-green-600 hover:bg-green-700 px-12 py-6 text-xl shadow-md font-bold rounded-full" onClick={() => {
+               startSim();
+           }}>
+               开始模拟
+           </Button>
+         </div>
+       </div>
+    </div>
+  );
+		
   const isResultDisplay = stage===4 && protestState==='ruling_result_display';
 
   return (
@@ -3860,7 +3992,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   );
 }
 
-function SunLinkV7_51_TransitionRestore() {
+export default function SunLinkV7_51_TransitionRestore() {
     return (
         <GameEntryWrapper>
             <SunLinkESGSimV7_47_Refined />
