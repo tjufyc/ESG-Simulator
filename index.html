@@ -1279,11 +1279,8 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           }
       }
   }, [activeRole, mode]);
-  
-  const applyStatePayload = (data) => {
+    const applyStatePayload = (data) => {
       if(!data) return;
-      const isMyTurn = assignedRole && assignedRole === data.activeRole;
-
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
       if(data.playerState) setPlayerState(data.playerState);
@@ -1292,41 +1289,14 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.s3State) setS3State(data.s3State);
       if(data.s4State) setS4State(data.s4State);
       if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
-      
-      if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
-      if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
-      if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
-      if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
-      
-      if (!isMyTurn || !assignedRole) {
-          if(data.govMandates) setGovMandates(data.govMandates);
-          if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
-          if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
-          if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
-          if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
-          if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
-          if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
-          if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
-          if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
-          if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
-      }
-
-      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
-      if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
-
-      if(data.ngoDemandReason !== undefined) setNgoDemandReason(data.ngoDemandReason);
-      if(data.partyOfferReason !== undefined) setPartyOfferReason(data.partyOfferReason);
-      
       if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
       if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
       if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
       
-      if(data.ownerRespEsmp !== undefined) setOwnerRespEsmp(data.ownerRespEsmp); // Fix for multi
+      if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
       if(data.tenderDuration) setTenderDuration(data.tenderDuration);
       if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
       if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
-      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); 
-      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); 
       
       if(data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);
@@ -1334,6 +1304,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if (data.stage >= 1) setIsTimerRunning(true);
   };
 
+  // Polling Logic for Game State (Fixes 403)
   useEffect(() => {
       if (mode !== 'multi' || !roomNumber) return;
 
@@ -1345,20 +1316,31 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
               const q = new AV.Query('GameAction');
               q.equalTo('room', parseInt(roomNumber));
               q.descending('createdAt');
-              q.limit(5); 
+              q.limit(5); // Fetch few recent
               
               const actions = await q.find();
+              
+              // Process logs (reverse order because actions are descending)
               const reversedActions = [...actions].reverse();
               
+              // Find latest full state
               let latestStatePayload = null;
               
+              // Check for logs
               reversedActions.forEach(act => {
                    if (act.get('type') === 'SYNC_STATE_FULL') {
                        latestStatePayload = act.get('payload');
                    }
+                   // Note: In polling mode, SYNC_LOG might be missed or duplicated if we just append.
+                   // Best practice is to rely on SYNC_STATE_FULL's `logs` array if available.
+                   // Current implementation relies on FULL state syncing `logs`.
               });
 
               if (latestStatePayload) {
+                   // Basic deduplication logic or overwrite
+                   // Since we use Polling, we might just overwrite state if it's newer?
+                   // Or check if stage/time changed.
+                   // For simplicity: Apply always. React handles diffing.
                    applyStatePayload(latestStatePayload);
               }
 
@@ -1367,13 +1349,16 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           }
       };
 
+      // Initial fetch
       pollState();
-      pollingRef.current = setInterval(pollState, 3000);
+      
+      // Loop
+      pollingRef.current = setInterval(pollState, 1500);
       
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
       }
-  }, [mode, roomNumber, assignedRole]); 
+  }, [mode, roomNumber]);
 
   const syncToCloud = (type, payload) => {
       if (mode !== 'multi') return;
@@ -1387,7 +1372,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       act.set('payload', payload);
       act.save();
   };
-  
+    
   const broadcastState = (overrides = {}) => {
       if (mode !== 'multi') return;
       
