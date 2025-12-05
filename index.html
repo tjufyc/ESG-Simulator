@@ -1,233 +1,47 @@
-	      <!DOCTYPE html>
-<html>
-  <head>
-    <title>TJU</title>
+	<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunLink ESG Simulator</title>
 
-    <script type="importmap">
-      {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
-    </script>
-
+ <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      window.addEventListener("error", function (event) {
-        const errorObj = {
-          message: event.message,
-          source: event.filename,
-          lineno: event.lineno,
-          colno: event.colno,
-          stack: event.error ? event.error.stack : null
-        };
-        window.parent.postMessage(
-          { action: "error", error: JSON.stringify(errorObj) },
-          "*"
-        );
-        event.preventDefault();
-      });
-
-  function handleImportError(error) {
-    throw new Error('Import module failed: ' + error.target.src);
-  }
-
-  const observer = new MutationObserver(mutations => {
-    mutations.forEach(mutation => {
-      mutation.addedNodes.forEach(node => {
-        if (node.tagName === 'SCRIPT' && node.type === 'module') {
-          node.onerror = handleImportError;
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(214.3 31.8% 91.4%)",
+                        input: "hsl(214.3 31.8% 91.4%)",
+                        ring: "hsl(215 20.2% 65.1%)",
+                        background: "hsl(0 0% 100%)",
+                        foreground: "hsl(222.2 47.4% 11.2%)",
+                        primary: { DEFAULT: "hsl(222.2 47.4% 11.2%)", foreground: "hsl(210 40% 98%)" },
+                        destructive: { DEFAULT: "hsl(0 100% 50%)", foreground: "hsl(210 40% 98%)" },
+                        muted: { DEFAULT: "hsl(210 40% 96.1%)", foreground: "hsl(215.4 16.3% 46.9%)" },
+                        accent: { DEFAULT: "hsl(210 40% 96.1%)", foreground: "hsl(222.2 47.4% 11.2%)" },
+                    }
+                }
+            }
         }
-      });
-    });
-  });
-
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-
-  document.querySelectorAll('script[type="module"]').forEach(script => {
-    script.onerror = handleImportError;
-  });
-
-  
-window.console = new Proxy(console, {
-  get(target, prop) {
-    if (['log', 'warn', 'error'].includes(prop)) {
-      return new Proxy(target[prop], {
-        apply(fn, thisArg, args) {
-          fn.apply(thisArg, args);
-          window.parent.postMessage({ action: 'console', 
-            type: prop, 
-            args: args.map((arg) => {
-              try {
-                return JSON.stringify(arg).replace(/^["']|["']$/g, '');
-              } catch (e) {
-                return arg;
-              }
-            }) 
-          }, '*');
+    </script>
+	
+   <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0"
         }
-      });
     }
-    return target[prop];
-  }
-});
-
-
     </script>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
-    <style type="text/tailwindcss">
-      @layer base {
-        :root {
-          --background: 0 0% 100%;
-          --foreground: 222.2 47.4% 11.2%;
+	
+  <script src="https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js"></script>
 
-          --muted: 210 40% 96.1%;
-          --muted-foreground: 215.4 16.3% 46.9%;
+   <script src="https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js"></script>
 
-          --popover: 0 0% 100%;
-          --popover-foreground: 222.2 47.4% 11.2%;
-
-          --border: 214.3 31.8% 91.4%;
-          --input: 214.3 31.8% 91.4%;
-
-          --card: 0 0% 100%;
-          --card-foreground: 222.2 47.4% 11.2%;
-
-          --primary: 222.2 47.4% 11.2%;
-          --primary-foreground: 210 40% 98%;
-
-          --secondary: 210 40% 96.1%;
-          --secondary-foreground: 222.2 47.4% 11.2%;
-
-          --accent: 210 40% 96.1%;
-          --accent-foreground: 222.2 47.4% 11.2%;
-
-          --destructive: 0 100% 50%;
-          --destructive-foreground: 210 40% 98%;
-
-          --ring: 215 20.2% 65.1%;
-
-          --radius: 0.5rem;
-        }
-
-        .dark {
-          --background: 224 71% 4%;
-          --foreground: 213 31% 91%;
-
-          --muted: 223 47% 11%;
-          --muted-foreground: 215.4 16.3% 56.9%;
-
-          --accent: 216 34% 17%;
-          --accent-foreground: 210 40% 98%;
-
-          --popover: 224 71% 4%;
-          --popover-foreground: 215 20.2% 65.1%;
-
-          --border: 216 34% 17%;
-          --input: 216 34% 17%;
-
-          --card: 224 71% 4%;
-          --card-foreground: 213 31% 91%;
-
-          --primary: 210 40% 98%;
-          --primary-foreground: 222.2 47.4% 1.2%;
-
-          --secondary: 222.2 47.4% 11.2%;
-          --secondary-foreground: 210 40% 98%;
-
-          --destructive: 0 63% 31%;
-          --destructive-foreground: 210 40% 98%;
-
-          --ring: 216 34% 17%;
-
-          --radius: 0.5rem;
-        }
-      }
-    </style>
-    <script type="module">
-          import defaultTheme from "tailwindcss/defaultTheme"
-          import tailwindcssAnimate from "tailwindcss-animate"
-
-          const fontFamily = defaultTheme.fontFamily;
-
-          tailwind.config = {
-            darkMode: ["class"],
-        content: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
-        theme: {
-          container: {
-            center: true,
-            padding: "2rem",
-            screens: {
-              "2xl": "1400px",
-            },
-          },
-          extend: {
-            colors: {
-              border: "hsl(var(--border))",
-              input: "hsl(var(--input))",
-              ring: "hsl(var(--ring))",
-              background: "hsl(var(--background))",
-              foreground: "hsl(var(--foreground))",
-              primary: {
-                DEFAULT: "hsl(var(--primary))",
-                foreground: "hsl(var(--primary-foreground))",
-              },
-              secondary: {
-                DEFAULT: "hsl(var(--secondary))",
-                foreground: "hsl(var(--secondary-foreground))",
-              },
-              destructive: {
-                DEFAULT: "hsl(var(--destructive))",
-                foreground: "hsl(var(--destructive-foreground))",
-              },
-              muted: {
-                DEFAULT: "hsl(var(--muted))",
-                foreground: "hsl(var(--muted-foreground))",
-              },
-              accent: {
-                DEFAULT: "hsl(var(--accent))",
-                foreground: "hsl(var(--accent-foreground))",
-              },
-              popover: {
-                DEFAULT: "hsl(var(--popover))",
-                foreground: "hsl(var(--popover-foreground))",
-              },
-              card: {
-                DEFAULT: "hsl(var(--card))",
-                foreground: "hsl(var(--card-foreground))",
-              },
-            },
-            borderRadius: {
-              lg: `var(--radius)`,
-              md: `calc(var(--radius) - 2px)`,
-              sm: "calc(var(--radius) - 4px)",
-            },
-            fontFamily: {
-              sans: [...fontFamily.sans],
-            },
-
-            keyframes: {
-              "accordion-down": {
-                from: { height: "0" },
-                to: { height: "var(--radix-accordion-content-height)" },
-              },
-              "accordion-up": {
-                from: { height: "var(--radix-accordion-content-height)" },
-                to: { height: "0" },
-              },
-            },
-            animation: {
-              "accordion-down": "accordion-down 0.2s ease-out",
-              "accordion-up": "accordion-up 0.2s ease-out",
-            },
-          },
-        },
-        plugins: [tailwindcssAnimate]
-      }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.27.0/babel.min.js"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="text/babel" data-type="module">
-      		  import {createRoot} from "react-dom/client";
             
-      		  
+ <script type="text/babel" data-type="module">     		  
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "https://esm.sh/shadcdn?external=react,react-dom";
 import { Button } from "https://esm.sh/shadcdn?external=react,react-dom";
@@ -249,8 +63,68 @@ import {
   LogIn, Users2, Loader2, Network,
   UserPlus, ArrowBigRight, Info
 } from 'lucide-react';
-		
-// --- 静态配置 ---
+
+	 // --- 修复：手写模拟 Shadcn UI 组件 ---
+        const cn = (...classes) => classes.filter(Boolean).join(" ");
+
+        const Card = ({ className, children, ...props }) => <div className={cn("rounded-xl border bg-white text-slate-950 shadow", className)} {...props}>{children}</div>;
+        const CardHeader = ({ className, children, ...props }) => <div className={cn("flex flex-col space-y-1.5 p-6", className)} {...props}>{children}</div>;
+        const CardTitle = ({ className, children, ...props }) => <h3 className={cn("font-semibold leading-none tracking-tight", className)} {...props}>{children}</h3>;
+        const CardContent = ({ className, children, ...props }) => <div className={cn("p-6 pt-0", className)} {...props}>{children}</div>;
+        
+        const Button = ({ className, variant = "default", size = "default", children, ...props }) => {
+            const variants = {
+                default: "bg-slate-900 text-slate-50 hover:bg-slate-900/90",
+                destructive: "bg-red-500 text-slate-50 hover:bg-red-500/90",
+                outline: "border border-slate-200 bg-white hover:bg-slate-100 hover:text-slate-900",
+                secondary: "bg-slate-100 text-slate-900 hover:bg-slate-100/80",
+                ghost: "hover:bg-slate-100 hover:text-slate-900",
+                link: "text-slate-900 underline-offset-4 hover:underline",
+            };
+            const sizes = {
+                default: "h-9 px-4 py-2",
+                sm: "h-8 rounded-md px-3 text-xs",
+                lg: "h-10 rounded-md px-8",
+                icon: "h-9 w-9",
+            };
+            return (
+                <button className={cn("inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50", variants[variant], sizes[size], className)} {...props}>
+                    {children}
+                </button>
+            );
+        };
+
+        const Input = ({ className, type, ...props }) => (
+            <input type={type} className={cn("flex h-9 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 disabled:cursor-not-allowed disabled:opacity-50", className)} {...props} />
+        );
+
+        const Textarea = ({ className, ...props }) => (
+            <textarea className={cn("flex min-h-[60px] w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 disabled:cursor-not-allowed disabled:opacity-50", className)} {...props} />
+        );
+
+        const Checkbox = ({ className, checked, onCheckedChange, ...props }) => (
+            <input type="checkbox" checked={checked} onChange={(e) => onCheckedChange && onCheckedChange(e.target.checked)} className={cn("peer h-4 w-4 shrink-0 rounded-sm border border-slate-200 border-slate-900 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", className)} {...props} />
+        );
+
+        const Badge = ({ className, variant = "default", ...props }) => {
+            const variants = {
+                default: "border-transparent bg-slate-900 text-slate-50 shadow hover:bg-slate-900/80",
+                secondary: "border-transparent bg-slate-100 text-slate-900 hover:bg-slate-100/80",
+                destructive: "border-transparent bg-red-500 text-slate-50 shadow hover:bg-red-500/80",
+                outline: "text-slate-950 border-slate-200",
+            };
+            return <div className={cn("inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2", variants[variant], className)} {...props} />
+        };
+
+        const Alert = ({ className, variant = "default", children, ...props }) => (
+            <div role="alert" className={cn("relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-slate-950", className)} {...props}>{children}</div>
+        );
+        const AlertTitle = ({ className, children, ...props }) => <h5 className={cn("mb-1 font-medium leading-none tracking-tight", className)} {...props}>{children}</h5>;
+        const AlertDescription = ({ className, children, ...props }) => <div className={cn("text-sm [&_p]:leading-relaxed", className)} {...props}>{children}</div>;
+        
+        const ScrollArea = ({ className, children, ...props }) => <div className={cn("overflow-auto", className)} {...props}>{children}</div>;		
+
+	 // --- 静态配置 ---
 const PROJECT_INFO = {
   name: "SunLink 光伏+输变电项目", 
   location: "A国 (发展中国家) - 北部干旱荒漠与'绿洲'湿地保护区的交界地带",
@@ -353,198 +227,193 @@ const RISK_TABLE = [
 // --- 页面组件 ---
 
 const ProjectIntroView = ({ onStart, mode, assignedRole }) => {
-    return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-800 overflow-y-auto pb-10">
-            <div className="max-w-5xl mx-auto p-6 md:p-12">
-                <div className="mb-8 animate-in slide-in-from-top-5 duration-700">
-                    <div className="flex items-center gap-3 mb-4">
-                         <Activity size={32} className="text-blue-600"/>
-                         <Badge variant="outline" className="text-sm px-3 py-1 border-blue-200 text-blue-700 bg-blue-50">Project Background</Badge>
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight tracking-tight">{PROJECT_INFO.name}</h1>
-                    <div className="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
-                        <div className="flex items-center gap-1"><MapPin size={16}/> {PROJECT_INFO.location}</div>
-                        <div className="flex items-center gap-2 text-orange-700 font-bold bg-orange-50 px-3 py-1 rounded border border-orange-200 shadow-sm">
-                            <Clock size={16}/> 计划并网发电时间：24个月 (游戏中1分钟代表1个月)
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-800 overflow-y-auto pb-10">
+                    <div className="max-w-5xl mx-auto p-6 md:p-12">
+                        <div className="mb-8 animate-in slide-in-from-top-5 duration-700">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Activity size={32} className="text-blue-600"/>
+                                <Badge variant="outline" className="text-sm px-3 py-1 border-blue-200 text-blue-700 bg-blue-50">Project Background</Badge>
+                            </div>
+                            <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight tracking-tight">{PROJECT_INFO.name}</h1>
+                            <div className="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
+                                <div className="flex items-center gap-1"><MapPin size={16}/> {PROJECT_INFO.location}</div>
+                                <div className="flex items-center gap-2 text-orange-700 font-bold bg-orange-50 px-3 py-1 rounded border border-orange-200 shadow-sm">
+                                    <Clock size={16}/> 计划并网发电时间：24个月 (游戏中1分钟代表1个月)
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                             <Card className="md:col-span-2 border-0 shadow-lg bg-white overflow-hidden">
+                                <div className="h-2 bg-blue-500"></div>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-xl"><FileText className="text-blue-500"/> 项目背景与挑战</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4 text-slate-600 leading-relaxed">
+                                    <p>{PROJECT_INFO.background}</p>
+                                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 italic text-slate-700">
+                                        <span className="font-bold text-blue-600 not-italic block mb-2">核心任务:</span>
+                                        "{PROJECT_INFO.mission}"
+                                    </div>
+                                </CardContent>
+                             </Card>
+                             <div className="space-y-6">
+                                <Card className="border-0 shadow-md bg-blue-600 text-white">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2"><Target size={20}/> 项目建设内容</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ul className="space-y-2 text-sm text-blue-50">
+                                            {PROJECT_INFO.scope_items.map((item, i) => (
+                                                <li key={i} className="flex items-start gap-2">
+                                                    <span className="mt-1 w-1.5 h-1.5 bg-blue-300 rounded-full shrink-0"></span>
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </CardContent>
+                                </Card>
+                                
+                                <Card className="border-0 shadow-md bg-white">
+                                     <CardHeader className="pb-2">
+                                        <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-wider">ESG 关键风险点</CardTitle>
+                                     </CardHeader>
+                                     <CardContent className="space-y-2">
+                                         <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-red-100 text-red-600 rounded"><AlertTriangle size={12}/></span> 濒危物种保护</div>
+                                         <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-orange-100 text-orange-600 rounded"><Users size={12}/></span> 原住民水权</div>
+                                         <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-purple-100 text-purple-600 rounded"><ShieldAlert size={12}/></span> 劳工涌入风险</div>
+                                     </CardContent>
+                                </Card>
+                             </div>
+                        </div>
+                        
+                        <div className="mb-12">
+                            <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><ListChecks className="text-slate-400"/> 全流程模拟阶段</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                {PROJECT_INFO.stages_visual.map((stage) => (
+                                    <div key={stage.id} className={`p-3 rounded-lg border ${stage.color} flex flex-col justify-between h-24 transition-all hover:scale-105 cursor-default shadow-sm`}>
+                                        <div className="text-xs font-bold opacity-60">Stage 0{stage.id}</div>
+                                        <div>
+                                            <div className="font-bold text-sm mb-1">{stage.title}</div>
+                                            <div className="text-[10px] opacity-80 leading-tight">{stage.task}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        <div className="flex justify-center">
+                             <Button size="lg" onClick={onStart} className="h-14 px-8 text-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xl hover:shadow-2xl transition-all rounded-full flex items-center gap-2 animate-bounce">
+                                下一步：查看角色档案 <ArrowRight size={20}/>
+                             </Button>
+                        </div>
+                        
+                        <div className="text-center text-slate-400 text-xs mt-8">
+                            {mode === 'multi' && assignedRole ? `当前身份: ${INITIAL_STATES[assignedRole].label}` : "单机模式"}
                         </div>
                     </div>
                 </div>
+            );
+        };
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                     <Card className="md:col-span-2 border-0 shadow-lg bg-white overflow-hidden">
-                        <div className="h-2 bg-blue-500"></div>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-xl"><FileText className="text-blue-500"/> 项目背景与挑战</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-slate-600 leading-relaxed">
-                            <p>{PROJECT_INFO.background}</p>
-                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 italic text-slate-700">
-                                <span className="font-bold text-blue-600 not-italic block mb-2">核心任务:</span>
-                                "{PROJECT_INFO.mission}"
-                            </div>
-                        </CardContent>
-                     </Card>
-
-                     <div className="space-y-6">
-                        <Card className="border-0 shadow-md bg-blue-600 text-white">
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2"><Target size={20}/> 项目建设内容</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-2 text-sm text-blue-50">
-                                    {PROJECT_INFO.scope_items.map((item, i) => (
-                                        <li key={i} className="flex items-start gap-2">
-                                            <span className="mt-1 w-1.5 h-1.5 bg-blue-300 rounded-full shrink-0"></span>
-                                            <span>{item}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                        
-                        <Card className="border-0 shadow-md bg-white">
-                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-wider">ESG 关键风险点</CardTitle>
-                             </CardHeader>
-                             <CardContent className="space-y-2">
-                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-red-100 text-red-600 rounded"><AlertTriangle size={12}/></span> 濒危物种保护</div>
-                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-orange-100 text-orange-600 rounded"><Users size={12}/></span> 原住民水权</div>
-                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-purple-100 text-purple-600 rounded"><ShieldAlert size={12}/></span> 劳工涌入风险</div>
-                             </CardContent>
-                        </Card>
-                     </div>
-                </div>
-                
-                <div className="mb-12">
-                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><ListChecks className="text-slate-400"/> 全流程模拟阶段</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        {PROJECT_INFO.stages_visual.map((stage) => (
-                            <div key={stage.id} className={`p-3 rounded-lg border ${stage.color} flex flex-col justify-between h-24 transition-all hover:scale-105 cursor-default shadow-sm`}>
-                                <div className="text-xs font-bold opacity-60">Stage 0{stage.id}</div>
-                                <div>
-                                    <div className="font-bold text-sm mb-1">{stage.title}</div>
-                                    <div className="text-[10px] opacity-80 leading-tight">{stage.task}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex justify-center">
-                     <Button size="lg" onClick={onStart} className="h-14 px-8 text-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xl hover:shadow-2xl transition-all rounded-full flex items-center gap-2 animate-bounce">
-                        下一步：查看角色档案 <ArrowRight size={20}/>
-                     </Button>
-                </div>
-                
-                <div className="text-center text-slate-400 text-xs mt-8">
-                    {mode === 'multi' && assignedRole ? `当前身份: ${INITIAL_STATES[assignedRole].label}` : "单机模式"}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame }) => {
-    return (
-        <div className="min-h-screen bg-slate-100 font-sans p-4 md:p-8 overflow-y-auto">
-            <div className="max-w-6xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                     <div>
-                        <h1 className="text-3xl font-black text-slate-800">角色档案</h1>
-                        <p className="text-slate-500">Stakeholder Profiles</p>
-                     </div>
-                     {isGameRunning ? (
-                         <Button onClick={onBackToGame} variant="outline" className="border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
-                            <Reply className="mr-2" size={16}/> 返回游戏
-                         </Button>
-                     ) : (
-                         <Button onClick={onStartGame} size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg">
-                            <Zap className="mr-2" size={16}/> 进入游戏
-                         </Button>
-                     )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                     {Object.keys(ROLE_DETAILS).map(key => {
-                         const role = ROLE_DETAILS[key];
-                         const Icon = role.icon;
-                         return (
-                             <Card key={key} className="border-0 shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group">
-                                 <div className={`h-2 ${role.color.split(' ')[0].replace('text','bg')}`}></div>
+        const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame }) => {
+            return (
+                <div className="min-h-screen bg-slate-100 font-sans p-4 md:p-8 overflow-y-auto">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="flex items-center justify-between mb-8">
+                             <div>
+                                <h1 className="text-3xl font-black text-slate-800">角色档案</h1>
+                                <p className="text-slate-500">Stakeholder Profiles</p>
+                             </div>
+                             {isGameRunning ? (
+                                 <Button onClick={onBackToGame} variant="outline" className="border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
+                                    <Reply className="mr-2" size={16}/> 返回游戏
+                                 </Button>
+                             ) : (
+                                 <Button onClick={onStartGame} size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg">
+                                    <Zap className="mr-2" size={16}/> 进入游戏
+                                 </Button>
+                             )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                             {Object.keys(ROLE_DETAILS).map(key => {
+                                 const role = ROLE_DETAILS[key];
+                                 const Icon = role.icon;
+                                 return (
+                                     <Card key={key} className="border-0 shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                                         <div className={`h-2 ${role.color.split(' ')[0].replace('text','bg')}`}></div>
+                                         <CardHeader className="pb-2">
+                                             <div className="flex justify-between items-start">
+                                                 <div className={`p-2 rounded-lg ${role.color} bg-opacity-20`}>
+                                                     <Icon size={24} className={role.color.split(' ')[0]}/>
+                                                 </div>
+                                                 <Badge variant="outline" className="text-slate-400">Role 0{Object.keys(ROLE_DETAILS).indexOf(key)+1}</Badge>
+                                             </div>
+                                             <CardTitle className="text-xl mt-4">{role.label}</CardTitle>
+                                             <div className="text-sm font-medium text-slate-500">{role.desc}</div>
+                                         </CardHeader>
+                                         <CardContent className="text-sm text-slate-600 space-y-4">
+                                             <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                                                 <span className="font-bold text-slate-800 block mb-1">核心诉求:</span>
+                                                 {role.task}
+                                             </div>
+                                         </CardContent>
+                                     </Card>
+                                 )
+                             })}
+                             
+                             <Card className="border-0 shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group bg-slate-50 border-t-4 border-slate-500">
                                  <CardHeader className="pb-2">
                                      <div className="flex justify-between items-start">
-                                         <div className={`p-2 rounded-lg ${role.color} bg-opacity-20`}>
-                                             <Icon size={24} className={role.color.split(' ')[0]}/>
+                                         <div className="p-2 rounded-lg bg-slate-200">
+                                             <ScrollText size={24} className="text-slate-600"/>
                                          </div>
-                                         <Badge variant="outline" className="text-slate-400">Role 0{Object.keys(ROLE_DETAILS).indexOf(key)+1}</Badge>
+                                         <Badge variant="outline" className="text-slate-400">Notice</Badge>
                                      </div>
-                                     <CardTitle className="text-xl mt-4">{role.label}</CardTitle>
-                                     <div className="text-sm font-medium text-slate-500">{role.desc}</div>
+                                     <CardTitle className="text-xl mt-4">知情同意书</CardTitle>
                                  </CardHeader>
-                                 <CardContent className="text-sm text-slate-600 space-y-4">
-                                     <div className="bg-slate-50 p-3 rounded border border-slate-100">
-                                         <span className="font-bold text-slate-800 block mb-1">核心诉求:</span>
-                                         {role.task}
-                                     </div>
+                                 <CardContent className="text-sm text-slate-600 space-y-3">
+                                     <p className="font-medium text-slate-700">您即将参与的是一项关于国际工程项目ESG管理的行为实验，由天津大学全球工程经营实验室开发。</p>
+                                     <ul className="space-y-2 text-xs bg-white p-3 rounded border border-slate-200">
+                                         <li><strong className="text-slate-800">自愿性：</strong>参与本实验完全自愿，您有权在任何时候关闭页面退出。</li>
+                                         <li><strong className="text-slate-800">无风险：</strong>本实验不涉及任何商业利益或个人隐私风险。</li>
+                                         <li><strong className="text-slate-800">匿名性：</strong>您的所有决策都不带任何个人标识，将被严格保密。</li>
+                                     </ul>
                                  </CardContent>
                              </Card>
-                         )
-                     })}
-                     
-                     <Card className="border-0 shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group bg-slate-50 border-t-4 border-slate-500">
-                         <CardHeader className="pb-2">
-                             <div className="flex justify-between items-start">
-                                 <div className="p-2 rounded-lg bg-slate-200">
-                                     <ScrollText size={24} className="text-slate-600"/>
-                                 </div>
-                                 <Badge variant="outline" className="text-slate-400">Notice</Badge>
-                             </div>
-                             <CardTitle className="text-xl mt-4">知情同意书</CardTitle>
-                         </CardHeader>
-                         <CardContent className="text-sm text-slate-600 space-y-3">
-                             <p className="font-medium text-slate-700">您即将参与的是一项关于国际工程项目ESG管理的行为实验，由天津大学全球工程经营实验室开发。</p>
-                             <ul className="space-y-2 text-xs bg-white p-3 rounded border border-slate-200">
-                                 <li><strong className="text-slate-800">自愿性：</strong>参与本实验完全自愿，您有权在任何时候关闭页面退出。</li>
-                                 <li><strong className="text-slate-800">无风险：</strong>本实验不涉及任何商业利益或个人隐私风险。</li>
-                                 <li><strong className="text-slate-800">匿名性：</strong>您的所有决策都不带任何个人标识，将被严格保密。</li>
-                             </ul>
-                         </CardContent>
-                     </Card>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    )
-};
+            )
+        };
 
-// --- 主要游戏组件的逻辑与视图路由 ---
+        const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn }) => {
+          const isActive = active === role;
+          const colorClass = role === 'owner' ? 'text-blue-600' : 
+                             role === 'gov' ? 'text-green-600' :
+                             role === 'mdb' ? 'text-purple-600' :
+                             role === 'epc' ? 'text-orange-600' : 
+                             role === 'ngo' ? 'text-red-600' : 'text-slate-600';
 
-const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn }) => {
-  const isActive = active === role;
-  const colorClass = role === 'owner' ? 'text-blue-600' : 
-                     role === 'gov' ? 'text-green-600' :
-                     role === 'mdb' ? 'text-purple-600' :
-                     role === 'epc' ? 'text-orange-600' : 
-                     role === 'ngo' ? 'text-red-600' : 'text-slate-600';
-
-  return (
-    <button 
-      onClick={() => onClick(role)}
-      className={`flex flex-col items-center justify-center rounded transition-all relative ${isActive ? 'bg-slate-100 shadow-inner' : 'bg-white'}`}
-    >
-      {alert && <span className="absolute top-1 right-2 w-2 h-2 bg-yellow-500 rounded-full animate-bounce z-10"></span>}
-      {isTurn && (
-        <span className="absolute -top-1 -right-1 flex h-3 w-3 z-20">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
-        </span>
-      )}
-      <Icon size={20} className={isActive ? colorClass : 'text-slate-400'} />
-      <span className={`text-[10px] mt-1 font-bold ${isActive ? 'text-slate-800' : 'text-slate-400'}`}>
-        {label}
-      </span>
-    </button>
-  );
-};
+          return (
+            <button 
+              onClick={() => onClick(role)}
+              className={`flex flex-col items-center justify-center rounded transition-all relative ${isActive ? 'bg-slate-100 shadow-inner' : 'bg-white'}`}
+            >
+              {alert && <span className="absolute top-1 right-2 w-2 h-2 bg-yellow-500 rounded-full animate-bounce z-10"></span>}
+              {isTurn && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3 z-20">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                </span>
+              )}
+              <Icon size={20} className={isActive ? colorClass : 'text-slate-400'} />
+              <span className={`text-[10px] mt-1 font-bold ${isActive ? 'text-slate-800' : 'text-slate-400'}`}>
+                {label}
+              </span>
+            </button>
+          );
+        };
 
 const ROLE_ORDER = ['owner', 'gov', 'mdb', 'epc', 'ngo'];
 
