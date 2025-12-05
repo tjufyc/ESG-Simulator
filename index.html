@@ -803,9 +803,7 @@ const GameEntryWrapper = ({ children }) => {
       return (
         <div className="min-h-screen flex flex-col justify-between bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=2000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-30" />
-            
             <div className="w-full h-10"></div>
-
             <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto z-10 relative -mt-20 md:-mt-32">
                 <div className="mb-8 flex justify-center relative">
                     <div className="w-24 h-24 bg-blue-500 rounded-full blur-[60px] absolute opacity-50 animate-pulse"></div>
@@ -816,31 +814,27 @@ const GameEntryWrapper = ({ children }) => {
                     <h1 className="text-4xl md:text-6xl font-black tracking-tight text-blue-300 drop-shadow-lg leading-tight">ESG Simulator</h1>
                     <div className="h-1 w-20 bg-blue-500 mx-auto mt-4 rounded-full"></div>
                 </div>
-                <div className="text-center space-y-2 mb-12">
-                    <h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide">国际工程项目ESG</h2>
-                    <h2 className="text-xl md:text-2xl font-light text-slate-200 tracking-wide">多角色全流程模拟</h2>
-                </div>
                 
                 <div className="flex flex-col md:flex-row gap-6 justify-center w-full max-w-lg px-4">
-                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
-                        <Smartphone size={24} />
+                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
+                        {/* 修复点：这里改回 Award，防止 Smartphone 未导入导致白屏 */}
+                        <Award size={24} />
                         <div className="flex flex-col items-center">
                             <span>单机体验版</span>
-                            <span className="text-xs opacity-70 font-normal">一人分饰五角·自由探索</span>
+                            <span className="text-xs opacity-70 font-normal">一人分饰五角</span>
                         </div>
                     </Button>
                     
-                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
+                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
                         <Network size={24} />
                         <div className="flex flex-col items-center">
                             <span>多人互动版</span>
-                            <span className="text-xs opacity-70 font-normal">5人实时组队·真实决策</span>
+                            <span className="text-xs opacity-70 font-normal">5人实时组队</span>
                         </div>
                     </Button>
                 </div>
             </div>
-
-            <div className="z-10 text-center space-y-1 opacity-80 w-full px-4 pb-4 mb-[10vh] text-slate-400">
+           <div className="z-10 text-center space-y-1 opacity-80 w-full px-4 pb-4 mb-[10vh] text-slate-400">
                 <div className="text-sm font-light text-slate-300">开发单位：天津大学全球工程经营实验室</div>
                 <div className="text-xs font-light">Developed by Tianjin University Global Infrastructure Project Center</div>
                 <div className="text-xs font-mono">联系人：傅老师 yongcheng_fu@tju.edu.cn</div>
@@ -849,7 +843,6 @@ const GameEntryWrapper = ({ children }) => {
         </div>
       );
   }
-
   
   if (appState === 'single_intro') {
       return (
