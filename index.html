@@ -563,43 +563,19 @@ const GameEntryWrapper = ({ children }) => {
   
   const pollingRef = useRef(null);
 
-  // --- 1. 初始化 SDK (包含内存存储修复) ---
+  // --- Init LeanCloud ---
   useEffect(() => {
       if (window.AV) {
           setSdkReady(true);
           return;
       }
       const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; 
+      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; // 移除 live-query lib
       script.async = true;
       script.onload = () => {
           console.log("LeanCloud SDK Loaded via CDN");
           try {
              const AV = window.AV;
-             
-             // =========== 关键修复开始：解决 Tracking Prevention 报错 ===========
-             // 定义一个纯内存存储器，不读写浏览器的 LocalStorage
-             const MemoryStorage = {
-                _data: {},
-                getItem: function(key) { return this._data[key] || null; },
-                setItem: function(key, value) { this._data[key] = value; },
-                removeItem: function(key) { delete this._data[key]; },
-                clear: function() { this._data = {}; },
-                getItemAsync: function(key) { return Promise.resolve(this._data[key]); },
-                setItemAsync: function(key, value) { this._data[key] = value; return Promise.resolve(); },
-                removeItemAsync: function(key) { delete this._data[key]; return Promise.resolve(); },
-                clearAsync: function() { this._data = {}; return Promise.resolve(); }
-             };
-             
-             if (AV.setAdapters) {
-                 // 强制覆盖适配器，告诉 SDK 用内存存数据
-                 AV.setAdapters({ 
-                     storage: MemoryStorage,
-                     localStorage: MemoryStorage 
-                 });
-             }
-             // =========== 关键修复结束 ===========
-
              if (!AV.applicationId) {
                  AV.init({
                     appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
@@ -613,12 +589,11 @@ const GameEntryWrapper = ({ children }) => {
           }
       };
       script.onerror = () => {
-          alert("错误：SDK加载失败！请关闭广告拦截插件或切换网络。");
+          alert("错误：SDK加载失败！请关闭广告拦截插件(AdBlock/uBlock)或切换网络后刷新重试。");
       };
       document.body.appendChild(script);
   }, []);
 
-  // --- 2. 获取在线人数 ---
   useEffect(() => {
       if (!sdkReady) return;
       const AV = window.AV;
@@ -633,11 +608,11 @@ const GameEntryWrapper = ({ children }) => {
            }
       };
       fetchOnlineCount();
-      const timer = setInterval(fetchOnlineCount, 30000);
+      const timer = setInterval(fetchOnlineCount, 20000);
       return () => clearInterval(timer);
   }, [sdkReady]);
 
-  // --- 3. 轮询逻辑 (大厅等待 & 游戏开始检测) ---
+  // --- Polling Logic for Lobby & Game Start ---
   useEffect(() => {
       if (lobbyStatus !== 'waiting' || !roomNumber || !sdkReady) {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -647,9 +622,10 @@ const GameEntryWrapper = ({ children }) => {
       const AV = window.AV;
       const rNum = parseInt(roomNumber);
 
+      // 轮询函数：检查玩家列表 + 检查游戏开始信号
       const poll = async () => {
           try {
-              // 刷新玩家列表
+              // 1. 刷新玩家列表
               const pQuery = new AV.Query('GamePlayer');
               pQuery.equalTo('room', rNum);
               pQuery.ascending('createdAt');
@@ -660,7 +636,8 @@ const GameEntryWrapper = ({ children }) => {
                   id: p.id
               })));
 
-              // 检查游戏开始信号
+              // 2. 检查是否有 Start Game 信号 (SYNC_STATE_FULL 且 stage=1)
+              // 为了性能，这里只查最新的一条 Action
               const aQuery = new AV.Query('GameAction');
               aQuery.equalTo('room', rNum);
               aQuery.equalTo('type', 'SYNC_STATE_FULL');
@@ -670,24 +647,26 @@ const GameEntryWrapper = ({ children }) => {
 
               if (latestAction) {
                   const payload = latestAction.get('payload');
+                  // 如果发现有 stage 1 的记录，且当前在 waiting 状态，则进入游戏
                   if (payload && payload.stage === 1) {
-                      console.log("Detected Game Start Signal!");
+                      console.log("Detected Game Start Signal via Polling!");
                       setAppState('playing');
                   }
               }
+
           } catch (e) {
               console.warn("Polling failed:", e);
           }
       };
 
+      // 立即执行一次，然后每 1.5 秒执行一次
       poll();
-      pollingRef.current = setInterval(poll, 2000); // 每2秒轮询一次
+      pollingRef.current = setInterval(poll, 1500);
 
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
       };
   }, [lobbyStatus, roomNumber, sdkReady]);
-
   // --- 业务函数 ---
   const enterRoomReal = async () => {
       if (!sdkReady || !window.AV) return alert("系统初始化中...");
