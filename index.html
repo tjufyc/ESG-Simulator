@@ -556,9 +556,6 @@ const GameEntryWrapper = ({ children }) => {
   
   const [roomNumber, setRoomNumber] = useState(''); 
   const [playerName, setPlayerName] = useState('');
-  // 新增：暂存输入，防止还没进房就触发连接
-  const [tempInput, setTempInput] = useState({ name: '', room: '' });
-
   const [lobbyStatus, setLobbyStatus] = useState('login'); 
   const [roomPlayers, setRoomPlayers] = useState([]);
   const [myRole, setMyRole] = useState(null);
@@ -575,6 +572,7 @@ const GameEntryWrapper = ({ children }) => {
       script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; 
       script.async = true;
       script.onload = () => {
+          console.log("LeanCloud SDK Loaded via CDN");
           try {
              const AV = window.AV;
              if (AV && !AV.applicationId) {
@@ -585,14 +583,36 @@ const GameEntryWrapper = ({ children }) => {
                  });
              }
              setSdkReady(true);
-          } catch (e) { console.error("AV Init failed:", e); }
+          } catch (e) {
+             console.error("AV Init failed:", e);
+          }
+      };
+      script.onerror = () => {
+          console.warn("Failed to load AV SDK");
       };
       document.body.appendChild(script);
   }, []);
 
-  // 在大厅等待时轮询玩家列表
   useEffect(() => {
-      if (appState !== 'multi_lobby' || !roomNumber || !sdkReady) {
+      if (!sdkReady || !window.AV) return;
+      const AV = window.AV;
+      
+      const fetchOnlineCount = async () => {
+           try {
+               const query = new AV.Query('GamePlayer');
+               const count = await query.count();
+               setOnlineCount(count);
+           } catch (e) {
+               setOnlineCount(Math.floor(Math.random() * 10) + 5);
+           }
+      };
+      fetchOnlineCount();
+      const timer = setInterval(fetchOnlineCount, 30000); // Reduced frequency
+      return () => clearInterval(timer);
+  }, [sdkReady]);
+
+  useEffect(() => {
+      if (lobbyStatus !== 'waiting' || !roomNumber || !sdkReady) {
           if (pollingRef.current) clearInterval(pollingRef.current);
           return;
       }
@@ -603,23 +623,16 @@ const GameEntryWrapper = ({ children }) => {
       const poll = async () => {
           try {
               if (!AV) return;
-              // 1. 获取玩家列表
               const pQuery = new AV.Query('GamePlayer');
               pQuery.equalTo('room', rNum);
               pQuery.ascending('createdAt');
               const players = await pQuery.find();
-              const playerList = players.map(p => ({
+              setRoomPlayers(players.map(p => ({
                   name: p.get('name'),
                   role: p.get('role'),
                   id: p.id
-              }));
-              setRoomPlayers(playerList);
-              
-              // 确认自己的角色（防丢失）
-              const me = playerList.find(p => p.name === playerName);
-              if (me) setMyRole(me.role);
+              })));
 
-              // 2. 监听游戏开始信号 (SYNC_STATE_FULL payload.stage === 1)
               const aQuery = new AV.Query('GameAction');
               aQuery.equalTo('room', rNum);
               aQuery.equalTo('type', 'SYNC_STATE_FULL');
@@ -630,56 +643,79 @@ const GameEntryWrapper = ({ children }) => {
               if (latestAction) {
                   const payload = latestAction.get('payload');
                   if (payload && payload.stage === 1) {
-                      console.log("Detected Game Start Signal!");
+                      console.log("Detected Game Start Signal via Polling!");
                       setAppState('playing');
                   }
               }
-          } catch (e) { console.warn("Polling failed:", e); }
+          } catch (e) {
+              console.warn("Polling failed:", e);
+          }
       };
 
       poll();
-      pollingRef.current = setInterval(poll, 2000); // 2秒轮询一次
+      pollingRef.current = setInterval(poll, 3000);
 
-      return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-  }, [appState, roomNumber, sdkReady, playerName]);
+      return () => {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+      };
+  }, [lobbyStatus, roomNumber, sdkReady]);
 
-  // 真正连接 LeanCloud 进入房间
   const enterRoomReal = async () => {
-      if (!sdkReady || !window.AV) return alert("系统初始化中...");
-      const rNum = parseInt(roomNumber);
-      
+      if (!sdkReady || !window.AV) return alert("系统正在初始化，请稍等两秒再试...");
+      const AV = window.AV;
+
+      const rNum = parseInt(roomNumber); 
+      if (!playerName.trim()) return alert("请输入昵称");
+      if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
+
       try {
-          const AV = window.AV;
+          setLobbyStatus('waiting');
+          
           const query = new AV.Query('GamePlayer');
           query.equalTo('room', rNum); 
+          query.ascending('createdAt');
+          
           const existingPlayers = await query.find(); 
           
-          // 检查是否已经选过角色（断线重连）
           const existingMe = existingPlayers.find(p => p.get('name') === playerName);
-          if (existingMe) setMyRole(existingMe.get('role')); 
+          if (existingMe) {
+             setMyRole(existingMe.get('role')); 
+          } else {
+             setMyRole(null); 
+          }
           
           setRoomPlayers(existingPlayers.map(p => ({
               name: p.get('name'),
               role: p.get('role'),
               id: p.id
           })));
-          
-          // 进入大厅界面
-          setAppState('multi_lobby');
 
       } catch (error) {
-          alert("连接失败: " + error.message);
-          setAppState('multi_setup'); // 回退
+          console.error("Connection Error:", error);
+          alert("连接失败，请检查网络。");
+          setLobbyStatus('login');
       }
   };
 
   const selectRole = async (roleToSelect) => {
+      if (!sdkReady) return;
       const AV = window.AV;
       if (myRole) return; 
-      const isTaken = roomPlayers.some(p => p.role === roleToSelect);
-      if (isTaken) return alert("该角色已被占用");
+      
+      const isTakenLocal = roomPlayers.some(p => p.role === roleToSelect);
+      if (isTakenLocal) return alert("该角色已被抢先一步！");
 
       try {
+          const checkQuery = new AV.Query('GamePlayer');
+          checkQuery.equalTo('room', parseInt(roomNumber));
+          checkQuery.equalTo('role', roleToSelect);
+          const existingRole = await checkQuery.first();
+
+          if (existingRole) {
+              alert("选角失败：云端显示该角色刚被占用。");
+              return;
+          }
+
           const GamePlayer = AV.Object.extend('GamePlayer');
           const player = new GamePlayer();
           player.set('room', parseInt(roomNumber));
@@ -688,43 +724,66 @@ const GameEntryWrapper = ({ children }) => {
           
           const acl = new AV.ACL();
           acl.setPublicReadAccess(true);
-          acl.setPublicWriteAccess(true); // 允许修改，方便调试
+          acl.setPublicWriteAccess(true);
           player.setACL(acl);
 
           await player.save();
           setMyRole(roleToSelect);
-          // 选完角色后，重新拉取一次列表
-          setRoomPlayers(prev => [...prev, {name: playerName, role: roleToSelect}]);
       } catch (e) {
-          alert(`选角失败: ${e.message}`);
+          console.error("选角失败", e);
+          alert(`选角失败: ${e.message || "网络错误"}`);
       }
   };
 
-  const ownerStartGame = async () => {
-      if (myRole !== 'owner') return;
-      try {
-         const AV = window.AV;
-         const Action = AV.Object.extend('GameAction');
-         const act = new Action();
-         act.set('room', parseInt(roomNumber));
-         act.set('type', 'SYNC_STATE_FULL');
-         act.set('payload', {
-             stage: 1,
-             activeRole: 'owner',
-             s1State: 'owner_draft',
-             logs: [{msg: '游戏开始，进入立项审批阶段。', type: 'info', time: '0分0秒'}]
-         });
-         await act.save();
-         setAppState('playing'); // 房主自己先跳
-      } catch (e) {
-         alert("启动失败");
-      }
+  const startMultiIntro = () => {
+      setAppState('multi_intro');
   };
 
-  if (!sdkReady) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white"><Loader2 className="animate-spin"/> SDK Init...</div>;
+  const startMultiRoles = () => {
+      setAppState('multi_roles');
+  };
 
-  // 0. 封面
-   if (appState === 'cover') {
+  const startGame = async () => {
+      if (!myRole) return alert("请先选择一个角色！");
+      
+      if (myRole === 'owner' && mode === 'multi') {
+          try {
+             const AV = window.AV;
+             const Action = AV.Object.extend('GameAction');
+             const act = new Action();
+             act.set('room', parseInt(roomNumber));
+             act.set('type', 'SYNC_STATE_FULL');
+             act.set('payload', {
+                 stage: 1,
+                 activeRole: 'owner',
+                 s1State: 'owner_draft',
+                 logs: [{msg: '游戏开始，进入立项审批阶段。', type: 'info', time: '0分0秒'}]
+             });
+             await act.save();
+             console.log("Initial state broadcasted by Owner.");
+          } catch (e) {
+             console.error("Failed to init game state", e);
+             alert("启动失败，请重试");
+             return;
+          }
+      }
+      
+      setAppState('playing');
+  };
+
+  if (!sdkReady) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+              <div className="flex flex-col items-center gap-4">
+                  <Loader2 size={48} className="animate-spin text-blue-500" />
+                  <div className="text-lg font-light">正在连接后端服务...</div>
+                  <div className="text-xs text-slate-500">Initializing LeanCloud SDK...</div>
+              </div>
+          </div>
+      )
+  }
+
+  if (appState === 'cover') {
       return (
         <div className="min-h-screen flex flex-col justify-between bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=2000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-30" />
@@ -755,8 +814,7 @@ const GameEntryWrapper = ({ children }) => {
                         </div>
                     </Button>
                     
-                    {/* 注意：这里已修正为跳转到 multi_setup */}
-                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_setup'); }}>
+                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
                         <Network size={24} />
                         <div className="flex flex-col items-center">
                             <span>多人互动版</span>
@@ -776,109 +834,144 @@ const GameEntryWrapper = ({ children }) => {
       );
   }
   
-  // 1. 单机流程
-  if (appState === 'single_intro') return <div className="h-screen bg-slate-900">{React.cloneElement(children, { assignedRole: null, mode: 'single', initialViewMode: 'intro', onExit: () => setAppState('cover') })}</div>;
-
-  // --- 多人流程开始 ---
-
-  // 2. 多人步骤一：输入信息 (不连接)
-  if (appState === 'multi_setup') {
+  if (appState === 'single_intro') {
       return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
-            <Card className="w-full max-w-md">
-                <CardHeader><CardTitle className="text-center">加入游戏</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                    <Input placeholder="游戏昵称" value={tempInput.name} onChange={e=>setTempInput({...tempInput, name: e.target.value})} />
-                    <Input type="number" placeholder="房间号 (1-20)" value={tempInput.room} onChange={e=>setTempInput({...tempInput, room: e.target.value})} />
-                    <Button className="w-full bg-purple-600" onClick={() => {
-                        if(!tempInput.name || !tempInput.room) return alert("请填写完整");
-                        setPlayerName(tempInput.name);
-                        setRoomNumber(tempInput.room);
-                        setAppState('multi_intro_view'); // 下一步：简介
-                    }}>下一步：阅读项目背景</Button>
-                    <Button variant="ghost" className="w-full" onClick={()=>setAppState('cover')}>返回</Button>
-                </CardContent>
-            </Card>
-        </div>
-      )
+         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
+             {React.cloneElement(children, { assignedRole: null, mode: 'single', initialViewMode: 'intro', onExit: () => setAppState('cover') })}
+         </div>
+      );
   }
-
-  // 3. 多人步骤二：项目简介
-  if (appState === 'multi_intro_view') {
-       // 复用 ProjectIntroView，但修改按钮行为
+  
+  if (appState === 'multi_intro') {
       return (
-         <div className="h-screen bg-slate-900 overflow-hidden">
+         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
              {React.cloneElement(children, { 
+                 assignedRole: myRole, 
                  mode: 'multi', 
-                 initialViewMode: 'intro_only', // 特殊标记，只渲染简介
-                 onStart: () => setAppState('multi_roles_view') // 点击下一步 -> 档案
+                 initialViewMode: 'intro_only', 
+                 onNext: startMultiRoles,
+                 onExit: () => setAppState('cover') 
              })}
          </div>
       );
   }
 
-  // 4. 多人步骤三：角色档案
-  if (appState === 'multi_roles_view') {
+  if (appState === 'multi_roles') {
       return (
-         <div className="h-screen bg-slate-900 overflow-hidden">
+         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
              {React.cloneElement(children, { 
+                 assignedRole: myRole, 
                  mode: 'multi', 
-                 initialViewMode: 'roles_only', // 特殊标记，只渲染档案
-                 isGameRunning: false,
-                 onStartGame: () => {
-                     // 点击“进入游戏” -> 实际上是连接服务器，去选角大厅
-                     enterRoomReal();
-                 }
+                 initialViewMode: 'roles_only',
+                 onNext: startGame,
+                 onExit: () => setAppState('cover') 
              })}
          </div>
       );
   }
 
-  // 5. 多人步骤四：选角大厅 (等待房主开始)
   if (appState === 'multi_lobby') {
-      return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans overflow-y-auto">
-           <Card className="w-full max-w-4xl border-t-4 border-purple-500 shadow-2xl my-8">
-              <CardHeader className="text-center border-b relative">
-                 <div className="absolute left-4 top-4 text-xs text-slate-400">房间: {roomNumber} | 我: {playerName}</div>
-                 <CardTitle className="text-purple-800 text-2xl">角色选择 & 等待大厅</CardTitle>
-                 <p className="text-slate-500 text-sm">请选择一个空闲角色，等待房主（业主）开始游戏</p>
-              </CardHeader>
-              <CardContent className="pt-6">
-                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-                    {ROLE_ORDER.map((role) => {
-                       const player = roomPlayers.find(p => p.role === role);
-                       const isMe = player?.name === playerName;
-                       const isTaken = !!player;
-                       return (
-                          <div key={role} onClick={() => !isTaken && selectRole(role)}
-                            className={`relative p-3 rounded-lg border-2 flex flex-col items-center justify-center h-32 transition-all ${isTaken ? (isMe ? 'border-green-500 bg-green-50 ring-2' : 'border-slate-200 bg-slate-100 opacity-70') : 'cursor-pointer border-dashed hover:border-purple-500 hover:bg-purple-50'}`}>
-                             <div className="font-bold text-sm mb-2">{INITIAL_STATES[role].label}</div>
-                             {isTaken ? <div className="text-xs font-bold">{player.name} {isMe&&'(我)'}</div> : <div className="text-xs text-slate-400 flex flex-col items-center"><UserPlus size={16}/><span>点击加入</span></div>}
-                          </div>
-                       )
-                    })}
-                 </div>
-                 <div className="space-y-3">
-                     {myRole === 'owner' ? (
-                         <Button className="w-full h-14 text-xl bg-green-600 hover:bg-green-700 animate-bounce shadow-lg" onClick={ownerStartGame}>
-                            房主确认：开始全员游戏 <ArrowRight className="ml-2"/>
-                         </Button>
-                     ) : (
-                         <Button disabled className="w-full h-14 text-lg bg-slate-100 text-slate-400">
-                             {myRole ? `我是 [${INITIAL_STATES[myRole].label}]，等待业主开始...` : "请先选择一个角色..."}
-                         </Button>
-                     )}
-                 </div>
-              </CardContent>
-           </Card>
-        </div>
-      );
+      if (lobbyStatus === 'login') {
+          return (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans relative overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1526304640152-929666d766a6?auto=format&fit=crop&w=1000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-20"/>
+                <div className="absolute top-4 right-4 text-white/60 text-xs flex items-center gap-2"><Users2 size={14}/> 平台玩家: {onlineCount}</div>
+                <Card className="w-full max-w-md bg-white/95 backdrop-blur relative z-10 border-t-4 border-purple-500 shadow-2xl">
+                    <div className="absolute top-4 left-4"><Button variant="ghost" size="sm" onClick={()=>setAppState('cover')}>&lt; 返回</Button></div>
+                    <CardHeader className="text-center pt-10">
+                        <div className="mx-auto bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mb-2"><Network size={32} className="text-purple-600"/></div>
+                        <CardTitle className="text-2xl font-black text-slate-800">多人互动大厅</CardTitle>
+                        <p className="text-sm text-slate-500">请输入房间号加入</p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                           <span className="text-xs font-bold text-slate-600">游戏昵称</span>
+                           <Input placeholder="例如: Player1" value={playerName} onChange={e=>setPlayerName(e.target.value)} className="text-center text-lg h-12"/>
+                        </div>
+                        <div className="space-y-2">
+                           <span className="text-xs font-bold text-slate-600">房间号 (1-20)</span>
+                           <Input type="number" min={1} max={20} placeholder="请输入房间号" value={roomNumber} onChange={e=>setRoomNumber(e.target.value)} className="text-center text-lg h-12 font-mono"/>
+                        </div>
+                        <Button className="w-full h-12 text-lg font-bold bg-purple-600 hover:bg-purple-700" onClick={enterRoomReal}>
+                            <LogIn className="mr-2" size={20}/> 进入房间
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+          )
+      }
+
+      if (lobbyStatus === 'waiting') {
+          return (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
+               <Card className="w-full max-w-2xl border-t-4 border-purple-500 shadow-2xl">
+                  <CardHeader className="text-center pb-2 border-b border-slate-100 relative">
+                     <CardTitle className="flex items-center justify-center gap-2 text-purple-800">
+                        房间 #{roomNumber} - 角色选择
+                     </CardTitle>
+                     <div className="text-xs text-slate-400 mt-1">请点击空闲卡片选择您的角色 (建议满5人)</div>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {ROLE_ORDER.map((role) => {
+                           const player = roomPlayers.find(p => p.role === role);
+                           const isMe = player?.name === playerName;
+                           const isTaken = !!player;
+                           
+                           const roleColor = role === 'owner' ? 'bg-blue-50 border-blue-200 text-blue-800' :
+                                             role === 'gov' ? 'bg-green-50 border-green-200 text-green-800' :
+                                             role === 'mdb' ? 'bg-purple-50 border-purple-200 text-purple-800' :
+                                             role === 'epc' ? 'bg-orange-50 border-orange-200 text-orange-800' :
+                                             'bg-red-50 border-red-200 text-red-800';
+                           
+                           return (
+                              <div 
+                                key={role} 
+                                onClick={() => !isTaken && selectRole(role)}
+                                className={`
+                                   relative p-3 rounded-lg border-2 flex flex-col items-center justify-center h-32 transition-all
+                                   ${isTaken ? (isMe ? 'border-green-500 ring-2 ring-green-200 shadow-md' : 'border-slate-200 bg-slate-50 opacity-70 cursor-not-allowed') : 'cursor-pointer hover:scale-105 shadow-sm border-dashed border-slate-300 hover:border-purple-400 bg-white'}
+                                   ${isMe ? roleColor : ''}
+                                `}
+                              >
+                                 <div className="font-bold text-sm mb-2">{INITIAL_STATES[role].label}</div>
+                                 {isTaken ? (
+                                     <div className="text-center">
+                                         <div className="text-xs font-bold truncate max-w-[80px]">{player.name}</div>
+                                         {isMe && <Badge className="mt-1 bg-green-600 h-4 text-[9px]">我</Badge>}
+                                     </div>
+                                 ) : (
+                                     <div className="text-xs text-slate-400 flex flex-col items-center gap-1">
+                                         <UserPlus size={16}/>
+                                         <span>点击选择</span>
+                                     </div>
+                                 )}
+                              </div>
+                           )
+                        })}
+                     </div>
+                     
+                     <div className="mt-8 space-y-3">
+                         {myRole ? (
+                             <Button className="w-full h-12 text-lg bg-green-600 hover:bg-green-700 animate-bounce" onClick={startMultiIntro}>
+                                 <ArrowBigRight className="mr-2"/> 确认并下一步 (项目简介)
+                             </Button>
+                         ) : (
+                             <Button disabled className="w-full h-12 bg-slate-200 text-slate-500">
+                                 {!myRole ? "请先选择角色" : <><Loader2 className="mr-2 animate-spin"/> 等待队友 ({roomPlayers.length}/5)</>}
+                             </Button>
+                         )}
+                         <div className="text-center text-xs text-slate-400">请确认所有玩家到齐后点击下一步</div>
+                     </div>
+                  </CardContent>
+               </Card>
+            </div>
+          );
+      }
   }
 
-  // 6. 游戏中
   if (appState === 'playing') {
-      return React.cloneElement(children, { 
+      const gameContent = React.cloneElement(children, { 
          assignedRole: myRole, 
          mode: mode,
          roomNumber: roomNumber,
@@ -886,6 +979,16 @@ const GameEntryWrapper = ({ children }) => {
          initialViewMode: 'game',
          onExit: () => setAppState('cover')
      });
+
+     if (mode === 'single') {
+        return (
+            <div className="h-screen w-screen bg-slate-900 overflow-hidden">
+               {gameContent}
+            </div>
+        )
+     }
+
+     return gameContent;
   }
   
   return null;
@@ -1020,9 +1123,9 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if (mode === 'single' && !initialViewMode) setViewMode('intro');
   }, [mode, initialViewMode]);
 
-  if (mode === 'multi' && !assignedRole && initialViewMode !== 'intro_only' && initialViewMode !== 'roles_only') {
-    return <div className="text-white p-10">Error: No Role Assigned. Please restart.</div>;
-}
+  if (mode === 'multi' && !assignedRole) {
+      return <div className="p-8 text-white">Error: No Role Assigned</div>
+  }
 
   const [gameTime, setGameTime] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -1177,66 +1280,63 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       }
   }, [activeRole, mode]);
   
-const applyStatePayload = (data) => {
+  const applyStatePayload = (data) => {
       if(!data) return;
-      
-      // 强制同步日志 (解决日志不同步问题)
-      if(data.logs && Array.isArray(data.logs)) {
-          setLogs(data.logs);
-      }
+      const isMyTurn = assignedRole && assignedRole === data.activeRole;
 
-      // 基础状态同步
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
       if(data.playerState) setPlayerState(data.playerState);
-      if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
-      
-      // 子阶段状态同步 (解决流程卡住问题)
       if(data.s1State) setS1State(data.s1State);
       if(data.s2State) setS2State(data.s2State);
       if(data.s3State) setS3State(data.s3State);
       if(data.s4State) setS4State(data.s4State);
-      if(data.inspectionState) setInspectionState(data.inspectionState);
-      if(data.protestState) setProtestState(data.protestState);
-
-      // 同步所有勾选状态 (解决其他玩家看不到勾选的问题)
-      if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
-      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
-      if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
-      if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
-      if(data.govMandates) setGovMandates(data.govMandates);
-      if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
+      if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
       
-      if(data.riskLevel) setRiskLevel(data.riskLevel);
-      if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
-      if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
-      if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
-      if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
+      if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
+      if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
       if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
       if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
       
-      if(data.tenderLimitPrice) setTenderLimitPrice(data.tenderLimitPrice);
-      if(data.tenderDuration) setTenderDuration(data.tenderDuration);
-      if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
-      if(data.epcBid) setEpcBid(data.epcBid);
-      if(data.epcBidHistory) setEpcBidHistory(data.epcBidHistory);
+      if (!isMyTurn || !assignedRole) {
+          if(data.govMandates) setGovMandates(data.govMandates);
+          if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
+          if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
+          if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
+          if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
+          if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
+          if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
+          if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
+          if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
+          if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
+      }
+
+      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
+      if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
+
+      if(data.ngoDemandReason !== undefined) setNgoDemandReason(data.ngoDemandReason);
+      if(data.partyOfferReason !== undefined) setPartyOfferReason(data.partyOfferReason);
       
-      if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
-      if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
-      if(data.epcViolations) setEpcViolations(data.epcViolations);
-      
-      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis);
-      if(data.ngoDemandAmount) setNgoDemandAmount(data.ngoDemandAmount);
-      if(data.offerAmount) setOfferAmount(data.offerAmount);
       if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
-
-      // 启动计时器
-      if (data.stage >= 1 && !isTimerRunning) setIsTimerRunning(true);
+      if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
+      if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
+      
+      if(data.ownerRespEsmp !== undefined) setOwnerRespEsmp(data.ownerRespEsmp); // Fix for multi
+      if(data.tenderDuration) setTenderDuration(data.tenderDuration);
+      if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
+      if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
+      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); 
+      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); 
+      
+      if(data.logs && Array.isArray(data.logs)) {
+          setLogs(data.logs);
+      }
+      if (data.stage >= 1) setIsTimerRunning(true);
   };
-
 
   useEffect(() => {
       if (mode !== 'multi' || !roomNumber) return;
+
       const AV = window.AV;
       if (!AV) return;
 
@@ -1245,23 +1345,35 @@ const applyStatePayload = (data) => {
               const q = new AV.Query('GameAction');
               q.equalTo('room', parseInt(roomNumber));
               q.descending('createdAt');
-              q.limit(1); // 只取最新的一条即可
+              q.limit(5); 
               
-              const latestAction = await q.first();
-              if (latestAction) {
-                   const payload = latestAction.get('payload');
-                   // 只有当 payload 的时间戳或内容与本地不同才更新？
-                   // 简化处理：直接应用，React 会处理 Diff
-                   applyStatePayload(payload);
+              const actions = await q.find();
+              const reversedActions = [...actions].reverse();
+              
+              let latestStatePayload = null;
+              
+              reversedActions.forEach(act => {
+                   if (act.get('type') === 'SYNC_STATE_FULL') {
+                       latestStatePayload = act.get('payload');
+                   }
+              });
+
+              if (latestStatePayload) {
+                   applyStatePayload(latestStatePayload);
               }
-          } catch (e) { console.warn("Sync error", e); }
+
+          } catch (e) {
+              console.warn("Game state polling failed", e);
+          }
       };
 
       pollState();
-      pollingRef.current = setInterval(pollState, 1000); // 改为 1秒轮询，提高实时性
+      pollingRef.current = setInterval(pollState, 3000);
       
-      return () => { if (pollingRef.current) clearInterval(pollingRef.current); }
-  }, [mode, roomNumber]); 
+      return () => {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+      }
+  }, [mode, roomNumber, assignedRole]); 
 
   const syncToCloud = (type, payload) => {
       if (mode !== 'multi') return;
@@ -3629,16 +3741,7 @@ const applyStatePayload = (data) => {
   };
 
   const isResultDisplay = stage===4 && protestState==='ruling_result_display';
-  if (initialViewMode === 'intro_only') {
-      // 这里的 ProjectIntroView 是您代码里定义过的组件
-      return <ProjectIntroView onStart={onStart} />;
-  }
 
-  // 2. 如果处于“多人模式-档案阶段”
-  if (initialViewMode === 'roles_only') {
-      // 这里的 RoleSelectionView 也是您代码里定义过的组件
-      return <RoleSelectionView onSelect={onStartGame} />;
-  }
   return (
     <div className="h-full w-full bg-slate-100 flex flex-col font-sans overflow-hidden relative">
       {renderTopBar()}
