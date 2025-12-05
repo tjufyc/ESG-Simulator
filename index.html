@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Button } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Checkbox } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Input } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Badge } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Alert, AlertTitle, AlertDescription } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { ScrollArea } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Textarea } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 
 import { 
   User, Building2, Landmark, Globe, Users, Activity, 
@@ -23,7 +24,7 @@ import {
 // --- 静态配置 ---
 const PROJECT_INFO = {
   name: "SunLink 光伏+输变电项目", 
-  location: "A国 (虚构发展中国家) - 北部干旱荒漠与'绿洲'湿地保护区的交界地带",
+  location: "A国 (发展中国家) - 北部干旱荒漠与'绿洲'湿地保护区的交界地带",
   scope_items: [
     "新建一座 100 MW 光伏电站",
     "配套建设约 80 km、132kV 输电线路，接入国家主干电网",
