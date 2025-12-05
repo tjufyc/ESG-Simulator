@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title> 1 SunLink ESG Simulator by TJU GIPC</title>
+    <title> 2 SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -563,7 +563,7 @@ const GameEntryWrapper = ({ children }) => {
   
   const pollingRef = useRef(null);
 
-  useEffect(() => {
+useEffect(() => {
       if (window.AV) {
           setSdkReady(true);
           return;
@@ -575,6 +575,24 @@ const GameEntryWrapper = ({ children }) => {
           console.log("LeanCloud SDK Loaded via CDN");
           try {
              const AV = window.AV;
+             
+             // --- 修复开始：定义内存存储适配器 ---
+             // 这段代码能解决 "Tracking Prevention blocked access" 错误
+             const MemoryStorage = {
+                _data: {},
+                getItem: function(key) { return this._data[key] || null; },
+                setItem: function(key, value) { this._data[key] = value; },
+                removeItem: function(key) { delete this._data[key]; },
+                clear: function() { this._data = {}; }
+             };
+             
+             // 强制 SDK 使用内存存储，不再读写浏览器的 LocalStorage
+             // 这样浏览器就不会认为我们在“追踪用户”从而进行拦截
+             if (AV.setAdapters) {
+                 AV.setAdapters({ storage: MemoryStorage });
+             }
+             // --- 修复结束 ---
+
              if (AV && !AV.applicationId) {
                  AV.init({
                     appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
