@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title> SunLink ESG Simulator by TJU GIPC</title>
+    <title> 1 SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -1262,8 +1262,11 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           }
       }
   }, [activeRole, mode]);
-    const applyStatePayload = (data) => {
+   
+	const applyStatePayload = (data) => {
       if(!data) return;
+
+      // --- 原有部分 (宏观状态) ---
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
       if(data.playerState) setPlayerState(data.playerState);
@@ -1272,10 +1275,36 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.s3State) setS3State(data.s3State);
       if(data.s4State) setS4State(data.s4State);
       if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
+
+      // --- 【必须补全的部分】具体业务数据 ---
+      
+      // Stage 1 数据
+      if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
+      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
+      if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
+      if(data.govMandates) setGovMandates(data.govMandates);
+      if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
+      if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
+
+      // Stage 2 数据
+      if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
+      if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
+      if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
+      if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
+      if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
+      if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
+
+      // Stage 4 数据
+      if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
+      if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
+      if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
+      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); 
+      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); 
+
+      // --- 原有部分 ---
       if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
       if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
       if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
-      
       if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
       if(data.tenderDuration) setTenderDuration(data.tenderDuration);
       if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
