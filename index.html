@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title>CodeSandbox</title>
+    <title>SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -238,16 +238,17 @@ import { Badge } from "https://esm.sh/shadcdn?external=react,react-dom";
 import { Alert, AlertTitle, AlertDescription } from "https://esm.sh/shadcdn?external=react,react-dom";
 import { ScrollArea } from "https://esm.sh/shadcdn?external=react,react-dom";
 import { Textarea } from "https://esm.sh/shadcdn?external=react,react-dom";
+
 import { 
   User, Building2, Landmark, Globe, Users, Activity, 
-  ArrowRight, FileText, CheckCircle2, Info, MapPin, 
-  Banknote, Clock, ShieldAlert, XCircle, AlertTriangle,
-  Timer, Image as ImageIcon, Gavel, BookOpen, Reply,
+  ArrowRight, FileText, CheckCircle2, MapPin, 
+  Banknote, Clock, ShieldAlert, AlertTriangle,
+  Timer, Gavel, BookOpen, Reply,
   ClipboardCheck, Award, Megaphone, Handshake, Eye,
-  Sun, Zap, Truck, HardHat, FileSignature, ListChecks,
-  Lock, PieChart, BarChart3, ScrollText, Target, Scale,
-  Menu, LogIn, Users2, Loader2, Gamepad2, Network, Cloud,
-  Mail, UserPlus, Check, Smartphone, RefreshCw, ArrowBigRight
+  Zap, HardHat, ListChecks,
+  PieChart, BarChart3, ScrollText, Target, Scale,
+  LogIn, Users2, Loader2, Network,
+  UserPlus, ArrowBigRight, Info
 } from 'lucide-react';
 
 // --- 静态配置 ---
@@ -275,27 +276,37 @@ const ROLE_DETAILS = {
   owner: { 
       label: "业主", 
       desc: "投资方 GreenGen 集团 (跨国能源巨头)", 
-      task: "你需要对总部的财务报表负责，首要目标是控制投资和按期并网发电。虽然你知道ESG很重要，但同时也意味着昂贵的成本。" 
+      task: "你需要对总部的财务报表负责，首要目标是控制投资和按期并网发电。虽然你知道ESG很重要，但同时也意味着昂贵的成本。",
+      icon: User,
+      color: "text-blue-600 bg-blue-50 border-blue-200"
   },
   gov: { 
       label: "政府", 
       desc: "A国能源与环境部 (监管者)", 
-      task: "你处于夹缝之中。一方面，你需要这个项目带来的电力和税收政绩；另一方面，你必须依据法律监管环境问题，否则会被国际社会指责甚至引发国内动荡。你的审批权是你最大的筹码。" 
+      task: "你处于夹缝之中。一方面，你需要这个项目带来的电力和税收政绩；另一方面，你必须依据法律监管环境问题，否则会被国际社会指责甚至引发国内动荡。你的审批权是你最大的筹码。",
+      icon: Landmark,
+      color: "text-green-600 bg-green-50 border-green-200"
   },
   mdb: { 
       label: "多边开发银行", 
       desc: "世界基础设施银行 (WIB) (贷款方)", 
-      task: "你为项目提供关键的低息贷款，遵循世界银行《环境社会框架》（ESF），期望通过项目促进当地经济社会发展并支持当地能力建设。你的《环境社会标准》（ESS）是项目的紧箍咒，你并不直接管理项目建设，但如果项目出现丑闻，声誉风险是你无法接受的。" 
+      task: "你为项目提供关键的低息贷款，遵循世界银行《环境社会框架》（ESF），期望通过项目促进当地经济社会发展并支持当地能力建设。你的《环境社会标准》（ESS）是项目的紧箍咒，你并不直接管理项目建设，但如果项目出现丑闻，声誉风险是你无法接受的。",
+      icon: Globe,
+      color: "text-purple-600 bg-purple-50 border-purple-200"
   },
   epc: { 
       label: "EPC承包商", 
       desc: "GIP国际工程公司 (总包方)", 
-      task: "你是项目的总承包商。你的目标是争取对自己有利的合同条件，在合同谈判阶段与业主划分ESG责任，并在报价中考虑自己需要负责的环境社会管理计划（ESMP）。建设阶段按合同办事，落实ESMP会增加成本，但也需要考虑企业声誉的影响。" 
+      task: "你是项目的总承包商。你的目标是争取对自己有利的合同条件，在合同谈判阶段与业主划分ESG责任，并在报价中考虑自己需要负责的环境社会管理计划（ESMP）。建设阶段按合同办事，落实ESMP会增加成本，但也需要考虑企业声誉的影响。",
+      icon: Building2,
+      color: "text-orange-600 bg-orange-50 border-orange-200"
   },
   ngo: { 
       label: "公众", 
       desc: "当地受影响社区及NGO (监督者)", 
-      task: "你们资源最少，但声音最大。你们不反对项目，但反对以牺牲环境为代价的发展，希望社区从中获益，担心生态环境破坏。如果诉求得不到满足，你们会抗议、甚至阻工。" 
+      task: "你们资源最少，但声音最大。你们不反对项目，但反对以牺牲环境为代价的发展，希望社区从中获益，担心生态环境破坏。如果诉求得不到满足，你们会抗议、甚至阻工。",
+      icon: Users,
+      color: "text-red-600 bg-red-50 border-red-200"
   }
 };
 
@@ -340,6 +351,174 @@ const RISK_TABLE = [
   { level: '低风险', basis: '项目可能产生极少或不存在环境和社会不利影响', req: '不要求进行环境和社会评估' }
 ];
 
+// --- 页面组件 ---
+
+const ProjectIntroView = ({ onStart, mode, assignedRole }) => {
+    return (
+        <div className="min-h-screen bg-slate-50 font-sans text-slate-800 overflow-y-auto pb-10">
+            <div className="max-w-5xl mx-auto p-6 md:p-12">
+                <div className="mb-8 animate-in slide-in-from-top-5 duration-700">
+                    <div className="flex items-center gap-3 mb-4">
+                         <Activity size={32} className="text-blue-600"/>
+                         <Badge variant="outline" className="text-sm px-3 py-1 border-blue-200 text-blue-700 bg-blue-50">Project Background</Badge>
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight tracking-tight">{PROJECT_INFO.name}</h1>
+                    <div className="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
+                        <div className="flex items-center gap-1"><MapPin size={16}/> {PROJECT_INFO.location}</div>
+                        <div className="flex items-center gap-2 text-orange-700 font-bold bg-orange-50 px-3 py-1 rounded border border-orange-200 shadow-sm">
+                            <Clock size={16}/> 计划并网发电时间：24个月 (游戏中1分钟代表1个月)
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                     <Card className="md:col-span-2 border-0 shadow-lg bg-white overflow-hidden">
+                        <div className="h-2 bg-blue-500"></div>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-xl"><FileText className="text-blue-500"/> 项目背景与挑战</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-slate-600 leading-relaxed">
+                            <p>{PROJECT_INFO.background}</p>
+                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 italic text-slate-700">
+                                <span className="font-bold text-blue-600 not-italic block mb-2">核心任务:</span>
+                                "{PROJECT_INFO.mission}"
+                            </div>
+                        </CardContent>
+                     </Card>
+
+                     <div className="space-y-6">
+                        <Card className="border-0 shadow-md bg-blue-600 text-white">
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2"><Target size={20}/> 项目建设内容</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2 text-sm text-blue-50">
+                                    {PROJECT_INFO.scope_items.map((item, i) => (
+                                        <li key={i} className="flex items-start gap-2">
+                                            <span className="mt-1 w-1.5 h-1.5 bg-blue-300 rounded-full shrink-0"></span>
+                                            <span>{item}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                        </Card>
+                        
+                        <Card className="border-0 shadow-md bg-white">
+                             <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-wider">ESG 关键风险点</CardTitle>
+                             </CardHeader>
+                             <CardContent className="space-y-2">
+                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-red-100 text-red-600 rounded"><AlertTriangle size={12}/></span> 濒危物种保护</div>
+                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-orange-100 text-orange-600 rounded"><Users size={12}/></span> 原住民水权</div>
+                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-purple-100 text-purple-600 rounded"><ShieldAlert size={12}/></span> 劳工涌入风险</div>
+                             </CardContent>
+                        </Card>
+                     </div>
+                </div>
+                
+                <div className="mb-12">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><ListChecks className="text-slate-400"/> 全流程模拟阶段</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        {PROJECT_INFO.stages_visual.map((stage) => (
+                            <div key={stage.id} className={`p-3 rounded-lg border ${stage.color} flex flex-col justify-between h-24 transition-all hover:scale-105 cursor-default shadow-sm`}>
+                                <div className="text-xs font-bold opacity-60">Stage 0{stage.id}</div>
+                                <div>
+                                    <div className="font-bold text-sm mb-1">{stage.title}</div>
+                                    <div className="text-[10px] opacity-80 leading-tight">{stage.task}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex justify-center">
+                     <Button size="lg" onClick={onStart} className="h-14 px-8 text-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xl hover:shadow-2xl transition-all rounded-full flex items-center gap-2 animate-bounce">
+                        下一步：查看角色档案 <ArrowRight size={20}/>
+                     </Button>
+                </div>
+                
+                <div className="text-center text-slate-400 text-xs mt-8">
+                    {mode === 'multi' && assignedRole ? `当前身份: ${INITIAL_STATES[assignedRole].label}` : "单机模式"}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame }) => {
+    return (
+        <div className="min-h-screen bg-slate-100 font-sans p-4 md:p-8 overflow-y-auto">
+            <div className="max-w-6xl mx-auto">
+                <div className="flex items-center justify-between mb-8">
+                     <div>
+                        <h1 className="text-3xl font-black text-slate-800">角色档案</h1>
+                        <p className="text-slate-500">Stakeholder Profiles</p>
+                     </div>
+                     {isGameRunning ? (
+                         <Button onClick={onBackToGame} variant="outline" className="border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
+                            <Reply className="mr-2" size={16}/> 返回游戏
+                         </Button>
+                     ) : (
+                         <Button onClick={onStartGame} size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg">
+                            <Zap className="mr-2" size={16}/> 进入游戏
+                         </Button>
+                     )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     {Object.keys(ROLE_DETAILS).map(key => {
+                         const role = ROLE_DETAILS[key];
+                         const Icon = role.icon;
+                         return (
+                             <Card key={key} className="border-0 shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                                 <div className={`h-2 ${role.color.split(' ')[0].replace('text','bg')}`}></div>
+                                 <CardHeader className="pb-2">
+                                     <div className="flex justify-between items-start">
+                                         <div className={`p-2 rounded-lg ${role.color} bg-opacity-20`}>
+                                             <Icon size={24} className={role.color.split(' ')[0]}/>
+                                         </div>
+                                         <Badge variant="outline" className="text-slate-400">Role 0{Object.keys(ROLE_DETAILS).indexOf(key)+1}</Badge>
+                                     </div>
+                                     <CardTitle className="text-xl mt-4">{role.label}</CardTitle>
+                                     <div className="text-sm font-medium text-slate-500">{role.desc}</div>
+                                 </CardHeader>
+                                 <CardContent className="text-sm text-slate-600 space-y-4">
+                                     <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                                         <span className="font-bold text-slate-800 block mb-1">核心诉求:</span>
+                                         {role.task}
+                                     </div>
+                                 </CardContent>
+                             </Card>
+                         )
+                     })}
+                     
+                     <Card className="border-0 shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group bg-slate-50 border-t-4 border-slate-500">
+                         <CardHeader className="pb-2">
+                             <div className="flex justify-between items-start">
+                                 <div className="p-2 rounded-lg bg-slate-200">
+                                     <ScrollText size={24} className="text-slate-600"/>
+                                 </div>
+                                 <Badge variant="outline" className="text-slate-400">Notice</Badge>
+                             </div>
+                             <CardTitle className="text-xl mt-4">知情同意书</CardTitle>
+                         </CardHeader>
+                         <CardContent className="text-sm text-slate-600 space-y-3">
+                             <p className="font-medium text-slate-700">您即将参与的是一项关于国际工程项目ESG管理的行为实验，由天津大学全球工程经营实验室开发。</p>
+                             <ul className="space-y-2 text-xs bg-white p-3 rounded border border-slate-200">
+                                 <li><strong className="text-slate-800">自愿性：</strong>参与本实验完全自愿，您有权在任何时候关闭页面退出。</li>
+                                 <li><strong className="text-slate-800">无风险：</strong>本实验不涉及任何商业利益或个人隐私风险。</li>
+                                 <li><strong className="text-slate-800">匿名性：</strong>您的所有决策都不带任何个人标识，将被严格保密。</li>
+                             </ul>
+                         </CardContent>
+                     </Card>
+                </div>
+            </div>
+        </div>
+    )
+};
+
+// --- 主要游戏组件的逻辑与视图路由 ---
+
 const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn }) => {
   const isActive = active === role;
   const colorClass = role === 'owner' ? 'text-blue-600' : 
@@ -382,23 +561,21 @@ const GameEntryWrapper = ({ children }) => {
   const [myRole, setMyRole] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0); 
   
-  // 使用轮询替代 LiveQuery 解决 403 问题
   const pollingRef = useRef(null);
 
-  // --- Init LeanCloud ---
   useEffect(() => {
       if (window.AV) {
           setSdkReady(true);
           return;
       }
       const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; // 移除 live-query lib
+      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; 
       script.async = true;
       script.onload = () => {
           console.log("LeanCloud SDK Loaded via CDN");
           try {
              const AV = window.AV;
-             if (!AV.applicationId) {
+             if (AV && !AV.applicationId) {
                  AV.init({
                     appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
                     appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
@@ -411,13 +588,13 @@ const GameEntryWrapper = ({ children }) => {
           }
       };
       script.onerror = () => {
-          alert("错误：SDK加载失败！请关闭广告拦截插件(AdBlock/uBlock)或切换网络后刷新重试。");
+          console.warn("Failed to load AV SDK");
       };
       document.body.appendChild(script);
   }, []);
 
   useEffect(() => {
-      if (!sdkReady) return;
+      if (!sdkReady || !window.AV) return;
       const AV = window.AV;
       
       const fetchOnlineCount = async () => {
@@ -430,11 +607,10 @@ const GameEntryWrapper = ({ children }) => {
            }
       };
       fetchOnlineCount();
-      const timer = setInterval(fetchOnlineCount, 20000);
+      const timer = setInterval(fetchOnlineCount, 30000); // Reduced frequency
       return () => clearInterval(timer);
   }, [sdkReady]);
 
-  // --- Polling Logic for Lobby & Game Start ---
   useEffect(() => {
       if (lobbyStatus !== 'waiting' || !roomNumber || !sdkReady) {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -444,10 +620,9 @@ const GameEntryWrapper = ({ children }) => {
       const AV = window.AV;
       const rNum = parseInt(roomNumber);
 
-      // 轮询函数：检查玩家列表 + 检查游戏开始信号
       const poll = async () => {
           try {
-              // 1. 刷新玩家列表
+              if (!AV) return;
               const pQuery = new AV.Query('GamePlayer');
               pQuery.equalTo('room', rNum);
               pQuery.ascending('createdAt');
@@ -458,8 +633,6 @@ const GameEntryWrapper = ({ children }) => {
                   id: p.id
               })));
 
-              // 2. 检查是否有 Start Game 信号 (SYNC_STATE_FULL 且 stage=1)
-              // 为了性能，这里只查最新的一条 Action
               const aQuery = new AV.Query('GameAction');
               aQuery.equalTo('room', rNum);
               aQuery.equalTo('type', 'SYNC_STATE_FULL');
@@ -469,21 +642,18 @@ const GameEntryWrapper = ({ children }) => {
 
               if (latestAction) {
                   const payload = latestAction.get('payload');
-                  // 如果发现有 stage 1 的记录，且当前在 waiting 状态，则进入游戏
                   if (payload && payload.stage === 1) {
                       console.log("Detected Game Start Signal via Polling!");
                       setAppState('playing');
                   }
               }
-
           } catch (e) {
               console.warn("Polling failed:", e);
           }
       };
 
-      // 立即执行一次，然后每 1.5 秒执行一次
       poll();
-      pollingRef.current = setInterval(poll, 1500);
+      pollingRef.current = setInterval(poll, 3000);
 
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -496,7 +666,7 @@ const GameEntryWrapper = ({ children }) => {
 
       const rNum = parseInt(roomNumber); 
       if (!playerName.trim()) return alert("请输入昵称");
-      if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
+      if (isNaN(rNum) || rNum < 1 || rNum > 100) return alert("请输入有效的房间号 (1-99)");
 
       try {
           setLobbyStatus('waiting');
@@ -514,7 +684,6 @@ const GameEntryWrapper = ({ children }) => {
              setMyRole(null); 
           }
           
-          // 初始列表
           setRoomPlayers(existingPlayers.map(p => ({
               name: p.get('name'),
               role: p.get('role'),
@@ -560,28 +729,23 @@ const GameEntryWrapper = ({ children }) => {
 
           await player.save();
           setMyRole(roleToSelect);
-          // 轮询会更新列表，这里不用手动 refresh
       } catch (e) {
           console.error("选角失败", e);
           alert(`选角失败: ${e.message || "网络错误"}`);
       }
   };
 
-  // NEW: 进入项目简介
   const startMultiIntro = () => {
       setAppState('multi_intro');
   };
 
-  // NEW: 进入角色档案
   const startMultiRoles = () => {
       setAppState('multi_roles');
   };
 
-  // NEW: 开始游戏 (Owner 触发)
   const startGame = async () => {
       if (!myRole) return alert("请先选择一个角色！");
       
-      // 仅房主 Owner 初始化游戏状态
       if (myRole === 'owner' && mode === 'multi') {
           try {
              const AV = window.AV;
@@ -643,7 +807,7 @@ const GameEntryWrapper = ({ children }) => {
                 
                 <div className="flex flex-col md:flex-row gap-6 justify-center w-full max-w-lg px-4">
                     <Button size="lg" className="flex-1 h-auto py-4 text-base bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
-                        <Smartphone size={24} />
+                        <Award size={24} />
                         <div className="flex flex-col items-center">
                             <span>单机体验版</span>
                             <span className="text-xs opacity-70 font-normal">一人分饰五角·自由探索</span>
@@ -669,8 +833,7 @@ const GameEntryWrapper = ({ children }) => {
         </div>
       );
   }
-
-  // 单机版简介页
+  
   if (appState === 'single_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -679,7 +842,6 @@ const GameEntryWrapper = ({ children }) => {
       );
   }
   
-  // 多人版项目简介 (复用 Intro View，传入模式)
   if (appState === 'multi_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -694,7 +856,6 @@ const GameEntryWrapper = ({ children }) => {
       );
   }
 
-  // 多人版角色档案
   if (appState === 'multi_roles') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -728,7 +889,7 @@ const GameEntryWrapper = ({ children }) => {
                            <Input placeholder="例如: Player1" value={playerName} onChange={e=>setPlayerName(e.target.value)} className="text-center text-lg h-12"/>
                         </div>
                         <div className="space-y-2">
-                           <span className="text-xs font-bold text-slate-600">房间号 (1-20)</span>
+                           <span className="text-xs font-bold text-slate-600">房间号 (1-99)</span>
                            <Input type="number" min={1} max={20} placeholder="请输入房间号" value={roomNumber} onChange={e=>setRoomNumber(e.target.value)} className="text-center text-lg h-12 font-mono"/>
                         </div>
                         <Button className="w-full h-12 text-lg font-bold bg-purple-600 hover:bg-purple-700" onClick={enterRoomReal}>
@@ -844,7 +1005,7 @@ const SummaryForm = ({ role, onSubmit }) => {
 
   const handleSubmit = () => {
      const allScoresFilled = Object.keys(INITIAL_STATES).every(k => scores[k] && scores[k] !== "");
-     if(!pros || !cons || !allScoresFilled) { alert("请填写优点、不足，并完成所有满意度评价"); return; }
+     if(!pros || !cons || !allScoresFilled) { alert("请填写优点/不足，并完成所有满意度评价"); return; }
      onSubmit(role, { pros, cons, scores });
   };
 
@@ -875,9 +1036,10 @@ const SummaryForm = ({ role, onSubmit }) => {
 
 const TransitionOverlay = ({ isVisible, stageTitle, extraText, onComplete }) => {
     const [count, setCount] = useState(3);
+    
     useEffect(() => {
         if (isVisible) {
-            setCount(3); 
+            setCount(3); // 重置倒计时
             const timer = setInterval(() => {
                 setCount(prev => {
                     if (prev <= 1) {
@@ -889,11 +1051,16 @@ const TransitionOverlay = ({ isVisible, stageTitle, extraText, onComplete }) => 
             }, 1000);
             return () => clearInterval(timer);
         }
-    }, [isVisible]);
+    }, [isVisible]); // 监听 isVisible
 
+    // 当倒计时结束时调用 onComplete
     useEffect(() => {
         if (isVisible && count === 0) {
-            onComplete();
+            // 增加一点微小的延迟，防止闪烁
+            const timeout = setTimeout(() => {
+                onComplete();
+            }, 100);
+            return () => clearTimeout(timeout);
         }
     }, [count, isVisible, onComplete]);
 
@@ -948,7 +1115,7 @@ const CrisisContextBox = ({ crisis }) => {
 // 主游戏组件
 // ------------------------------------------------------------------
 
-function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNumber, playerList, initialViewMode }) {
+function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNumber, playerList, initialViewMode }) {
   const [viewMode, setViewMode] = useState('intro'); 
   
   useEffect(() => {
@@ -1027,13 +1194,13 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   const [epcExecPlan, setEpcExecPlan] = useState([]);
   const [originalEpcExecPlan, setOriginalEpcExecPlan] = useState([]); 
   const [ownerAuditItems, setOwnerAuditItems] = useState([]);
+  const [previousAuditItems, setPreviousAuditItems] = useState([]); 
   const [s3Phase, setS3Phase] = useState('planning'); 
   const [epcViolations, setEpcViolations] = useState([]); 
 
   const [s4State, setS4State] = useState('idle');
   const [crisisQueue, setCrisisQueue] = useState([]); 
   const [currentCrisis, setCurrentCrisis] = useState(null);
-  const [s4Countdown, setS4Countdown] = useState(0); 
   const [resolutionMsg, setResolutionMsg] = useState(""); 
   
   const [protestState, setProtestState] = useState('idle'); 
@@ -1089,7 +1256,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   const [isSummarySubmitted, setIsSummarySubmitted] = useState({});
 
   const scrollRef = useRef(null);
-  const pollingRef = useRef(null); // For Game State Polling
+  const pollingRef = useRef(null); 
 
   useEffect(() => {
       if (mode === 'multi' && assignedRole) {
@@ -1106,21 +1273,6 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   }, [isTimerRunning, isTransitioning]);
 
   useEffect(() => {
-    if (stage === 1 && logs.length === 0 && isTimerRunning) {
-       addLog("当前为项目立项审批阶段，请业主开展项目环境社会影响评价（ESIA）", "blue");
-    }
-  }, [stage, logs, isTimerRunning]);
-
-  useEffect(() => {
-    if (s4State === 'construction_start' && s4Countdown > 0 && !isTransitioning) {
-      const timer = setTimeout(() => setS4Countdown(c => c - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (s4State === 'construction_start' && s4Countdown === 0 && !isTransitioning) {
-       startNextCrisis(crisisQueue, 0);
-    }
-  }, [s4State, s4Countdown, crisisQueue, isTransitioning]);
-
-  useEffect(() => {
       if (activeRole !== 'all' && ['owner', 'gov', 'mdb', 'epc', 'ngo'].includes(activeRole)) {
           if (mode === 'single') {
             setMobileTab(activeRole);
@@ -1130,6 +1282,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   
   const applyStatePayload = (data) => {
       if(!data) return;
+      const isMyTurn = assignedRole && assignedRole === data.activeRole;
+
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
       if(data.playerState) setPlayerState(data.playerState);
@@ -1138,14 +1292,41 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       if(data.s3State) setS3State(data.s3State);
       if(data.s4State) setS4State(data.s4State);
       if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
+      
+      if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
+      if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
+      if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
+      if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
+      
+      if (!isMyTurn || !assignedRole) {
+          if(data.govMandates) setGovMandates(data.govMandates);
+          if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
+          if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
+          if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
+          if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
+          if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
+          if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
+          if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
+          if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
+          if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
+      }
+
+      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
+      if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
+
+      if(data.ngoDemandReason !== undefined) setNgoDemandReason(data.ngoDemandReason);
+      if(data.partyOfferReason !== undefined) setPartyOfferReason(data.partyOfferReason);
+      
       if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
       if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
       if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
       
-      if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
+      if(data.ownerRespEsmp !== undefined) setOwnerRespEsmp(data.ownerRespEsmp); // Fix for multi
       if(data.tenderDuration) setTenderDuration(data.tenderDuration);
       if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
       if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
+      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); 
+      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); 
       
       if(data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);
@@ -1153,7 +1334,6 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       if (data.stage >= 1) setIsTimerRunning(true);
   };
 
-  // Polling Logic for Game State (Fixes 403)
   useEffect(() => {
       if (mode !== 'multi' || !roomNumber) return;
 
@@ -1165,31 +1345,20 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
               const q = new AV.Query('GameAction');
               q.equalTo('room', parseInt(roomNumber));
               q.descending('createdAt');
-              q.limit(5); // Fetch few recent
+              q.limit(5); 
               
               const actions = await q.find();
-              
-              // Process logs (reverse order because actions are descending)
               const reversedActions = [...actions].reverse();
               
-              // Find latest full state
               let latestStatePayload = null;
               
-              // Check for logs
               reversedActions.forEach(act => {
                    if (act.get('type') === 'SYNC_STATE_FULL') {
                        latestStatePayload = act.get('payload');
                    }
-                   // Note: In polling mode, SYNC_LOG might be missed or duplicated if we just append.
-                   // Best practice is to rely on SYNC_STATE_FULL's `logs` array if available.
-                   // Current implementation relies on FULL state syncing `logs`.
               });
 
               if (latestStatePayload) {
-                   // Basic deduplication logic or overwrite
-                   // Since we use Polling, we might just overwrite state if it's newer?
-                   // Or check if stage/time changed.
-                   // For simplicity: Apply always. React handles diffing.
                    applyStatePayload(latestStatePayload);
               }
 
@@ -1198,16 +1367,13 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
           }
       };
 
-      // Initial fetch
       pollState();
-      
-      // Loop
-      pollingRef.current = setInterval(pollState, 1500);
+      pollingRef.current = setInterval(pollState, 3000);
       
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
       }
-  }, [mode, roomNumber]);
+  }, [mode, roomNumber, assignedRole]); 
 
   const syncToCloud = (type, payload) => {
       if (mode !== 'multi') return;
@@ -1224,6 +1390,9 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   
   const broadcastState = (overrides = {}) => {
       if (mode !== 'multi') return;
+      
+      const currentLogs = overrides.logs || logs;
+
       const payload = {
           stage: overrides.stage !== undefined ? overrides.stage : stage,
           activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
@@ -1233,6 +1402,28 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
           s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
           s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
           lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
+          
+          govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
+          accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
+          accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
+          accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs !== undefined ? overrides.accumulatedGovEscpReqs : accumulatedGovEscpReqs,
+          accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs !== undefined ? overrides.accumulatedMdbEscpReqs : accumulatedMdbEscpReqs,
+          govEscpMandates: overrides.govEscpMandates !== undefined ? overrides.govEscpMandates : govEscpMandates,
+          mdbEscpMandates: overrides.mdbEscpMandates !== undefined ? overrides.mdbEscpMandates : mdbEscpMandates,
+          
+          ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
+          ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
+          ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
+          confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
+          confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
+
+          epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
+          ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
+          previousAuditItems: overrides.previousAuditItems !== undefined ? overrides.previousAuditItems : previousAuditItems,
+
+          ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
+          partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
+
           govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
           partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
           ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
@@ -1240,7 +1431,11 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
           tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
           delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
           earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
-          logs: logs 
+          
+          crisisQueue: overrides.crisisQueue !== undefined ? overrides.crisisQueue : crisisQueue,
+          currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
+          
+          logs: currentLogs 
       };
       syncToCloud('SYNC_STATE_FULL', payload);
   };
@@ -1257,18 +1452,20 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     });
   };
 
-  useEffect(() => {
-      const timer = setInterval(() => {
-          const now = Date.now();
-          setFloatEffects(prev => prev.filter(e => now - e.timestamp < 3000));
-      }, 1000);
-      return () => clearInterval(timer);
-  }, []);
-
-  const updateStat = (role, key, val) => {
-    if (val === 0) return;
-    const newPlayerState = { ...playerState, [role]: { ...playerState[role], [key]: playerState[role][key] + val } };
-    setPlayerState(newPlayerState); 
+  const updateStat = (role, key, val, baseState = null) => {
+    if (val === 0) return baseState || playerState;
+    const stateToUse = baseState || playerState;
+    const newPlayerState = { 
+        ...stateToUse, 
+        [role]: { 
+            ...stateToUse[role], 
+            [key]: stateToUse[role][key] + val 
+        } 
+    };
+    
+    if (!baseState) {
+        setPlayerState(newPlayerState);
+    }
     addFloatEffect(role, val);
     return newPlayerState; 
   };
@@ -1279,15 +1476,18 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     return newInfo;
   };
 
-  const addLog = (msg, type = 'info') => {
+  const getUpdatedLogs = (msg, type = 'info') => {
     const fixedMsg = msg.replace(/EPC/g, "EPC承包商");
     const t = `${Math.floor(gameTime/60)}分${gameTime%60}秒`;
     const logEntry = { msg: fixedMsg, type, time: t };
-    setLogs(prev => [...prev, logEntry]);
-    // For polling mode, we rely on broadcastState to sync logs within full state payload later
-    // But to ensure log isn't lost if next action happens fast:
-    // Ideally we queue it. Here we just update local state, and next broadcastState will pick it up.
+    const newLogs = [...logs, logEntry];
+    setLogs(newLogs);
+    return newLogs;
   };
+
+  const addLog = (msg, type = 'info') => {
+     getUpdatedLogs(msg, type);
+  }
 
   const setFinancialAlert = (role, msg) => {
       setFinancialAlerts(prev => ({...prev, [role]: msg}));
@@ -1295,6 +1495,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   };
 
   const triggerStageTransition = (targetStage, title, extraText="", crisisIndex=null) => {
+      // 强制进入过渡状态
       setIsTransitioning(true);
       setTransitionContext({
           targetStage,
@@ -1315,11 +1516,15 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       let newS3State = s3State;
       let newS2State = s2State;
       let newInspectionState = inspectionState;
+      let currentCrisisUpdate = null;
+      let newLogs = logs;
 
       if (targetStage === 4 && crisisIndex !== null) {
           const crisis = crisisQueue[crisisIndex];
           if (crisis) {
-             setCurrentCrisis({ ...crisis, index: crisisIndex });
+             currentCrisisUpdate = { ...crisis, index: crisisIndex };
+             setCurrentCrisis(currentCrisisUpdate);
+             
              newS4State = `t${crisisIndex+1}_crisis`;
              setS4State(newS4State);
              setProtestState('ngo_decide'); setActiveRole('ngo'); newActiveRole = 'ngo';
@@ -1341,9 +1546,9 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
              setEpcProtestReason("");
              setConfirmedParties([]); 
          
-             addLog(`危机爆发 (${crisisIndex+1}/4): [${crisis.title}]`, 'red');
+             newLogs = getUpdatedLogs(`危机爆发 (${crisisIndex+1}/4): [${crisis.title}]`, 'red');
           }
-          broadcastState({ s4State: newS4State, activeRole: newActiveRole });
+          broadcastState({ s4State: newS4State, activeRole: newActiveRole, currentCrisis: currentCrisisUpdate, logs: newLogs });
           return;
       }
 
@@ -1353,29 +1558,29 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
         newS2State = 'owner_apply';
         setS2State('owner_apply'); 
         setActiveRole('owner'); newActiveRole = 'owner';
-        addLog('进入项目融资阶段。请业主向银行申请贷款。', 'purple');
+        newLogs = getUpdatedLogs('进入项目融资阶段。请业主向银行申请贷款。', 'purple');
       } else if (targetStage === 3) {
         newS3State = 'owner_tender';
         setS3State('owner_tender'); 
         setActiveRole('owner'); newActiveRole = 'owner';
-        addLog(`项目融资协议已签署，多边开发银行贷款1500万（分阶段拨付），融资关闭，进入EPC合同谈判阶段。`, 'green');
+        newLogs = getUpdatedLogs(`项目融资协议已签署，多边开发银行贷款1500万（分阶段拨付），融资关闭，进入EPC合同谈判阶段。`, 'green');
       } else if (targetStage === 4) {
         newS4State = 's4_planning';
         setS4State('s4_planning'); 
         setActiveRole('epc'); newActiveRole = 'epc';
         setS3Phase('planning'); 
-        addLog('进入项目建设阶段(S4)。请承包商编制ESMP执行方案。', 'orange');
+        newLogs = getUpdatedLogs('进入项目建设阶段(S4)。请承包商编制ESMP执行方案。', 'orange');
       } else if (targetStage === 5) {
          newS4State = 'finished';
          setS4State('finished'); 
          newInspectionState = 'epc_apply';
          setInspectionState('epc_apply'); 
          setActiveRole('epc'); newActiveRole = 'epc';
-         addLog('S4阶段结束。进入S5验收与后评价阶段。', 'green');
+         newLogs = getUpdatedLogs('S4阶段结束。进入S5验收与后评价阶段。', 'green');
       } else if (targetStage === 6) {
          setIsTimerRunning(false);
          setActiveRole('all'); newActiveRole = 'all';
-         addLog('项目竣工移交。进入总结阶段。', 'green');
+         newLogs = getUpdatedLogs('项目竣工移交。进入总结阶段。', 'green');
       }
       
       broadcastState({ 
@@ -1383,7 +1588,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
           activeRole: newActiveRole, 
           s4State: newS4State,
           s3State: newS3State,
-          s2State: newS2State
+          s2State: newS2State,
+          logs: newLogs
       });
   };
 
@@ -1391,7 +1597,15 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       setTimeStart1(0); 
       setViewMode('game');
       setIsTimerRunning(true);
-      triggerStageTransition(1, "项目立项审批阶段");
+      if (mode === 'multi') {
+          onNext();
+      } else {
+          triggerStageTransition(1, "项目立项审批阶段");
+      }
+  }
+
+  const gotoRoles = () => {
+      setViewMode('roles');
   }
 
   const processScheduledPayment = (crisisIndex) => {
@@ -1407,7 +1621,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
 
      if (actualBankDisbursed > 0.1) { 
          const bankPay = loanAmount * (actualBankDisbursed / 100);
-         newState = updateStat('owner', 'money', bankPay);
+         newState = updateStat('owner', 'money', bankPay, newState);
          setBankDisbursedPct(nextBankPct);
          setFinancialAlert('owner', `银行拨付${ratioTxt}贷款: +$${bankPay.toFixed(1)}万`);
      }
@@ -1417,16 +1631,17 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
      
      if (actualOwnerPaid > 0.1) {
          const ownerPay = finalContractPrice * (actualOwnerPaid / 100);
-         newState = updateStat('owner', 'money', -ownerPay);
-         newState = updateStat('epc', 'money', ownerPay);
+         newState = updateStat('owner', 'money', -ownerPay, newState);
+         newState = updateStat('epc', 'money', ownerPay, newState);
          setOwnerPaidPct(nextOwnerPct);
          ownerPayAmt = ownerPay;
          setFinancialAlert('owner', `支付进度款: -$${ownerPay.toFixed(1)}万`);
          setFinancialAlert('epc', `收到进度款: +$${ownerPay.toFixed(1)}万`);
      }
      
-     addLog(`资金流转(自动): 银行拨付${ratioTxt}，业主支付${ratioTxt}进度款。`, 'green');
-     return { ownerPayAmt, newState };
+     setPlayerState(newState); 
+     const newLogs = getUpdatedLogs(`资金流转(自动): 银行拨付${ratioTxt}，业主支付${ratioTxt}进度款。`, 'green');
+     return { ownerPayAmt, newState, newLogs };
   };
 
 
@@ -1437,7 +1652,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     const newCost = newItems.reduce((sum, id) => sum + (ESIA_ITEMS.find(i=>i.id===id).cost * multiplier), 0);
     let newState = playerState;
     if (newCost > 0) {
-        newState = updateStat('owner', 'money', -Math.round(newCost));
+        newState = updateStat('owner', 'money', -Math.round(newCost), newState);
+        setPlayerState(newState);
     }
 
     setConfirmedEsiaSelection([...ownerEsiaSelection]);
@@ -1446,13 +1662,16 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     
     const itemNames = ownerEsiaSelection.map(id => ESIA_ITEMS.find(i=>i.id===id).label).join('; ');
     const newLastAction = updateLastAction('owner', `已提交ESIA: ${ownerEsiaSelection.length}项`);
-    addLog(`业主提交ESIA方案。包含评价: ${itemNames || "无"}。`, 'blue');
+    const newLogs = getUpdatedLogs(`业主提交ESIA方案。包含评价: ${itemNames || "无"}。`, 'blue');
     
     broadcastState({ 
         s1State: 'ngo_eval', 
         activeRole: 'ngo',
         playerState: newState,
-        lastActionInfo: newLastAction
+        lastActionInfo: newLastAction,
+        ownerEsiaSelection: ownerEsiaSelection, 
+        confirmedEsiaSelection: [...ownerEsiaSelection],
+        logs: newLogs
     });
   };
 
@@ -1460,22 +1679,24 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     setHasProtested(protest);
     let newState = playerState;
     let newLastAction = lastActionInfo;
+    let newLogs;
 
     if (protest) {
        const newReqs = ngoRequirements.filter(id => !accumulatedNgoReqs.includes(id));
        if (newReqs.length > 0) {
          const protestCost = newReqs.length * 2;
          const repGain = newReqs.length * 2;
-         newState = updateStat('ngo', 'benefit', -protestCost); 
-         newState = updateStat('ngo', 'reputation', repGain);
+         newState = updateStat('ngo', 'benefit', -protestCost, newState); 
+         newState = updateStat('ngo', 'reputation', repGain, newState);
+         setPlayerState(newState); 
          setAccumulatedNgoReqs(prev => [...prev, ...newReqs]);
        }
        const reqNames = ngoRequirements.map(id => ESIA_ITEMS.find(i=>i.id===id).label).join('; ');
        newLastAction = updateLastAction('ngo', `抗议并要求: ${ngoRequirements.length}项补充`);
-       addLog(`公众提出抗议，需补充以下ESIA专项评价：${reqNames}`, 'red');
+       newLogs = getUpdatedLogs(`公众提出抗议，需补充以下ESIA专项评价：${reqNames}`, 'red');
     } else {
        newLastAction = updateLastAction('ngo', `无异议`);
-       addLog(`公众无异议。`, 'gray');
+       newLogs = getUpdatedLogs(`公众无异议。`, 'gray');
     }
     setS1State('gov_review'); setActiveRole('gov');
     
@@ -1483,12 +1704,16 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
         s1State: 'gov_review', 
         activeRole: 'gov',
         playerState: newState,
-        lastActionInfo: newLastAction
+        lastActionInfo: newLastAction,
+        accumulatedNgoReqs: [...accumulatedNgoReqs, ...ngoRequirements], 
+        ngoRequirements: ngoRequirements,
+        logs: newLogs
     });
   };
 
   const s1GovReview = (approve) => {
     const govSelectedIds = approve ? confirmedEsiaSelection : [...confirmedEsiaSelection, ...govMandates];
+    
     const newGovMandates = govMandates.filter(id => !accumulatedGovMandates.includes(id));
     
     const repGain = newGovMandates.length * 1;
@@ -1500,20 +1725,32 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     const netRepChange = repGain - repPenalty;
     
     let newState = playerState;
-    if (netRepChange !== 0) newState = updateStat('gov', 'reputation', netRepChange);
+    
+    if (newGovMandates.length > 0) {
+        const govCost = newGovMandates.length * 2;
+        newState = updateStat('gov', 'cost', govCost, newState);
+    }
+
+    if (netRepChange !== 0) {
+        newState = updateStat('gov', 'reputation', netRepChange, newState);
+    }
+    setPlayerState(newState); 
 
     if (approve) {
       updateLastAction('gov', `批准立项。`);
-      addLog(`政府批准ESIA。政府声誉变动: ${netRepChange}`, netRepChange >= 0 ? 'green' : 'orange');
+      const newLogs = getUpdatedLogs(`政府批准ESIA。政府声誉变动: ${netRepChange}`, netRepChange >= 0 ? 'green' : 'orange');
+      broadcastState({ logs: newLogs, playerState: newState });
       
-      triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程。");
+      // 恢复：进入Stage 2的过渡
+      triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程");
+      
       return; 
       
     } else {
+      let nextAccumulated = accumulatedGovMandates;
       if (newGovMandates.length > 0) {
-          const govCost = newGovMandates.length * 2;
-          newState = updateStat('gov', 'cost', govCost);
-          setAccumulatedGovMandates(prev => [...prev, ...newGovMandates]);
+          nextAccumulated = [...accumulatedGovMandates, ...newGovMandates];
+          setAccumulatedGovMandates(nextAccumulated);
       }
       
       const allExtras = [...new Set([...ngoRequirements, ...govMandates])];
@@ -1521,7 +1758,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       const ownerPenalty = uniqueMissedItems.length * 3;
       
       if (ownerPenalty > 0) {
-         newState = updateStat('owner', 'reputation', -ownerPenalty);
+         newState = updateStat('owner', 'reputation', -ownerPenalty, newState);
+         setPlayerState(newState);
       }
 
       const mandateNames = govMandates.map(id => ESIA_ITEMS.find(i=>i.id===id).label).join('; ');
@@ -1529,7 +1767,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       
       const newLastAction = updateLastAction('gov', `驳回并要求补充: ${govMandates.length}项`);
       setS1Feedback(fb);
-      addLog(`${fb}。业主声誉 -${ownerPenalty}`, 'red'); 
+      const newLogs = getUpdatedLogs(`${fb}。业主声誉 -${ownerPenalty}`, 'red'); 
       
       setS1State('owner_draft'); setActiveRole('owner');
       setS1SubmissionCount(c => c + 1);
@@ -1538,7 +1776,10 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
           s1State: 'owner_draft', 
           activeRole: 'owner',
           playerState: newState,
-          lastActionInfo: newLastAction
+          lastActionInfo: newLastAction,
+          govMandates: govMandates,
+          accumulatedGovMandates: nextAccumulated,
+          logs: newLogs
       });
     }
   };
@@ -1546,12 +1787,13 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   const s2OwnerApply = () => {
       setS2State('risk_assess'); setActiveRole('mdb');
       const newLastAction = updateLastAction('owner', '申请融资1500万');
-      addLog('业主申请项目融资1500万。', 'blue');
+      const newLogs = getUpdatedLogs('业主申请项目融资1500万。', 'blue');
       
       broadcastState({ 
           s2State: 'risk_assess', 
           activeRole: 'mdb',
-          lastActionInfo: newLastAction
+          lastActionInfo: newLastAction,
+          logs: newLogs
       });
   };
 
@@ -1559,12 +1801,13 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     setRiskLevel(lvl);
     setS2State('owner_escp'); setActiveRole('owner');
     const newLastAction = updateLastAction('mdb', `评定风险为: ${lvl}`);
-    addLog(`S2: 银行评级为 ${lvl}。请业主选择ESCP。`, 'purple');
+    const newLogs = getUpdatedLogs(`S2: 银行评级为 ${lvl}。请业主选择ESCP。`, 'purple');
     
     broadcastState({ 
         s2State: 'owner_escp', 
         activeRole: 'owner',
-        lastActionInfo: newLastAction 
+        lastActionInfo: newLastAction,
+        logs: newLogs
     });
   };
 
@@ -1574,62 +1817,90 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     const cost = newItems.reduce((sum, id) => sum + (ESMP_LIBRARY.find(i=>i.id===id).cost * multiplier), 0);
     
     let newState = playerState;
-    if (cost > 0) newState = updateStat('owner', 'money', -Math.round(cost));
+    if (cost > 0) {
+        newState = updateStat('owner', 'money', -Math.round(cost), newState);
+        setPlayerState(newState);
+    }
 
     setConfirmedEscpSelection([...ownerEscpSelection]); 
     setS2State('gov_check'); setActiveRole('gov');
     const newLastAction = updateLastAction('owner', `提交ESCP: ${ownerEscpSelection.length}项`);
-    addLog('S2: 业主提交ESCP承诺。', 'blue');
+    const newLogs = getUpdatedLogs('S2: 业主提交ESCP承诺。', 'blue');
     
     broadcastState({ 
         s2State: 'gov_check', 
         activeRole: 'gov',
         playerState: newState,
-        lastActionInfo: newLastAction
+        lastActionInfo: newLastAction,
+        ownerEscpSelection: ownerEscpSelection,
+        confirmedEscpSelection: [...ownerEscpSelection],
+        logs: newLogs
     });
   };
 
   const s2GovCheck = (pass) => {
     let newState = playerState;
     let newLastAction = lastActionInfo;
+    let newLogs;
+    let nextAccumulated = accumulatedGovEscpReqs;
+
+    const addedItems = govEscpMandates.filter(id => !accumulatedGovEscpReqs.includes(id));
+    if (addedItems.length > 0) {
+          const costIncrease = addedItems.length * 2; 
+          newState = updateStat('gov', 'cost', costIncrease, newState); 
+          
+          nextAccumulated = [...accumulatedGovEscpReqs, ...addedItems];
+          setAccumulatedGovEscpReqs(nextAccumulated);
+    }
     
     if (pass) {
       setS2State('mdb_sign'); setActiveRole('mdb');
       newLastAction = updateLastAction('gov', '通过业主ESCP');
-      addLog('S2: 政府通过业主ESCP。', 'green');
-      
-      broadcastState({ s2State: 'mdb_sign', activeRole: 'mdb', lastActionInfo: newLastAction });
+      newLogs = getUpdatedLogs('S2: 政府通过业主ESCP。', 'green');
+      setPlayerState(newState); 
+      broadcastState({ s2State: 'mdb_sign', activeRole: 'mdb', lastActionInfo: newLastAction, logs: newLogs, playerState: newState, accumulatedGovEscpReqs: nextAccumulated });
     } else {
-      const addedItems = govEscpMandates.filter(id => !accumulatedGovEscpReqs.includes(id));
       if (addedItems.length > 0) {
-          const costIncrease = addedItems.length * 2; 
           const repIncrease = addedItems.length * 2; 
           const ownerRepDrop = addedItems.length * 3;
 
-          newState = updateStat('gov', 'cost', costIncrease);
-          newState = updateStat('gov', 'reputation', repIncrease);
-          newState = updateStat('owner', 'reputation', -ownerRepDrop);
-          setAccumulatedGovEscpReqs(prev => [...prev, ...addedItems]);
+          newState = updateStat('gov', 'reputation', repIncrease, newState);
+          newState = updateStat('owner', 'reputation', -ownerRepDrop, newState);
+          setPlayerState(newState); 
       }
       setS2State('owner_escp'); setActiveRole('owner');
       setS2SubmissionCount(c => c + 1); 
       newLastAction = updateLastAction('gov', '驳回业主ESCP');
-      addLog(`S2: 政府驳回业主ESCP。要求补充: ${addedItems.map(id=>ESMP_LIBRARY.find(x=>x.id===id).label).join(', ')}`, 'red');
+      newLogs = getUpdatedLogs(`S2: 政府驳回业主ESCP。要求补充: ${addedItems.map(id=>ESMP_LIBRARY.find(x=>x.id===id).label).join(', ')}`, 'red');
       
-      broadcastState({ s2State: 'owner_escp', activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction });
+      broadcastState({ 
+          s2State: 'owner_escp', 
+          activeRole: 'owner', 
+          playerState: newState, 
+          lastActionInfo: newLastAction, 
+          accumulatedGovEscpReqs: nextAccumulated,
+          govEscpMandates: govEscpMandates,
+          logs: newLogs 
+      });
     }
   };
 
   const s2MdbSign = (sign) => {
     let newState = playerState;
     let newLastAction = lastActionInfo;
+    let nextAccumulated = accumulatedMdbEscpReqs;
+    let newLogs;
     
     if (sign) {
-      newState = updateStat('owner', 'money', 300);
+      newState = updateStat('owner', 'money', 300, newState);
+      setPlayerState(newState);
       setBankDisbursedPct(20);
       setFinancialAlert('owner', "银行首笔拨款: +$300万");
       
       newLastAction = updateLastAction('mdb', '签署贷款协议');
+      newLogs = getUpdatedLogs('S2: 银行签署贷款协议。发放首笔贷款。', 'green');
+      broadcastState({ logs: newLogs });
+
       triggerStageTransition(3, "EPC合同谈判阶段");
       return;
     } else {
@@ -1639,17 +1910,28 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
         const repIncrease = addedItems.length * 2; 
         const ownerRepDrop = addedItems.length * 3;
 
-        newState = updateStat('mdb', 'cost', costIncrease);
-        newState = updateStat('mdb', 'reputation', repIncrease);
-        newState = updateStat('owner', 'reputation', -ownerRepDrop);
-        setAccumulatedMdbEscpReqs(prev => [...prev, ...addedItems]);
+        newState = updateStat('mdb', 'cost', costIncrease, newState);
+        newState = updateStat('mdb', 'reputation', repIncrease, newState);
+        newState = updateStat('owner', 'reputation', -ownerRepDrop, newState);
+        setPlayerState(newState); 
+
+        nextAccumulated = [...accumulatedMdbEscpReqs, ...addedItems];
+        setAccumulatedMdbEscpReqs(nextAccumulated);
       }
       setS2State('owner_escp'); setActiveRole('owner');
       setS2SubmissionCount(c => c + 1);
       newLastAction = updateLastAction('mdb', '拒绝贷款');
-      addLog(`S2: 银行拒绝贷款。要求补充: ${addedItems.map(id=>ESMP_LIBRARY.find(x=>x.id===id).label).join(', ')}`, 'purple');
+      newLogs = getUpdatedLogs(`S2: 银行拒绝贷款。要求补充: ${addedItems.map(id=>ESMP_LIBRARY.find(x=>x.id===id).label).join(', ')}`, 'purple');
       
-      broadcastState({ s2State: 'owner_escp', activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction });
+      broadcastState({ 
+          s2State: 'owner_escp', 
+          activeRole: 'owner', 
+          playerState: newState, 
+          lastActionInfo: newLastAction,
+          accumulatedMdbEscpReqs: nextAccumulated,
+          mdbEscpMandates: mdbEscpMandates,
+          logs: newLogs
+      });
     }
   };
 
@@ -1662,13 +1944,14 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
 
     let newState = playerState;
     if (selfManagedCount > 0) {
-        newState = updateStat('owner', 'money', -cost);
-        newState = updateStat('owner', 'reputation', repGain);
+        newState = updateStat('owner', 'money', -cost, newState);
+        newState = updateStat('owner', 'reputation', repGain, newState);
+        setPlayerState(newState); 
     }
 
     setS3State('epc_bid'); setActiveRole('epc');
     const newLastAction = updateLastAction('owner', `发布招标文件。自管${ownerRespEsmp.length}项，工期${tenderDuration}月`);
-    addLog(`S3: 业主发标。自管ESMP: ${ownerRespEsmp.length}项 (成本-${cost}万, 声誉+${repGain})。工期要求: ${tenderDuration}个月。误期罚款:${delayPenalty}万/月, 提前奖励:${earlyBonus}万/月`, 'blue');
+    const newLogs = getUpdatedLogs(`S3: 业主发标。自管ESMP: ${ownerRespEsmp.length}项 (成本-${cost}万, 声誉+${repGain})。工期要求: ${tenderDuration}个月。误期罚款:${delayPenalty}万/月, 提前奖励:${earlyBonus}万/月`, 'blue');
     
     broadcastState({ 
         s3State: 'epc_bid', 
@@ -1678,7 +1961,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
         ownerRespEsmp: ownerRespEsmp, 
         tenderDuration: tenderDuration,
         delayPenalty: delayPenalty,
-        earlyBonus: earlyBonus
+        earlyBonus: earlyBonus,
+        logs: newLogs
     });
   };
 
@@ -1688,9 +1972,9 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     setEpcBidHistory([...epcBidHistory, newBid]);
     setS3State('owner_eval'); setActiveRole('owner');
     const newLastAction = updateLastAction('epc', `投标报价: $${epcBid.price}万`);
-    addLog(`S3: EPC承包商提交第${newBid.round}轮报价: $${epcBid.price}万。`, 'orange');
+    const newLogs = getUpdatedLogs(`S3: EPC承包商提交第${newBid.round}轮报价: $${epcBid.price}万。`, 'orange');
     
-    broadcastState({ s3State: 'owner_eval', activeRole: 'owner', lastActionInfo: newLastAction });
+    broadcastState({ s3State: 'owner_eval', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
   };
 
   const s3OwnerEval = (accept) => {
@@ -1702,11 +1986,13 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       setTimeStart2(gameTime); 
       
       const newLastAction = updateLastAction('owner', '接受EPC投标');
-      addLog(`S3: 业主接受投标。合同价: $${epcBid.price}万, 工期: ${tenderDuration}月。`, 'green');
+      const newLogs = getUpdatedLogs(`S3: 业主接受投标。合同价: $${epcBid.price}万, 工期: ${tenderDuration}月。`, 'green');
       
       setS3State('epc_contract_sign'); setActiveRole('epc');
-      addLog(`系统：等待EPC承包商签署确认合同。`, 'orange');
-      broadcastState({ s3State: 'epc_contract_sign', activeRole: 'epc', lastActionInfo: newLastAction });
+      const newLogs2 = [...newLogs, { msg: `系统：等待EPC承包商签署确认合同。`, type: 'orange', time: `${Math.floor(gameTime/60)}分${gameTime%60}秒` }];
+      setLogs(newLogs2);
+
+      broadcastState({ s3State: 'epc_contract_sign', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs2 });
       
     } else {
       setS3State('epc_bid'); setActiveRole('epc');
@@ -1716,62 +2002,97 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       if (ownerRejectReason) {
           logMsg += ` 理由: ${ownerRejectReason}`;
       }
-      addLog(logMsg, 'red');
-      broadcastState({ s3State: 'epc_bid', activeRole: 'epc', lastActionInfo: newLastAction });
+      const newLogs = getUpdatedLogs(logMsg, 'red');
+      broadcastState({ s3State: 'epc_bid', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
     }
   };
   
   const s3EpcSignConfirm = () => {
-      triggerStageTransition(4, "项目建设阶段", `合同签约完成。\n合同价: $${epcBid.price}万\n工期: ${tenderDuration}个月\n误期罚款: ${delayPenalty}万/月\n提前奖励: ${earlyBonus}万/月`);
+      // 恢复：EPC签署合同后，进入Stage 4的过渡
+      triggerStageTransition(
+          4, 
+          "项目建设阶段", 
+          `合同签约完成\n合同价: $${epcBid.price}万\n工期: ${tenderDuration}个月\n误期罚款: ${delayPenalty}万/月\n提前奖励: ${earlyBonus}万/月`
+      );
   };
 
   const s4EpcPlan = () => {
+    const itemsToPayFor = epcExecPlan.filter(id => !ownerRespEsmp.includes(id));
+    const cost = itemsToPayFor.reduce((sum, id) => {
+        const item = ESMP_LIBRARY.find(i => i.id === id);
+        return sum + (item ? item.cost : 0);
+    }, 0);
+
+    let newState = playerState;
+    if (cost > 0) {
+        newState = updateStat('epc', 'money', -cost, newState);
+        setPlayerState(newState);
+        setFinancialAlert('epc', `ESMP执行投入: -$${cost}万`);
+    }
+
     setOriginalEpcExecPlan([...epcExecPlan]);
     setS4State('s4_audit'); setActiveRole('owner');
     const newLastAction = updateLastAction('epc', '提交执行方案');
-    addLog('S4: EPC承包商提交ESMP执行方案，等待业主审计。', 'orange');
-    broadcastState({ s4State: 's4_audit', activeRole: 'owner', lastActionInfo: newLastAction });
+    const newLogs = getUpdatedLogs('S4: EPC承包商提交ESMP执行方案，等待业主审计。', 'orange');
+    broadcastState({ 
+        s4State: 's4_audit', 
+        activeRole: 'owner', 
+        playerState: newState, 
+        lastActionInfo: newLastAction, 
+        epcExecPlan: epcExecPlan,
+        logs: newLogs 
+    });
   };
 
   const s4OwnerAudit = () => {
     const auditCost = ownerAuditItems.length * 5;
-    let newState = updateStat('owner', 'money', -auditCost);
-    addLog(`S4: 业主执行抽查，花费$${auditCost}万。`, 'blue');
+    let newState = updateStat('owner', 'money', -auditCost, playerState);
+    setFinancialAlert('owner', `审计支出: -$${auditCost}万`);
+    
+    setPreviousAuditItems([...ownerAuditItems]); 
 
     const violations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
     
     let newLastAction;
+    let newLogs;
+
+    newLogs = getUpdatedLogs(`S4: 业主执行抽查，花费$${auditCost}万。`, 'blue');
+
     if (violations.length > 0) {
        const repDrop = violations.length * 5;
-       newState = updateStat('epc', 'reputation', -repDrop);
+       newState = updateStat('epc', 'reputation', -repDrop, newState);
+       setPlayerState(newState); 
+
        setEpcViolations(violations);
        setS4State('s4_punish_decide'); setActiveRole('owner'); 
        newLastAction = updateLastAction('owner', `发现${violations.length}项违规`);
-       addLog(`S4: 审计发现 ${violations.length} 项违规！承包商声誉 -${repDrop}。`, 'red');
+       newLogs = getUpdatedLogs(`S4: 审计发现 ${violations.length} 项违规！承包商声誉 -${repDrop}。`, 'red');
        
-       broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction });
+       broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction, logs: newLogs, previousAuditItems: ownerAuditItems });
     } else {
        newLastAction = updateLastAction('owner', '审计通过');
-       addLog('S4: 审计通过。等待承包商确认。', 'green');
+       newLogs = getUpdatedLogs('S4: 审计通过。等待承包商确认。', 'green');
+       setPlayerState(newState); 
        
        setS4State('epc_audit_pass_confirm'); setActiveRole('epc');
-       broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', playerState: newState, lastActionInfo: newLastAction });
+       broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', playerState: newState, lastActionInfo: newLastAction, logs: newLogs, previousAuditItems: ownerAuditItems });
     }
   };
 
   const s4OwnerPunishDecide = (action) => {
      let newLastAction;
+     let newLogs;
      if (action === 'rectify') {
         setEpcExecPlan(prev => [...new Set([...prev, ...epcViolations])]);
         setS4State('s4_epc_replan'); setActiveRole('epc');
         newLastAction = updateLastAction('owner', '责令整改');
-        addLog('S4: 业主责令整改。', 'blue');
-        broadcastState({ s4State: 's4_epc_replan', activeRole: 'epc', lastActionInfo: newLastAction });
+        newLogs = getUpdatedLogs('S4: 业主责令整改。', 'blue');
+        broadcastState({ s4State: 's4_epc_replan', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
      } else {
         newLastAction = updateLastAction('owner', '直接通过');
-        addLog('S4: 业主选择放行。', 'gray');
+        newLogs = getUpdatedLogs('S4: 业主选择放行。', 'gray');
         setS4State('epc_audit_pass_confirm'); setActiveRole('epc');
-        broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction });
+        broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
      }
   };
 
@@ -1783,55 +2104,73 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
      }
      setS4State('s4_owner_reaudit'); setActiveRole('owner');
      const newLastAction = updateLastAction('epc', '提交整改方案');
-     addLog('S4: EPC承包商提交整改方案。', 'orange');
-     broadcastState({ s4State: 's4_owner_reaudit', activeRole: 'owner', lastActionInfo: newLastAction });
+     const newLogs = getUpdatedLogs('S4: EPC承包商提交整改方案。', 'orange');
+     broadcastState({ s4State: 's4_owner_reaudit', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
   };
 
   const s4OwnerReaudit = () => {
+     const newlyAdded = ownerAuditItems.filter(id => !previousAuditItems.includes(id));
+     const reauditCost = newlyAdded.length * 5;
+     let newState = playerState;
+     
+     if (reauditCost > 0) {
+         newState = updateStat('owner', 'money', -reauditCost, newState);
+         setPlayerState(newState);
+         setFinancialAlert('owner', `复查追加支出: -$${reauditCost}万`);
+     }
+
      const stillViolating = epcViolations.filter(id => !epcExecPlan.includes(id));
      let newLastAction;
+     let newLogs;
      
+     const logPrefix = reauditCost > 0 ? `S4: 复查花费$${reauditCost}万。` : `S4: 执行复查。`;
+
      if (stillViolating.length > 0) {
         const currentViolations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
         
         if (currentViolations.length > 0) {
             setEpcViolations(currentViolations); 
-            newLastAction = updateLastAction('owner', `复查仍发现 ${currentViolations.length} 项违规`);
-            addLog(`S4: 复查发现仍有 ${currentViolations.length} 项违规！必须整改或风险通过。`, 'red');
+            newLastAction = updateLastAction('owner', `复查仍发现 ${currentViolations.length}项违规`);
+            newLogs = getUpdatedLogs(`${logPrefix}复查发现仍有 ${currentViolations.length} 项违规！必须整改或风险通过。`, 'red');
             
             alert(`复查不通过！发现 ${currentViolations.length} 项遗漏。请责令整改或选择风险通过。`);
 
             setS4State('s4_punish_decide'); setActiveRole('owner');
-            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction });
+            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, playerState: newState });
         } else {
              newLastAction = updateLastAction('owner', '复查通过');
-             addLog('S4: 整改复查通过，确认无遗漏。', 'green');
+             newLogs = getUpdatedLogs(`${logPrefix}整改复查通过，确认无遗漏。`, 'green');
              setS4State('epc_audit_pass_confirm'); setActiveRole('epc');
-             broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction });
+             broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs, playerState: newState });
         }
      } else {
          const currentViolations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
          if (currentViolations.length > 0) {
             setEpcViolations(currentViolations);
             newLastAction = updateLastAction('owner', '复查不通过');
-            addLog(`S4: 复查检测到 ${currentViolations.length} 项未执行。`, 'red');
+            newLogs = getUpdatedLogs(`${logPrefix}复查检测到 ${currentViolations.length} 项未执行。`, 'red');
             alert(`复查不通过！仍有未执行项目。`);
             setS4State('s4_punish_decide'); setActiveRole('owner');
-            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction });
+            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, playerState: newState });
          } else {
              newLastAction = updateLastAction('owner', '复查通过');
-             addLog('S4: 整改复查通过。', 'green');
+             newLogs = getUpdatedLogs(`${logPrefix}整改复查通过。`, 'green');
              setS4State('epc_audit_pass_confirm'); setActiveRole('epc');
-             broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction });
+             broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs, playerState: newState });
          }
      }
   };
   
   const s4EpcConfirmAuditPass = () => {
      prepareS4Construction();
-     setS4State('construction_start');
-     setS4Countdown(5); 
-     broadcastState({ s4State: 'construction_start' });
+     setS4State('construction_start'); 
+     setActiveRole('owner'); 
+     const newLogs = getUpdatedLogs("承包商确认。准备进入施工阶段。请业主下达开工令。", "orange");
+     broadcastState({ s4State: 'construction_start', activeRole: 'owner', logs: newLogs });
+  };
+
+  const s4OwnerStartConstruction = () => {
+      startNextCrisis(crisisQueue, 0);
   };
 
   const prepareS4Construction = () => {
@@ -1853,17 +2192,21 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
        title: item.crisisTitle,
        desc: item.crisisDesc
     }));
-    setCrisisQueue(queue);
-
+    setCrisisQueue(queue); 
+    
     const ownerPay = finalContractPrice * 0.2;
-    let newState = updateStat('owner', 'money', -ownerPay);
-    newState = updateStat('epc', 'money', ownerPay);
+    let newState = updateStat('owner', 'money', -ownerPay, playerState);
+    newState = updateStat('epc', 'money', ownerPay, newState);
+    setPlayerState(newState); 
+    
     setOwnerPaidPct(20);
     
     setFinancialAlert('owner', `支付预付款(20%): -$${ownerPay.toFixed(1)}万`);
     setFinancialAlert('epc', `收到预付款(20%): +$${ownerPay.toFixed(1)}万`);
 
-    addLog(`资金流转: 业主支付预付款$${ownerPay}万(20%)。`, 'green');
+    const newLogs = getUpdatedLogs(`资金流转: 业主支付预付款$${ownerPay}万(20%)。`, 'green');
+    
+    broadcastState({ crisisQueue: queue, logs: newLogs });
   }
 
   const startNextCrisis = (queue, index) => {
@@ -1882,18 +2225,26 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   const protestNgoDecide = (claim) => {
      let newState = playerState;
      let newLastAction = lastActionInfo;
+     let newLogs;
      if (claim) {
-        newState = updateStat('ngo', 'benefit', -10);
-        newState = updateStat('ngo', 'reputation', 10);
+        newState = updateStat('ngo', 'benefit', -10, newState);
+        newState = updateStat('ngo', 'reputation', 10, newState);
+        setPlayerState(newState);
+        
         setProtestState('ngo_input_demand');
         newLastAction = updateLastAction('ngo', '决定索赔');
-        addLog('公众决定索赔 (成本10万, 声誉+10)。', 'red');
+        newLogs = getUpdatedLogs('公众决定索赔 (成本10万, 声誉+10)。', 'red');
+        broadcastState({ s4State: 's4_crisis_active', activeRole: 'ngo', playerState: newState, lastActionInfo: newLastAction, logs: newLogs });
      } else {
         setNgoNoClaimDisabled(true);
-        newState = updateStat('ngo', 'reputation', -10);
+        newState = updateStat('ngo', 'reputation', -10, newState);
+        setPlayerState(newState);
+        
         newLastAction = updateLastAction('ngo', '放弃索赔');
-        addLog('公众放弃索赔 (声誉-10)。项目继续。', 'gray');
-        resolveCrisis(false, true, "公众放弃索赔，危机解除。"); 
+        newLogs = getUpdatedLogs('公众放弃索赔 (声誉-10)。项目继续。', 'gray');
+        broadcastState({ playerState: newState, lastActionInfo: newLastAction, logs: newLogs });
+        
+        resolveCrisis(false, true, "公众放弃索赔，危机解除。", newState); 
      }
   };
 
@@ -1902,54 +2253,58 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     let responsible = 'epc';
     if (ownerRespEsmp.includes(esmpId)) responsible = 'owner';
     
-    let newState = updateStat(responsible, 'reputation', -20);
+    let newState = updateStat(responsible, 'reputation', -20, playerState);
     const other = responsible === 'owner' ? 'epc' : 'owner';
-    newState = updateStat(other, 'reputation', -10);
+    newState = updateStat(other, 'reputation', -10, newState);
+    setPlayerState(newState);
     
-    addLog(`系统判定: 实际责任方为 ${responsible==='owner'?'业主':'EPC承包商'}。`, 'orange');
-    addLog(`声誉惩罚: 责任方-20, 非责任方-10。`, 'red');
+    const newLogs = getUpdatedLogs(`系统判定: 实际责任方为 ${responsible==='owner'?'业主':'EPC承包商'}。声誉惩罚: 责任方-20, 非责任方-10。公众索赔理由: ${ngoDemandReason}`, 'orange');
 
     setProtestHandler(responsible); 
     setProtestState('owner_route'); setActiveRole('owner'); 
     const newLastAction = updateLastAction('ngo', `索赔 $${ngoDemandAmount}万`);
     
-    if (ngoDemandReason) {
-        addLog(`公众索赔理由: ${ngoDemandReason}`, 'red');
-    }
-    
-    broadcastState({ activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction });
+    broadcastState({ 
+        activeRole: 'owner', 
+        playerState: newState, 
+        lastActionInfo: newLastAction, 
+        ngoDemandReason: ngoDemandReason,
+        logs: newLogs 
+    });
   };
 
   const protestOwnerRoute = (handleSelf) => {
     let newLastAction;
+    let newLogs;
     if (handleSelf) {
         setProtestHandler('owner');
         setProtestState('party_negotiate'); setActiveRole('owner');
         newLastAction = updateLastAction('owner', '决定自行处理');
-        addLog('业主决定自行处理危机。', 'blue');
-        broadcastState({ activeRole: 'owner', lastActionInfo: newLastAction });
+        newLogs = getUpdatedLogs('业主决定自行处理危机。', 'blue');
+        broadcastState({ activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
     } else {
         setProtestHandler('epc');
         setProtestState('epc_route_check'); setActiveRole('epc');
         newLastAction = updateLastAction('owner', '转交EPC承包商处理');
-        addLog('业主将危机转交EPC承包商处理。', 'orange');
-        broadcastState({ activeRole: 'epc', lastActionInfo: newLastAction });
+        newLogs = getUpdatedLogs('业主将危机转交EPC承包商处理。', 'orange');
+        broadcastState({ activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
     }
   };
 
   const protestEpcRouteCheck = (accept) => {
      let newLastAction;
+     let newLogs;
      if (accept) {
          setProtestState('party_negotiate'); setActiveRole('epc');
          newLastAction = updateLastAction('epc', '接受处理');
-         addLog('EPC承包商接受处理危机。', 'blue');
-         broadcastState({ activeRole: 'epc', lastActionInfo: newLastAction });
+         newLogs = getUpdatedLogs('EPC承包商接受处理危机。', 'blue');
+         broadcastState({ activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
      } else {
          setProtestHandler('owner');
          setProtestState('owner_route'); setActiveRole('owner');
          newLastAction = updateLastAction('epc', '拒绝并退回业主');
-         addLog('EPC承包商拒绝处理，退回给业主。', 'red');
-         broadcastState({ activeRole: 'owner', lastActionInfo: newLastAction });
+         newLogs = getUpdatedLogs('EPC承包商拒绝处理，退回给业主。', 'red');
+         broadcastState({ activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
      }
   };
 
@@ -1957,27 +2312,27 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
      setOfferAmount(amount);
      setProtestState('ngo_response'); setActiveRole('ngo');
      const newLastAction = updateLastAction(protestHandler, `主张 $${amount}万`); 
-     addLog(`${protestHandler==='owner'?'业主':'EPC承包商'} 主张赔偿 $${amount}万。`, 'blue');
+     const newLogs = getUpdatedLogs(`${protestHandler==='owner'?'业主':'EPC承包商'} 主张赔偿 $${amount}万。责任方主张理由: ${partyOfferReason}`, 'blue');
      
-     if (partyOfferReason) {
-        addLog(`责任方主张理由: ${partyOfferReason}`, 'blue');
-     }
-     broadcastState({ activeRole: 'ngo', lastActionInfo: newLastAction });
+     broadcastState({ activeRole: 'ngo', lastActionInfo: newLastAction, partyOfferReason: partyOfferReason, logs: newLogs });
   };
 
   const protestNgoResponse = (accept) => {
      if (accept) {
-        let newState = updateStat(protestHandler, 'money', -offerAmount);
-        newState = updateStat('ngo', 'benefit', offerAmount); 
-        addLog(`公众接受赔偿。危机解除。`, 'green');
+        let newState = updateStat(protestHandler, 'money', -offerAmount, playerState);
+        newState = updateStat('ngo', 'benefit', offerAmount, newState);
+        setPlayerState(newState);
+        
+        const newLogs = getUpdatedLogs(`公众接受赔偿。危机解除。`, 'green');
         
         setFinancialAlert(protestHandler, `支付赔偿金: -$${offerAmount}万`);
+        broadcastState({logs: newLogs, playerState: newState});
 
         resolveCrisis(false, true, `双方达成一致，${protestHandler==='owner'?'业主':'EPC承包商'}支付赔偿金$${offerAmount}万。`); 
      } else {
-        addLog('公众拒绝赔偿。政府介入。', 'red');
+        const newLogs = getUpdatedLogs('公众拒绝赔偿。政府介入。', 'red');
         setProtestState('gov_ruling'); setActiveRole('gov');
-        broadcastState({ activeRole: 'gov' });
+        broadcastState({ activeRole: 'gov', logs: newLogs });
      }
   };
 
@@ -2000,18 +2355,23 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
      setGovRulingHistory(newHistory);
 
      const newLastAction = updateLastAction('gov', `第${count}次裁决: $${numAmount}万`);
-     
+     let newLogs;
+
      if (govRulingReason) {
-        addLog(`政府裁决理由: ${govRulingReason}`, 'purple');
+        newLogs = getUpdatedLogs(`政府第${count}次裁决: $${numAmount}万。理由: ${govRulingReason}`, 'purple');
+     } else {
+        newLogs = getUpdatedLogs(`政府第${count}次裁决: $${numAmount}万。`, 'purple');
      }
      
      if (count >= 3) {
-        addLog(`政府终局裁决: $${numAmount}万。强制执行。`, 'purple');
-        
+        let newState = updateStat(protestHandler, 'reputation', -10, playerState);
+        setPlayerState(newState);
+         
+        const finalLogs = getUpdatedLogs(`政府终局裁决: $${numAmount}万。强制执行。责任方声誉惩罚 -10。`, 'purple');
         setProtestState('ruling_result_display'); setActiveRole('all');
-        broadcastState({ activeRole: 'all', govRulingHistory: newHistory, lastActionInfo: newLastAction });
+        broadcastState({ activeRole: 'all', govRulingHistory: newHistory, lastActionInfo: newLastAction, logs: finalLogs, playerState: newState });
      } else {
-        addLog(`政府第${count}次裁决下达。等待双方表态。`, 'blue');
+        const pendingLogs = getUpdatedLogs(`等待双方表态。`, 'blue');
         setPartyResponse(null);
         setNgoResponse(null);
         setPartyAppealInput('');
@@ -2019,7 +2379,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
         setNgoAppealInput('');
         setNgoAppealReason(''); 
         setProtestState('parties_react_ruling'); setActiveRole('all'); 
-        broadcastState({ activeRole: 'all', govRulingHistory: newHistory, lastActionInfo: newLastAction });
+        broadcastState({ activeRole: 'all', govRulingHistory: newHistory, lastActionInfo: newLastAction, logs: pendingLogs });
      }
   };
   
@@ -2032,8 +2392,10 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
 
      if (hasNgo && hasParty) {
          const numAmount = Number(govRulingAmount);
-         let newState = updateStat(protestHandler, 'money', -numAmount);
-         newState = updateStat('ngo', 'benefit', numAmount);
+         let newState = updateStat(protestHandler, 'money', -numAmount, playerState);
+         newState = updateStat('ngo', 'benefit', numAmount, newState);
+         setPlayerState(newState);
+
          setFinancialAlert(protestHandler, `强制支付赔偿: -$${numAmount}万`);
 
          setProtestState('bank_decision'); setActiveRole('mdb');
@@ -2046,7 +2408,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       setOfferAmount(type === 'accept' ? Number(govRulingAmount) : Number(appealVal));
       if (type === 'appeal') {
           setPartyAppealReason(appealReas); 
-          if(appealReas) addLog(`责任方申诉理由: ${appealReas}`, 'blue');
+          if(appealReas) getUpdatedLogs(`责任方申诉理由: ${appealReas}`, 'blue');
           broadcastState({ activeRole: 'all', partyAppealReason: appealReas });
       } else {
           broadcastState({ activeRole: 'all' });
@@ -2058,7 +2420,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       setNgoDemandAmount(type === 'accept' ? Number(govRulingAmount) : Number(appealVal)); 
       if (type === 'appeal') {
           setNgoAppealReason(appealReas); 
-          if(appealReas) addLog(`公众申诉理由: ${appealReas}`, 'red');
+          if(appealReas) getUpdatedLogs(`公众申诉理由: ${appealReas}`, 'red');
           broadcastState({ activeRole: 'all', ngoAppealReason: appealReas });
       } else {
           broadcastState({ activeRole: 'all' });
@@ -2069,15 +2431,18 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     if (protestState === 'parties_react_ruling' && partyResponse && ngoResponse) {
         const rulingVal = Number(govRulingAmount);
         if (partyResponse === 'accept' && ngoResponse === 'accept') {
-           let newState = updateStat(protestHandler, 'money', -rulingVal);
-           newState = updateStat('ngo', 'benefit', rulingVal);
+           let newState = updateStat(protestHandler, 'money', -rulingVal, playerState);
+           newState = updateStat('ngo', 'benefit', rulingVal, newState);
+           setPlayerState(newState);
            
            setFinancialAlert(protestHandler, `支付赔偿金: -$${rulingVal}万`);
 
-           addLog('双方接受裁决。危机解除。', 'green');
+           const newLogs = getUpdatedLogs('双方接受裁决。危机解除。', 'green');
+           broadcastState({logs: newLogs, playerState: newState});
            resolveCrisis(false, true, `双方接受政府裁决，${protestHandler==='owner'?'业主':'EPC承包商'}支付赔偿金$${rulingVal}万。`);
         } else {
-           addLog('一方或双方提出申诉，进入下一轮裁决。', 'orange');
+           const newLogs = getUpdatedLogs('一方或双方提出申诉，进入下一轮裁决。', 'orange');
+           broadcastState({logs: newLogs});
            setTimeout(() => {
                setGovRulingAmount(""); 
                setGovRulingReason(""); 
@@ -2094,10 +2459,10 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
      const ratioTxt = currentCrisis.index === 3 ? "15%" : "20%";
      const newLastAction = updateLastAction('mdb', freeze ? `暂停拨付${ratioTxt}贷款` : '继续拨付贷款');
      
-     addLog(`多边开发银行决定: ${freeze?'暂停':'继续'}拨付贷款。通知业主。`, 'purple');
+     const newLogs = getUpdatedLogs(`多边开发银行决定: ${freeze?'暂停':'继续'}拨付贷款。通知业主。`, 'purple');
      
      setProtestState('owner_pay_decision'); setActiveRole('owner');
-     broadcastState({ activeRole: 'owner', lastActionInfo: newLastAction });
+     broadcastState({ activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
   };
 
   const protestOwnerPayDecision = (pay) => {
@@ -2105,9 +2470,10 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
      const newLastAction = updateLastAction('owner', pay ? '支付进度款' : `暂停支付${ratioTxt}进度款`);
      
      let msg = "危机结束。";
+     let newLogs;
 
      if (ownerPayDecisionReason) {
-         addLog(`业主决策理由: ${ownerPayDecisionReason}`, pay ? 'green' : 'red');
+         newLogs = getUpdatedLogs(`业主决策理由: ${ownerPayDecisionReason}`, pay ? 'green' : 'red');
      }
      
      let newState = playerState;
@@ -2120,7 +2486,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
 
         if (actualBankDisbursed > 0.1) {
             const bankPay = loanAmount * (actualBankDisbursed/100);
-            newState = updateStat('owner', 'money', bankPay); 
+            newState = updateStat('owner', 'money', bankPay, newState); 
             setBankDisbursedPct(nextBankPct);
             setFinancialAlert('owner', `银行拨款: +$${bankPay.toFixed(1)}万`);
         }
@@ -2134,36 +2500,36 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
         
         if (actualOwnerPaid > 0.1) {
             const ownerPay = finalContractPrice * (actualOwnerPaid/100);
-            newState = updateStat('owner', 'money', -ownerPay);
-            newState = updateStat('epc', 'money', ownerPay);
+            newState = updateStat('owner', 'money', -ownerPay, newState);
+            newState = updateStat('epc', 'money', ownerPay, newState);
+            setPlayerState(newState);
             setOwnerPaidPct(nextOwnerPct);
             
             setFinancialAlert('owner', `支付进度款: -$${ownerPay.toFixed(1)}万`);
             setFinancialAlert('epc', `收到进度款: +$${ownerPay.toFixed(1)}万`);
             
-            addLog(`业主决定: 支付${ratioTxt}进度款。通知承包商。`, 'green');
+            newLogs = getUpdatedLogs(`业主决定: 支付${ratioTxt}进度款。通知承包商。`, 'green');
             msg = `业主决定继续支付进度款 ($${ownerPay.toFixed(1)}万)。`;
+            broadcastState({logs: newLogs, playerState: newState});
             resolveCrisis(false, false, msg);
         } else {
-            addLog('业主决定支付，但支付比例已达上限(95%)。', 'gray');
+            newLogs = getUpdatedLogs('业主决定支付，但支付比例已达上限(95%)。', 'gray');
             msg = "业主决定支付，但已达支付上限。";
+            broadcastState({logs: newLogs});
             resolveCrisis(false, false, msg);
         }
      } else {
         setProtestState('epc_notify_freeze'); setActiveRole('epc');
-        addLog('业主决定: 暂停支付进度款。通知承包商。', 'red');
-        broadcastState({ activeRole: 'epc', lastActionInfo: newLastAction });
+        newLogs = getUpdatedLogs('业主决定: 暂停支付进度款。通知承包商。', 'red');
+        broadcastState({ activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
      }
   };
 
   const protestEpcNotifyFreeze = (protest) => {
      if (protest) {
          setProtestState('owner_reconsider_pay'); setActiveRole('owner');
-         addLog('承包商反对暂停支付，要求业主重新考虑。', 'orange');
-         if (epcProtestReason) {
-             addLog(`承包商抗议理由: ${epcProtestReason}`, 'orange');
-         }
-         broadcastState({ activeRole: 'owner' });
+         const newLogs = getUpdatedLogs(`承包商反对暂停支付，要求业主重新考虑。抗议理由: ${epcProtestReason}`, 'orange');
+         broadcastState({ activeRole: 'owner', logs: newLogs });
      } else {
          const msg = "业主决定暂停支付进度款。承包商知悉。";
          resolveCrisis(false, false, msg);
@@ -2175,16 +2541,25 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
          protestOwnerPayDecision(true);
       } else {
          setProtestState('epc_notify_freeze'); setActiveRole('epc');
-         addLog('业主坚持暂停支付。通知承包商。', 'red');
-         broadcastState({ activeRole: 'epc' });
+         const newLogs = getUpdatedLogs('业主坚持暂停支付。通知承包商。', 'red');
+         broadcastState({ activeRole: 'epc', logs: newLogs });
       }
   };
 
-  const resolveCrisis = (skipped, autoPay, customMsg) => {
-     let newState = playerState;
+  const resolveCrisis = (skipped, autoPay, customMsg, inputState = null) => {
+     let newState = inputState || playerState;
+     let newLogs = logs;
+     
      if (autoPay) {
         const res = processScheduledPayment(currentCrisis.index);
-        newState = res.newState;
+        const paidState = res.newState; 
+        if (inputState) {
+             newState = updateStat('owner', 'money', (paidState.owner.money - playerState.owner.money), newState);
+             newState = updateStat('epc', 'money', (paidState.epc.money - playerState.epc.money), newState);
+        } else {
+             newState = paidState;
+        }
+        newLogs = res.newLogs;
      }
      
      const finalMsg = customMsg || "本轮危机处理完毕，进入下一阶段。";
@@ -2192,9 +2567,11 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
      setS4State('s4_resolution'); 
      setActiveRole('all');
 
-     addLog('危机结束。进入结算界面。', 'green');
+     const finalLogs = [...newLogs, {msg: '危机结束。进入结算界面。', type: 'green', time: `${Math.floor(gameTime/60)}分${gameTime%60}秒`}];
+     setLogs(finalLogs);
+     setPlayerState(newState);
      
-     broadcastState({ s4State: 's4_resolution', activeRole: 'all', playerState: newState });
+     broadcastState({ s4State: 's4_resolution', activeRole: 'all', playerState: newState, logs: finalLogs });
 
      const nextIndex = currentCrisis.index + 1;
      setTimeout(() => {
@@ -2205,8 +2582,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   const s5EpcApply = () => {
      setInspectionState('owner_decide_pay'); setActiveRole('owner');
      const newLastAction = updateLastAction('epc', '申请竣工验收');
-     addLog('承包商申请竣工验收。', 'orange');
-     broadcastState({ activeRole: 'owner', lastActionInfo: newLastAction });
+     const newLogs = getUpdatedLogs('承包商申请竣工验收。', 'orange');
+     broadcastState({ activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
   };
 
   const s5OwnerSubmitProposal = () => {
@@ -2223,8 +2600,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
      setTimeEnd(gameTime); 
      setInspectionState('epc_review_proposal'); setActiveRole('epc');
      const newLastAction = updateLastAction('owner', `通过验收，拟付至${proposal}%`);
-     addLog(`业主通过质量验收。拟支付至${proposal}%。意见: ${ownerFeedback}`, 'blue');
-     broadcastState({ activeRole: 'epc', lastActionInfo: newLastAction });
+     const newLogs = getUpdatedLogs(`业主通过质量验收。拟支付至${proposal}%。意见: ${ownerFeedback}`, 'blue');
+     broadcastState({ activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
   };
 
   const s5EpcReview = (accept) => {
@@ -2245,8 +2622,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
 
       setInspectionState('gov_s5_ruling'); setActiveRole('gov');
       const newLastAction = updateLastAction('epc', `申诉：要求付至${epcClaimProposal}%`);
-      addLog(`承包商拒绝接受，发起申诉。主张支付至${epcClaimProposal}%。`, 'red');
-      broadcastState({ activeRole: 'gov', lastActionInfo: newLastAction });
+      const newLogs = getUpdatedLogs(`承包商拒绝接受，发起申诉。主张支付至${epcClaimProposal}%。`, 'red');
+      broadcastState({ activeRole: 'gov', lastActionInfo: newLastAction, logs: newLogs });
   };
 
   const s5GovMakeRuling = () => {
@@ -2256,13 +2633,10 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
           return;
       }
       
-      addLog(`政府裁决：业主应支付至${ruling}%。`, 'purple');
-      if (s5GovRulingReason) {
-          addLog(`裁决理由：${s5GovRulingReason}`, 'purple');
-      }
+      const newLogs = getUpdatedLogs(`政府裁决：业主应支付至${ruling}%。理由：${s5GovRulingReason || '无'}`, 'purple');
 
       setInspectionState('s5_ruling_result'); setActiveRole('all');
-      broadcastState({ activeRole: 'all' });
+      broadcastState({ activeRole: 'all', logs: newLogs });
   };
 
   const s5AcknowledgeRuling = (role) => {
@@ -2282,8 +2656,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       const diffPct = finalPct - ownerPaidPct;
       if (diffPct > 0) {
            const payAmt = finalContractPrice * (diffPct / 100);
-           newState = updateStat('owner', 'money', -payAmt);
-           newState = updateStat('epc', 'money', payAmt);
+           newState = updateStat('owner', 'money', -payAmt, newState);
+           newState = updateStat('epc', 'money', payAmt, newState);
            setOwnerPaidPct(finalPct);
            
            setFinancialAlert('owner', `支付结算款: -$${payAmt.toFixed(1)}万`);
@@ -2298,8 +2672,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       if (deviation > 0) {
              if (finalDelayPenalty > 0) {
                  const penaltyAmt = deviation * finalDelayPenalty;
-                 newState = updateStat('epc', 'money', -penaltyAmt);
-                 newState = updateStat('owner', 'money', penaltyAmt);
+                 newState = updateStat('epc', 'money', -penaltyAmt, newState);
+                 newState = updateStat('owner', 'money', penaltyAmt, newState);
                  bonusPenaltyText = `项目延误 ${deviation} 个月。承包商支付误期赔偿: $${penaltyAmt}万`;
                  setFinancialAlert('epc', `支付误期赔偿: -$${penaltyAmt}万`);
                  setFinancialAlert('owner', `收到误期赔偿: +$${penaltyAmt}万`);
@@ -2309,8 +2683,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       } else if (deviation < 0) {
              if (finalEarlyBonus > 0) {
                  const bonusAmt = Math.abs(deviation) * finalEarlyBonus;
-                 newState = updateStat('owner', 'money', -bonusAmt);
-                 newState = updateStat('epc', 'money', bonusAmt);
+                 newState = updateStat('owner', 'money', -bonusAmt, newState);
+                 newState = updateStat('epc', 'money', bonusAmt, newState);
                  bonusPenaltyText = `项目提前 ${Math.abs(deviation)} 个月。业主支付提前奖励: $${bonusAmt}万`;
                  setFinancialAlert('owner', `支付提前奖励: -$${bonusAmt}万`);
                  setFinancialAlert('epc', `收到提前奖励: +$${bonusAmt}万`);
@@ -2321,9 +2695,11 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
              bonusPenaltyText = "项目按期完工。";
       }
 
-      addLog(`结算完成。最终支付比例: ${finalPct}%。${bonusPenaltyText}`, 'green');
+      setPlayerState(newState); 
+      const newLogs = getUpdatedLogs(`结算完成。最终支付比例: ${finalPct}%。${bonusPenaltyText}`, 'green');
+      broadcastState({logs: newLogs});
       
-      triggerStageTransition(6, "完工总结阶段", "项目已完成结算，顺利进入并网发电，请填写项目总结。");
+      triggerStageTransition(6, "完工总结阶段", "项目已完成结算，顺利进入并网发电，请填写项目总结");
   };
 
   const submitSummary = (role, data) => {
@@ -2374,7 +2750,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   };
 
   const FloatingText = ({ value, type }) => (
-      <span className={`absolute -top-4 right-0 text-xs font-black animate-out fade-out slide-out-to-top-4 duration-[3000ms] z-50 ${value > 0 ? 'text-green-600' : 'text-red-600'}`}>
+      <span className={`absolute -top-4 right-0 text-xs font-black animate-out fade-out slide-out-to-top-4 duration-1000 z-50 ${value > 0 ? 'text-green-600' : 'text-red-600'}`}>
         {value > 0 ? '+' : ''}{value}
       </span>
   );
@@ -2389,7 +2765,6 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       )
   };
 
-  // ... approved list functions ...
   const renderS1ApprovedEsiaListFull = () => (
       <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col shrink-0">
         <div className="bg-slate-100 text-xs px-2 py-1 font-bold border-b border-slate-200 text-slate-700 flex justify-between items-center shrink-0">
@@ -2481,7 +2856,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.41</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.48</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
@@ -2509,11 +2884,24 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     </div>
   );
 
+  // --- View Rendering Logic ---
+  
+  if (viewMode === 'intro') {
+      return <ProjectIntroView onStart={gotoRoles} mode={mode} assignedRole={assignedRole} />;
+  }
+  
+  if (viewMode === 'roles') {
+      return <RoleDetailView onStartGame={startSim} isGameRunning={stage > 1 || isTimerRunning} onBackToGame={()=>setViewMode('game')} />;
+  }
+
+  // --- Main Game View ---
+
   const renderRoleColumn = (roleKey, title, Icon, colorClass) => {
     const isActive = activeRole === roleKey || activeRole === 'all' 
        || (stage===4 && ['gov','ngo',protestHandler].includes(roleKey))
        || (stage===4 && protestState==='ruling_result_display' && (roleKey==='ngo' || roleKey===protestHandler))
-       || (stage===5 && inspectionState==='s5_ruling_result' && (roleKey==='owner' || roleKey==='epc'));
+       || (stage===5 && inspectionState==='s5_ruling_result' && (roleKey==='owner' || roleKey==='epc'))
+       || (stage===4 && s4State==='construction_start' && roleKey==='owner');
 
     const state = playerState[roleKey];
     
@@ -2603,6 +2991,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   };
 
   const renderRoleContent = (role) => {
+      // ... (Role Content Logic from previous version, unchanged)
       if (stage === 6) {
        if (isSummarySubmitted[role]) {
           return <div className="text-center text-green-600 pt-4"><CheckCircle2 className="mx-auto mb-2"/> 已提交总结</div>
@@ -2652,7 +3041,6 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
         );
     }
 
-    // --- Owner Roles ---
     if (role === 'owner') {
       if (stage === 1 && s1State === 'owner_draft') {
         const multiplier = 1.0 + (s1SubmissionCount - 1) * 0.2;
@@ -2662,6 +3050,12 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
           <div className="font-bold text-blue-800 text-xs">
              {s1SubmissionCount > 1 ? "选择补充 (价格上涨" + Math.round((multiplier-1)*100) + "%):" : "请开展ESIA专项评价 (括号内为成本):"}
           </div>
+          {(accumulatedGovMandates.length > 0 || accumulatedNgoReqs.length > 0) && (
+             <div className="bg-red-50 text-red-600 text-[10px] p-1 rounded border border-red-100 mb-1">
+                <strong>未满足要求: </strong>
+                {[...new Set([...accumulatedGovMandates, ...accumulatedNgoReqs])].filter(id => !confirmedEsiaSelection.includes(id)).map(id => ESIA_ITEMS.find(i=>i.id===id)?.label).join(', ')}
+             </div>
+          )}
           <div className="border border-slate-200 rounded-sm shadow-inner bg-white flex-1 overflow-y-auto min-h-0">
              {ESIA_ITEMS.map(i => {
             const isConfirmed = confirmedEsiaSelection.includes(i.id);
@@ -2733,8 +3127,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
              <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">控制价($万) <span className="text-red-500">*</span></span><Input type="number" onChange={e=>setTenderLimitPrice(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
              <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">合同工期(月)</span><Input type="number" defaultValue={20} onChange={e=>setTenderDuration(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
              <div className="grid grid-cols-2 gap-2">
-                 <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">误期罚款</span><Input type="number" min={0} defaultValue={0} onChange={e=>setDelayPenalty(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
-                 <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">提前奖励</span><Input type="number" min={0} defaultValue={0} onChange={e=>setEarlyBonus(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
+                 <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">误期损害赔偿费（万/月）</span><Input type="number" min={0} defaultValue={0} onChange={e=>setDelayPenalty(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
+                 <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">提前完工奖励（万/月）</span><Input type="number" min={0} defaultValue={0} onChange={e=>setEarlyBonus(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
              </div>
            </div>
            
@@ -2775,23 +3169,26 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(item => {
                const isOwnerResp = ownerRespEsmp.includes(item.id);
                const isViolation = s4State === 's4_owner_reaudit' && epcViolations.includes(item.id);
+               const isAlreadyAudited = s4State === 's4_owner_reaudit' && previousAuditItems.includes(item.id);
                
                return (
-                   <div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-50' : ''} ${isViolation ? 'bg-red-50' : ''}`}>
+                   <div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp || isAlreadyAudited ? 'opacity-50 bg-slate-50' : ''} ${isViolation ? 'bg-red-50' : ''}`}>
                        <Checkbox 
                            className="h-5 w-5 md:h-4 md:w-4" 
                            checked={ownerAuditItems.includes(item.id)} 
-                           disabled={isOwnerResp} 
+                           disabled={isOwnerResp || isAlreadyAudited} // Disable if owner responsible OR already audited
                            onCheckedChange={c=>c?setOwnerAuditItems([...ownerAuditItems,item.id]):setOwnerAuditItems(ownerAuditItems.filter(x=>x!==item.id))}
                        />
                        <div className="flex flex-col justify-center">
                            <span className="text-sm leading-none text-slate-700">{item.label}</span>
                            {isOwnerResp && <span className="text-[10px] text-blue-500 leading-none">业主负责 (不可选)</span>}
+                           {isAlreadyAudited && <span className="text-[10px] text-gray-500 leading-none">已审计 (无需付费)</span>}
                            {isViolation && <span className="text-[10px] text-red-500 font-bold leading-none">重点复查对象</span>}
                        </div>
                    </div>
                )
            })}</div>
+           {s4State === 's4_audit' && <div className="text-xs text-slate-500 text-center">本次审计成本: {ownerAuditItems.length * 5}万</div>}
            {s4State === 's4_audit' ? <Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s4OwnerAudit}>执行审计 (花费{ownerAuditItems.length*5}万)</Button> : <Button size="sm" className="w-full h-12 md:h-8 text-sm bg-orange-600 shrink-0 font-bold" onClick={s4OwnerReaudit}>执行复查 (确认漏项已修复)</Button>}
         </div>
       );
@@ -2807,6 +3204,14 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
             <Button size="sm" className="w-full h-12 md:h-8 text-sm bg-blue-600 mb-1 shrink-0 font-bold" onClick={()=>s4OwnerPunishDecide('rectify')}>责令整改</Button>
             <Button size="sm" variant="outline" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={()=>s4OwnerPunishDecide('pass')}>直接通过 (有风险)</Button>
          </div>
+      );
+      if (stage === 4 && s4State === 'construction_start') return (
+          <div className="space-y-2 bg-green-50 p-2 rounded border border-green-200 flex flex-col items-center justify-center h-full">
+              <HardHat size={32} className="text-green-600 mb-2"/>
+              <div className="font-bold text-green-800 text-center">施工准备就绪</div>
+              <div className="text-xs text-slate-600 text-center mb-4">承包商已确认进场。请点击开始推进施工进度。</div>
+              <Button size="sm" className="w-full bg-green-600 font-bold animate-pulse" onClick={s4OwnerStartConstruction}>下达开工指令</Button>
+          </div>
       );
       if (stage === 4 && protestState === 'owner_route') return (
         <div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200 flex flex-col h-full">
@@ -2850,7 +3255,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
          <div className="space-y-2 bg-purple-50 p-2 rounded border border-purple-200">
              <CrisisContextBox crisis={currentCrisis} />
              <div className="font-bold text-purple-800 text-xs">银行决定: {bankFreezeDecision==='freeze'?'暂停拨付':'继续拨付'}</div>
-             <div className="text-xs mb-2 text-slate-700">是否继续支付EPC承包商进度款 ({currentCrisis?.index === 3 ? '15%' : '20%'})?</div>
+             <div className="text-xs mb-2 text-slate-700">是否因危机暂停当前 {currentCrisis?.index === 3 ? '15%' : '20%'} 的进度款支付?</div>
              <Input type="text" placeholder="理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setOwnerPayDecisionReason(e.target.value)}/>
              <Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerPayDecision(true)}>支付</Button>
              <Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerPayDecision(false)}>暂停支付</Button>
@@ -2866,16 +3271,15 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       );
       if (stage === 5 && inspectionState === 'owner_decide_pay') return (
         <div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200">
-           <div className="font-bold text-orange-800 flex items-center gap-1 text-xs"><ClipboardCheck size={12}/> 竣工验收决策</div>
+           <div className="font-bold text-orange-800 flex items-center gap-1"><ClipboardCheck size={12}/> 竣工验收决策</div>
            <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div className="bg-white p-1 rounded">银行拨付: {bankDisbursedPct}%</div><div className="bg-white p-1 rounded">业主已付: {ownerPaidPct}%</div></div>
-           <div className="space-y-1"><div className="text-xs font-bold text-slate-700">支付合同额比例至(%) (> {ownerPaidPct}%):</div><Input type="number" className="h-12 md:h-7 text-sm" min={ownerPaidPct} max={100} onChange={e=>setOwnerPayProposal(e.target.value)}/></div>
+           <div className="space-y-1"><div className="text-xs font-bold text-slate-700">支付合同额比例至(%) ({`>= ${ownerPaidPct}%`}):</div><Input type="number" className="h-12 md:h-7 text-sm" min={ownerPaidPct} max={100} onChange={e=>setOwnerPayProposal(e.target.value)}/></div>
            <div className="space-y-1"><div className="text-xs font-bold text-slate-700">反馈意见:</div><Textarea className="h-20 md:h-12 text-sm bg-white" onChange={e=>setOwnerFeedback(e.target.value)} placeholder="解释支付比例..."/></div>
            <Button size="sm" className="w-full bg-green-600 mt-2 h-12 md:h-7 text-sm font-bold" onClick={s5OwnerSubmitProposal}>通过质量验收</Button>
         </div>
       );
     }
 
-    // --- Gov Roles ---
     if (role === 'gov') {
        if (stage === 1 && s1State === 'gov_review') {
          const hasNewMandates = govMandates.filter(id => !accumulatedGovMandates.includes(id)).length > 0;
@@ -2893,7 +3297,7 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
                 if (isOwnerSelected) return <div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center bg-slate-100 opacity-60 border-b last:border-0"><Checkbox className="h-5 w-5 md:h-4 md:w-4" checked disabled /><span className="text-sm text-slate-500 leading-none">{i.label}</span></div>
                 return (
                     <div key={i.id} className="flex gap-1 py-2 md:py-1 px-2 items-center hover:bg-slate-50 border-b last:border-0">
-                       <Checkbox className="h-5 w-5 md:h-4 md:w-4" onCheckedChange={c=>c?setGovMandates([...govMandates,i.id]):setGovMandates(govMandates.filter(x=>x!==i.id))}/>
+                       <Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={govMandates.includes(i.id)} onCheckedChange={c=>c?setGovMandates([...govMandates,i.id]):setGovMandates(govMandates.filter(x=>x!==i.id))}/>
                        <div className="flex-1 flex items-center justify-between"><span className="text-sm text-slate-700 leading-none">{i.label}</span>{isPublicReq && <Badge variant="outline" className="text-[10px] h-4 px-1 text-red-600 border-red-200 bg-red-50 leading-none">公众要求</Badge>}</div>
                     </div>
                 )
@@ -2975,7 +3379,6 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
        );
     }
 
-    // --- MDB Roles ---
     if (role === 'mdb') {
        if (stage === 2 && s2State === 'risk_assess') return (
           <div className="flex flex-col h-full">
@@ -3010,7 +3413,10 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
                 )
              })}</div>
              <div className="flex gap-2 mt-1 shrink-0">
-                <div className="flex-1"><Button size="sm" className="w-full bg-purple-600 h-12 md:h-8 text-sm font-bold" onClick={()=>s2MdbSign(true)}>签署1500万贷款协议</Button></div>
+                <div className="flex-1">
+                    <Button size="sm" className="w-full bg-purple-600 h-12 md:h-8 text-sm font-bold" onClick={()=>s2MdbSign(true)}>签署1500万贷款协议</Button>
+                    <div className="text-[10px] text-slate-500 mt-1 text-center">分阶段拨付，当前支付20%</div>
+                </div>
                 <Button size="sm" variant="outline" className="w-full flex-1 h-12 md:h-8 text-sm font-bold" onClick={()=>s2MdbSign(false)} disabled={!hasNewMandates}>驳回</Button>
              </div>
              <div className="text-[10px] text-slate-400 italic text-center shrink-0">监督成本+2万/项，政府声誉+2分/项</div>
@@ -3028,7 +3434,6 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
        );
     }
 
-    // --- EPC Roles ---
     if (role === 'epc') {
        if (stage === 3 && s3State === 'epc_bid') return (
           <div className="space-y-2 flex flex-col h-full">
@@ -3072,10 +3477,14 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
                  const isForced = s4State === 's4_epc_replan' && (isViolation || wasOriginallySelected);
                  let displayCost = item.cost;
                  if (s4State === 's4_epc_replan' && isViolation) displayCost = Math.round(item.cost * 1.2);
+                 
                  return (
-                   <div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-50' : ''}`}>
+                   <div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-100 grayscale' : ''}`}>
                        <Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isOwnerResp ? false : (isForced ? true : epcExecPlan.includes(item.id))} disabled={isOwnerResp || isForced} onCheckedChange={c=>c?setEpcExecPlan([...epcExecPlan,item.id]):setEpcExecPlan(epcExecPlan.filter(x=>x!==item.id))}/>
-                       <div className="flex flex-col justify-center"><span className="text-sm text-slate-700 leading-none">{item.label} (${displayCost}万)</span>{isViolation && <span className="text-[10px] text-red-600 font-bold leading-none">整改必选 (+20%)</span>}</div>
+                       <div className="flex flex-col justify-center">
+                           <span className="text-sm text-slate-700 leading-none">{item.label} {isOwnerResp ? '(业主负责)' : `(${displayCost}万)`}</span>
+                           {isViolation && <span className="text-[10px] text-red-600 font-bold leading-none">整改必选 (+20%)</span>}
+                       </div>
                    </div>
                  )
              })}</div>
@@ -3088,9 +3497,16 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
           <div className="space-y-2 bg-green-50 p-2 rounded border border-green-200 flex flex-col items-center justify-center h-full">
              <CheckCircle2 size={32} className="text-green-600 mb-2"/>
              <div className="font-bold text-green-800 text-center">业主ESMP审计通过</div>
-             <div className="text-xs text-slate-600 text-center mb-4">您的执行方案已通过业主审查。点击确认开始施工。</div>
-             <Button size="sm" className="w-full bg-green-600 font-bold" onClick={s4EpcConfirmAuditPass}>确认 & 开始施工</Button>
+             <div className="text-xs text-slate-600 text-center mb-4">您的执行方案已通过业主审查。点击确认进场。</div>
+             <Button size="sm" className="w-full bg-green-600 font-bold" onClick={s4EpcConfirmAuditPass}>确认进场</Button>
           </div>
+       );
+       if (stage === 4 && s4State === 'construction_start') return (
+           <div className="space-y-2 bg-yellow-50 p-2 rounded border border-yellow-200 flex flex-col items-center justify-center h-full">
+               <Loader2 size={32} className="text-yellow-600 mb-2 animate-spin"/>
+               <div className="font-bold text-yellow-800 text-center">等待施工指令</div>
+               <div className="text-xs text-slate-600 text-center">已确认进场，等待业主下达开工指令...</div>
+           </div>
        );
        if (stage === 4 && protestState === 'epc_route_check') return (
          <div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200 flex flex-col h-full">
@@ -3164,7 +3580,6 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
       );
     }
 
-    // --- NGO Roles ---
     if (role === 'ngo') {
       if (stage === 1 && s1State === 'ngo_eval') {
          const hasNewReqs = ngoRequirements.filter(id => !accumulatedNgoReqs.includes(id)).length > 0;
@@ -3325,139 +3740,6 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
     );
   };
 
-  // --- 简介模式 (Shared by Single & Multi) ---
-  if (viewMode === 'intro_only' || viewMode === 'intro') {
-      // 判断是否是多人模式以显示特定按钮
-      const isMulti = viewMode === 'intro_only';
-      
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
-            <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
-                <CardHeader className="border-b border-slate-100 pb-4">
-                    <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">{isMulti ? "多人模式" : "v7.41"}</Badge></div>
-                </CardHeader>
-                <CardContent className="space-y-8 pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="md:col-span-2 space-y-4">
-                            <div className="space-y-2"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><FileText size={20} className="text-blue-500"/> 项目背景</h3><p className="text-slate-600 leading-relaxed text-justify text-sm">{PROJECT_INFO.background}</p></div>
-                            <div className="space-y-2"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Target size={20} className="text-red-500"/> 挑战与使命</h3><p className="text-slate-600 leading-relaxed text-justify text-sm font-medium bg-slate-50 p-3 rounded border-l-4 border-slate-300">{PROJECT_INFO.mission}</p></div>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm"><h3 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Zap size={18}/> 工程范围</h3><ul className="space-y-2 text-xs text-blue-900">{PROJECT_INFO.scope_items.map((item, i) => (<li key={i} className="flex gap-2 items-start"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span><span>{item}</span></li>))}</ul></div>
-                            <div className="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm"><h3 className="font-bold text-green-800 mb-2 flex items-center gap-2"><Clock size={18}/> 并网发电进度目标</h3><div className="text-2xl font-black text-green-600">24个月</div><div className="text-xs text-green-700 mt-1 opacity-80">游戏中 1分钟 ≈ 现实 1个月</div></div>
-                        </div>
-                    </div>
-                    {/* Restored Stages for both modes */}
-                    <div className="space-y-4"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Scale size={20} className="text-purple-500"/> 模拟阶段概览</h3><div className="grid grid-cols-2 md:grid-cols-5 gap-2">{PROJECT_INFO.stages_visual.map((s) => (<div key={s.id} className={`border p-3 rounded-lg text-center hover:shadow-md transition-all group ${s.color}`}><div className="w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm flex items-center justify-center text-sm font-bold mb-2 mx-auto shadow-sm">{s.id}</div><div className="font-bold text-xs mb-1">{s.title}</div><div className="text-[10px] opacity-80 leading-tight">{s.task}</div></div>))}</div></div>
-                    
-                    <div className="pt-4 flex justify-center gap-4">
-                        <Button size="lg" variant="outline" onClick={onExit}>返回主菜单</Button>
-                        {isMulti ? (
-                             <Button size="lg" className="w-full md:w-1/3 bg-slate-900 hover:bg-slate-800 text-white shadow-xl" onClick={onNext}>下一步: 查阅角色档案</Button>
-                        ) : (
-                             <Button size="lg" className="w-full md:w-1/3 bg-slate-900 hover:bg-slate-800 text-white shadow-xl transform hover:-translate-y-1 transition-all" onClick={()=>setViewMode('roles')}>下一步: 查阅角色档案</Button>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-      );
-  }
-
-  // --- 角色档案模式 ---
-  if (viewMode === 'roles_only') {
-    return (
-        <div className="min-h-screen bg-slate-50 p-4 font-sans overflow-y-auto">
-           <div className="max-w-6xl mx-auto">
-             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                   角色档案 <Badge variant="secondary">多人模式</Badge>
-               </h2>
-               <div className="flex gap-2">
-                  <Button onClick={onExit} variant="outline">返回大厅</Button>
-               </div>
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {Object.entries(ROLE_DETAILS).map(([key, info]) => {
-                   const Icon = key==='owner'?User : key==='gov'?Landmark : key==='mdb'?Globe : key==='epc'?Building2 : Users;
-                   const styles = key==='owner'? 'border-blue-500 bg-blue-50/30' : key==='gov'? 'border-green-600 bg-green-50/30' : key==='mdb'? 'border-purple-600 bg-purple-50/30' : key==='epc'? 'border-orange-500 bg-orange-50/30' : 'border-red-500 bg-red-50/30';
-                   const iconColor = key==='owner'?'text-blue-600':key==='gov'?'text-green-600':key==='mdb'?'text-purple-600':key==='epc'?'text-orange-500':'text-red-600';
-                   const descBg = key==='owner'?'bg-blue-100 text-blue-900':key==='gov'?'bg-green-100 text-green-900':key==='mdb'?'bg-purple-100 text-purple-900':key==='epc'?'bg-orange-100 text-orange-900':'bg-red-100 text-red-900';
-                   const statBg = key==='owner'?'bg-blue-50 border-blue-200':key==='gov'?'bg-green-50 border-green-200':key==='mdb'?'bg-purple-50 border-purple-200':key==='epc'?'bg-orange-50 border-orange-200':'bg-red-50 border-red-200';
-                   
-                   const isAssigned = assignedRole === key;
-                   const isBlurred = assignedRole && assignedRole !== key;
-    
-                   return (
-                     <Card key={key} className={`border-t-8 hover:shadow-xl transition-all bg-white ${styles} min-h-[320px] ${isAssigned ? 'ring-4 ring-offset-2 ring-green-500 transform scale-105 z-10' : ''} ${isBlurred ? 'opacity-60 grayscale' : ''}`}>
-                         <CardHeader className="pb-4 relative">
-                             <CardTitle className={`flex items-center gap-3 text-xl ${iconColor}`}><div className="p-2 bg-white rounded-full shadow-sm"><Icon size={24}/></div> {INITIAL_STATES[key].label}</CardTitle>
-                             {isAssigned && <Badge className="absolute top-0 right-0 bg-green-600">您的身份</Badge>}
-                         </CardHeader>
-                         <CardContent className="space-y-5 text-base text-slate-700"><div className={`p-3 rounded-md font-bold text-sm ${descBg}`}>{info.desc}</div><div className="bg-white p-4 rounded-md text-sm italic border-l-4 border-slate-400 shadow-sm leading-relaxed">{info.task}</div><div className="grid grid-cols-2 gap-4 pt-2"><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">{key==='owner' ? "初始资金" : key==='epc' ? "初始资金" : (key==='gov'||key==='mdb') ? "初始监督成本" : "社会效益"}</span><span className="text-xl">${key==='owner' ? INITIAL_STATES[key].money : key==='epc' ? INITIAL_STATES[key].money : (key==='gov'||key==='mdb') ? INITIAL_STATES[key].cost : INITIAL_STATES[key].benefit}万</span></div><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">初始声誉</span><span className="text-xl">{INITIAL_STATES[key].reputation}分</span></div></div></CardContent>
-                     </Card>
-                   )
-                })}
-             </div>
-             <div className="text-center pb-8">
-               {assignedRole === 'owner' ? (
-                 <Button size="lg" className="bg-green-600 hover:bg-green-700 px-12 py-6 text-xl shadow-md font-bold rounded-full" onClick={onNext}>
-                     开始游戏
-                 </Button>
-               ) : (
-                 <div className="flex flex-col items-center gap-2">
-                    <Button disabled size="lg" className="bg-slate-300 text-slate-500 px-12 py-6 text-xl font-bold rounded-full">
-                       <Loader2 className="mr-2 animate-spin"/> 等待房主(业主)开始...
-                    </Button>
-                    <div className="text-xs text-slate-400">提示：房主点击开始后，您将自动进入游戏</div>
-                 </div>
-               )}
-             </div>
-           </div>
-        </div>
-      );
-  }
-
-  // --- 单机版角色档案 ---
-  if (viewMode === 'roles') return (
-    <div className="min-h-screen bg-slate-50 p-4 font-sans overflow-y-auto">
-       <div className="max-w-6xl mx-auto">
-         <div className="flex justify-between items-center mb-6">
-           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-               角色档案 
-           </h2>
-           <Button onClick={()=>setViewMode('game')} variant="outline"><Reply className="mr-2" size={16}/>返回游戏</Button>
-         </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Card className="border-t-8 border-slate-600 bg-white hover:shadow-xl transition-all min-h-[320px]"><CardHeader className="pb-4"><CardTitle className="flex items-center gap-3 text-xl text-slate-700"><div className="p-2 bg-slate-100 rounded-full shadow-sm"><ScrollText size={24}/></div> 知情同意书</CardTitle></CardHeader><CardContent className="text-sm text-slate-600 space-y-3 leading-relaxed"><p>您即将参与的是一项关于国际工程项目ESG管理的决策行为实验，由天津大学全球工程经营实验室开发。</p><p>匿名性：您的所有回答将被严格保密，系统仅记录去标识化的决策数据用于科研统计分析。</p><p>自愿性：参与本实验完全自愿，您有权在任何时候关闭页面退出。</p><p>无风险：本实验不涉及任何商业利益或个人隐私风险。</p></CardContent></Card>
-            {Object.entries(ROLE_DETAILS).map(([key, info]) => {
-               const Icon = key==='owner'?User : key==='gov'?Landmark : key==='mdb'?Globe : key==='epc'?Building2 : Users;
-               const styles = key==='owner'? 'border-blue-500 bg-blue-50/30' : key==='gov'? 'border-green-600 bg-green-50/30' : key==='mdb'? 'border-purple-600 bg-purple-50/30' : key==='epc'? 'border-orange-500 bg-orange-50/30' : 'border-red-500 bg-red-50/30';
-               const iconColor = key==='owner'?'text-blue-600':key==='gov'?'text-green-600':key==='mdb'?'text-purple-600':key==='epc'?'text-orange-500':'text-red-600';
-               const descBg = key==='owner'?'bg-blue-100 text-blue-900':key==='gov'?'bg-green-100 text-green-900':key==='mdb'?'bg-purple-100 text-purple-900':key==='epc'?'bg-orange-100 text-orange-900':'bg-red-100 text-red-900';
-               const statBg = key==='owner'?'bg-blue-50 border-blue-200':key==='gov'?'bg-green-50 border-green-200':key==='mdb'?'bg-purple-50 border-purple-200':key==='epc'?'bg-orange-50 border-orange-200':'bg-red-50 border-red-200';
-               
-               return (
-                 <Card key={key} className={`border-t-8 hover:shadow-xl transition-all bg-white ${styles} min-h-[320px]`}>
-                     <CardHeader className="pb-4 relative">
-                         <CardTitle className={`flex items-center gap-3 text-xl ${iconColor}`}><div className="p-2 bg-white rounded-full shadow-sm"><Icon size={24}/></div> {INITIAL_STATES[key].label}</CardTitle>
-                     </CardHeader>
-                     <CardContent className="space-y-5 text-base text-slate-700"><div className={`p-3 rounded-md font-bold text-sm ${descBg}`}>{info.desc}</div><div className="bg-white p-4 rounded-md text-sm italic border-l-4 border-slate-400 shadow-sm leading-relaxed">{info.task}</div><div className="grid grid-cols-2 gap-4 pt-2"><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">{key==='owner' ? "初始资金" : key==='epc' ? "初始资金" : (key==='gov'||key==='mdb') ? "初始监督成本" : "社会效益"}</span><span className="text-xl">${key==='owner' ? INITIAL_STATES[key].money : key==='epc' ? INITIAL_STATES[key].money : (key==='gov'||key==='mdb') ? INITIAL_STATES[key].cost : INITIAL_STATES[key].benefit}万</span></div><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">初始声誉</span><span className="text-xl">{INITIAL_STATES[key].reputation}分</span></div></div></CardContent>
-                 </Card>
-               )
-            })}
-         </div>
-         <div className="text-center pb-8">
-           <Button size="lg" className="bg-green-600 hover:bg-green-700 px-12 py-6 text-xl shadow-md font-bold rounded-full" onClick={() => {
-               startSim();
-           }}>
-               开始模拟
-           </Button>
-         </div>
-       </div>
-    </div>
-  );
-  
   const isResultDisplay = stage===4 && protestState==='ruling_result_display';
 
   return (
@@ -3501,7 +3783,8 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
               role="owner" label="业主" icon={User} active={mobileTab} onClick={setMobileTab} alert={financialAlerts.owner} 
               isTurn={
                   (!isResultDisplay && (activeRole === 'owner' || activeRole === 'all')) || 
-                  (stage===5 && inspectionState==='s5_ruling_result')
+                  (stage===5 && inspectionState==='s5_ruling_result') ||
+                  (stage===4 && s4State==='construction_start') 
               } 
             />
             <MobileNavBtn 
@@ -3577,17 +3860,17 @@ function SunLinkESGSimV7_39_SyncFix({ assignedRole, mode, onExit, onNext, roomNu
   );
 }
 
-function SunLinkV7_41_FinalFix() {
+function SunLinkV7_51_TransitionRestore() {
     return (
         <GameEntryWrapper>
-            <SunLinkESGSimV7_39_SyncFix />
+            <SunLinkESGSimV7_47_Refined />
         </GameEntryWrapper>
     );
 }
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_41_FinalFix />
+      		    <SunLinkV7_51_TransitionRestore />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
