@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title>4 SunLink ESG Simulator by TJU GIPC</title>
+    <title>SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -71,8 +71,6 @@ window.console = new Proxy(console, {
 
     </script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
- <script type="text/babel">
-  const ROLES = ['owner', 'gov', 'ngo', 'mdb', 'epc'];
     <style type="text/tailwindcss">
       @layer base {
         :root {
@@ -566,47 +564,101 @@ const GameEntryWrapper = ({ children }) => {
   const pollingRef = useRef(null);
 
   useEffect(() => {
-      if (mode !== 'multi' || !roomNumber) return;
+      if (window.AV) {
+          setSdkReady(true);
+          return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; 
+      script.async = true;
+      script.onload = () => {
+          console.log("LeanCloud SDK Loaded via CDN");
+          try {
+             const AV = window.AV;
+             if (AV && !AV.applicationId) {
+                 AV.init({
+                    appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
+                    appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
+                    serverURL: "https://oxljnef7.api.lncldglobal.com" 
+                 });
+             }
+             setSdkReady(true);
+          } catch (e) {
+             console.error("AV Init failed:", e);
+          }
+      };
+      script.onerror = () => {
+          console.warn("Failed to load AV SDK");
+      };
+      document.body.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+      if (!sdkReady || !window.AV) return;
+      const AV = window.AV;
+      
+      const fetchOnlineCount = async () => {
+           try {
+               const query = new AV.Query('GamePlayer');
+               const count = await query.count();
+               setOnlineCount(count);
+           } catch (e) {
+               setOnlineCount(Math.floor(Math.random() * 10) + 5);
+           }
+      };
+      fetchOnlineCount();
+      const timer = setInterval(fetchOnlineCount, 30000); // Reduced frequency
+      return () => clearInterval(timer);
+  }, [sdkReady]);
+
+  useEffect(() => {
+      if (lobbyStatus !== 'waiting' || !roomNumber || !sdkReady) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          return;
+      }
 
       const AV = window.AV;
-      if (!AV) return;
+      const rNum = parseInt(roomNumber);
 
-      const pollState = async () => {
+      const poll = async () => {
           try {
-              const q = new AV.Query('GameAction');
-              q.equalTo('room', parseInt(roomNumber));
-              // 关键：只获取最新的一条全量同步数据
-              q.equalTo('type', 'SYNC_STATE_FULL'); 
-              q.descending('createdAt');
-              q.limit(1); 
-              
-              const actions = await q.find();
-              
-              if (actions.length > 0) {
-                   const latestAction = actions[0];
-                   const latestStatePayload = latestAction.get('payload');
-                   
-                   // 可以在这里加一个时间戳检查，避免旧数据覆盖新数据
-                   // 但在目前的简单实现中，直接应用即可
-                   if (latestStatePayload) {
-                       applyStatePayload(latestStatePayload);
-                   }
-              }
+              if (!AV) return;
+              const pQuery = new AV.Query('GamePlayer');
+              pQuery.equalTo('room', rNum);
+              pQuery.ascending('createdAt');
+              const players = await pQuery.find();
+              setRoomPlayers(players.map(p => ({
+                  name: p.get('name'),
+                  role: p.get('role'),
+                  id: p.id
+              })));
 
+              const aQuery = new AV.Query('GameAction');
+              aQuery.equalTo('room', rNum);
+              aQuery.equalTo('type', 'SYNC_STATE_FULL');
+              aQuery.descending('createdAt');
+              aQuery.limit(1);
+              const latestAction = await aQuery.first();
+
+              if (latestAction) {
+                  const payload = latestAction.get('payload');
+                  if (payload && payload.stage === 1) {
+                      console.log("Detected Game Start Signal via Polling!");
+                      setAppState('playing');
+                  }
+              }
           } catch (e) {
-              console.warn("Game state polling failed (non-fatal)", e);
+              console.warn("Polling failed:", e);
           }
       };
 
-      // 首次立即执行
-      pollState();
-      // v7.45: 设置为 2000ms (2秒) 轮询一次，平衡性能与实时性
-      pollingRef.current = setInterval(pollState, 2000);
-      
+      poll();
+      pollingRef.current = setInterval(poll, 3000);
+
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
-      }
-  }, [mode, roomNumber, assignedRole]); 
+      };
+  }, [lobbyStatus, roomNumber, sdkReady]);
 
   const enterRoomReal = async () => {
       if (!sdkReady || !window.AV) return alert("系统正在初始化，请稍等两秒再试...");
@@ -644,15 +696,7 @@ const GameEntryWrapper = ({ children }) => {
           setLobbyStatus('login');
       }
   };
-	
- const startMultiIntro = () => {
-      setAppState('multi_intro');
-  };
 
-  const startMultiRoles = () => {
-      setAppState('multi_roles');
-  };
-	
   const selectRole = async (roleToSelect) => {
       if (!sdkReady) return;
       const AV = window.AV;
@@ -709,52 +753,21 @@ const GameEntryWrapper = ({ children }) => {
              const act = new Action();
              act.set('room', parseInt(roomNumber));
              act.set('type', 'SYNC_STATE_FULL');
-             
-             // 【关键修复】初始化所有列表变量，防止接收端 .map() 报错
-             const initialPayload = {
+             act.set('payload', {
                  stage: 1,
                  activeRole: 'owner',
                  s1State: 'owner_draft',
-                 
-                 // 必须显式初始化的空数组
-                 accumulatedGovMandates: [],
-                 accumulatedNgoReqs: [],
-                 accumulatedGovEscpReqs: [],
-                 accumulatedMdbEscpReqs: [],
-                 
-                 govMandates: [],
-                 govEscpMandates: [],
-                 mdbEscpMandates: [],
-                 ngoRequirements: [],
-                 
-                 ownerEsiaSelection: [],
-                 ownerEscpSelection: [],
-                 confirmedEsiaSelection: [],
-                 confirmedEscpSelection: [],
-                 confirmedParties: [],
-                 
-                 // 初始日志
                  logs: [{msg: '游戏开始，进入立项审批阶段。', type: 'info', time: '0分0秒'}]
-             };
-
-             act.set('payload', initialPayload);
-
-             // 设置 ACL 权限
-             const acl = new AV.ACL();
-             acl.setPublicReadAccess(true);
-             acl.setPublicWriteAccess(true);
-             act.setACL(acl);
-
+             });
              await act.save();
-             console.log("Initial state broadcasted by Owner.", initialPayload);
+             console.log("Initial state broadcasted by Owner.");
           } catch (e) {
              console.error("Failed to init game state", e);
-             alert("启动失败: " + e.message);
+             alert("启动失败，请重试");
              return;
           }
       }
       
-      // 本地状态切换
       setAppState('playing');
   };
 
@@ -829,79 +842,34 @@ const GameEntryWrapper = ({ children }) => {
       );
   }
   
-    if (appState === 'multi_intro') {
+  if (appState === 'multi_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {/* 【关键修复】同时传递 onStart 和 onNext，确保无论组件定义用哪个名字都能触发 */}
-             <ProjectIntroView 
-                 mode="multi" 
-                 assignedRole={myRole} 
-                 onStart={startMultiRoles} 
-                 onNext={startMultiRoles}
-             />
+             {React.cloneElement(children, { 
+                 assignedRole: myRole, 
+                 mode: 'multi', 
+                 initialViewMode: 'intro_only', 
+                 onNext: startMultiRoles,
+                 onExit: () => setAppState('cover') 
+             })}
          </div>
       );
   }
 
-    if (appState === 'multi_roles') {
-      const handleRoleViewStart = () => {
-          if (myRole === 'owner') {
-              startGame(); 
-          } else {
-              alert("请等待房主(Owner)点击开始游戏..."); 
-          }
-      };
-
-      // 【关键修复】防止 INITIAL_STATES 未定义或 myRole 为空导致的白屏
-      // 如果 myRole 为空，先渲染一个加载占位符
-      if (!myRole) return <div className="p-10 text-white">正在加载角色信息...</div>;
-
-      // 安全获取角色名称
-      const roleLabel = (window.INITIAL_STATES || INITIAL_STATES)?.[myRole]?.label || myRole;
-
+  if (appState === 'multi_roles') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {/* 【关键修复】assignedRole必传，且同时传递 onStart/onStartGame */}
-             <RoleDetailView 
-                 assignedRole={myRole} 
-                 onStartGame={handleRoleViewStart} 
-                 onStart={handleRoleViewStart}
-                 isGameRunning={false} 
-                 onBackToGame={()=>{}}
-             />
-             
-             <div className="absolute bottom-0 left-0 w-full bg-slate-800 text-white p-3 text-center text-xs flex justify-between items-center px-8 z-50 border-t border-slate-700">
-                 <span className="font-mono text-slate-300">当前身份: <span className="text-white font-bold">{roleLabel}</span></span>
-                 {myRole === 'owner' 
-                    ? <span className="text-green-400 font-bold cursor-pointer animate-pulse" onClick={handleRoleViewStart}>你是房主，点击屏幕中央或此处【进入游戏】</span>
-                    : <span className="text-yellow-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> 等待房主启动游戏...</span>
-                 }
-             </div>
+             {React.cloneElement(children, { 
+                 assignedRole: myRole, 
+                 mode: 'multi', 
+                 initialViewMode: 'roles_only',
+                 onNext: startGame,
+                 onExit: () => setAppState('cover') 
+             })}
          </div>
       );
   }
 
-      return (
-         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {/* 复用 RoleDetailView，但覆盖其 onStartGame 行为 */}
-             <RoleDetailView 
-                onStartGame={handleRoleViewStart} 
-                isGameRunning={false} // 此时游戏还没正式开始
-                onBackToGame={()=>{}} // 多人准备阶段不需要返回
-             />
-             
-             {/* 底部状态提示条 */}
-             <div className="absolute bottom-0 left-0 w-full bg-slate-800 text-white p-2 text-center text-xs flex justify-between items-center px-6">
-                 <span>当前身份: {INITIAL_STATES[myRole]?.label}</span>
-                 {myRole === 'owner' 
-                    ? <span className="text-green-400 font-bold">你是房主，请在全员准备好后点击屏幕中央的“进入游戏”</span>
-                    : <span className="text-yellow-400 animate-pulse">等待房主启动游戏...</span>
-                 }
-             </div>
-         </div>
-      );
-  }
-	
   if (appState === 'multi_lobby') {
       if (lobbyStatus === 'login') {
           return (
@@ -983,9 +951,8 @@ const GameEntryWrapper = ({ children }) => {
                         })}
                      </div>
                      
-                      <div className="mt-8 space-y-3">
+                     <div className="mt-8 space-y-3">
                          {myRole ? (
-                             // 修改点：点击后不再是无反应，而是跳转到 startMultiIntro
                              <Button className="w-full h-12 text-lg bg-green-600 hover:bg-green-700 animate-bounce" onClick={startMultiIntro}>
                                  <ArrowBigRight className="mr-2"/> 确认并下一步 (项目简介)
                              </Button>
@@ -1004,18 +971,12 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   if (appState === 'playing') {
-      // 【关键修复】确保 roomPlayers 即使为 undefined 也是空数组
-      const safePlayerList = Array.isArray(roomPlayers) ? roomPlayers : [];
-
-      // 【关键修复】添加 key={mode} 强迫 React 在模式切换时重建组件
-      // 传入 initialViewMode='game' 跳过介绍
       const gameContent = React.cloneElement(children, { 
-         key: mode || 'default', 
          assignedRole: myRole, 
          mode: mode,
          roomNumber: roomNumber,
-         playerList: safePlayerList,
-         initialViewMode: 'game', 
+         playerList: roomPlayers,
+         initialViewMode: 'game',
          onExit: () => setAppState('cover')
      });
 
@@ -1026,16 +987,7 @@ const GameEntryWrapper = ({ children }) => {
             </div>
         )
      }
-     return gameContent;
-  }
 
-     if (mode === 'single') {
-        return (
-            <div className="h-screen w-screen bg-slate-900 overflow-hidden">
-               {gameContent}
-            </div>
-        )
-     }
      return gameContent;
   }
   
@@ -1328,99 +1280,57 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       }
   }, [activeRole, mode]);
   
-    const applyStatePayload = (data) => {
+  const applyStatePayload = (data) => {
       if(!data) return;
-      // 如果当前是我的回合，且我正在操作，理论上不应被云端旧数据覆盖，
-      // 但为了保证一致性，通常我们只过滤掉"正在输入"这类临时状态。
-      // v7.45逻辑：全量信任云端最新的SYNC_STATE_FULL
-      
       const isMyTurn = assignedRole && assignedRole === data.activeRole;
 
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
       if(data.playerState) setPlayerState(data.playerState);
-      
-      // 阶段状态同步
       if(data.s1State) setS1State(data.s1State);
       if(data.s2State) setS2State(data.s2State);
       if(data.s3State) setS3State(data.s3State);
       if(data.s4State) setS4State(data.s4State);
-      if(data.inspectionState) setInspectionState(data.inspectionState); // 确保S5状态同步
-      if(data.protestState) setProtestState(data.protestState); // 确保S4危机状态同步
-
       if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
       
-      // 关键数据列表同步 (使用 !== undefined 检查以防空数组被忽略)
-      if(data.accumulatedGovMandates !== undefined) setAccumulatedGovMandates(data.accumulatedGovMandates);
-      if(data.accumulatedNgoReqs !== undefined) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
-      if(data.accumulatedGovEscpReqs !== undefined) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
-      if(data.accumulatedMdbEscpReqs !== undefined) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
+      if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
+      if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
+      if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
+      if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
       
-      // 非当前操作角色的被动同步 (即：如果是别人操作产生的数据，我必须同步)
       if (!isMyTurn || !assignedRole) {
-          if(data.govMandates !== undefined) setGovMandates(data.govMandates);
-          if(data.govEscpMandates !== undefined) setGovEscpMandates(data.govEscpMandates);
-          if(data.mdbEscpMandates !== undefined) setMdbEscpMandates(data.mdbEscpMandates);
-          if(data.ownerEsiaSelection !== undefined) setOwnerEsiaSelection(data.ownerEsiaSelection);
-          if(data.ownerEscpSelection !== undefined) setOwnerEscpSelection(data.ownerEscpSelection);
-          if(data.ngoRequirements !== undefined) setNgoRequirements(data.ngoRequirements);
-          if(data.ownerRespEsmp !== undefined) setOwnerRespEsmp(data.ownerRespEsmp);
-          if(data.epcExecPlan !== undefined) setEpcExecPlan(data.epcExecPlan);
-          if(data.ownerAuditItems !== undefined) setOwnerAuditItems(data.ownerAuditItems);
-          if(data.previousAuditItems !== undefined) setPreviousAuditItems(data.previousAuditItems);
-          
-          // S5验收相关
-          if(data.ownerPayProposal !== undefined) setOwnerPayProposal(data.ownerPayProposal);
-          if(data.ownerFeedback !== undefined) setOwnerFeedback(data.ownerFeedback);
-          if(data.epcClaimProposal !== undefined) setEpcClaimProposal(data.epcClaimProposal);
-          if(data.epcClaimReason !== undefined) setEpcClaimReason(data.epcClaimReason);
-          if(data.s5GovRuling !== undefined) setS5GovRuling(data.s5GovRuling);
-          if(data.s5GovRulingReason !== undefined) setS5GovRulingReason(data.s5GovRulingReason);
+          if(data.govMandates) setGovMandates(data.govMandates);
+          if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
+          if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
+          if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
+          if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
+          if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
+          if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
+          if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
+          if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
+          if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
       }
 
-      // 确认类数据（任何时候都应同步）
-      if(data.confirmedEsiaSelection !== undefined) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
-      if(data.confirmedEscpSelection !== undefined) setConfirmedEscpSelection(data.confirmedEscpSelection);
-      if(data.confirmedParties !== undefined) setConfirmedParties(data.confirmedParties);
-      if(data.s5ConfirmedParties !== undefined) setS5ConfirmedParties(data.s5ConfirmedParties);
+      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
+      if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
 
-      // 文本与原因类数据
       if(data.ngoDemandReason !== undefined) setNgoDemandReason(data.ngoDemandReason);
       if(data.partyOfferReason !== undefined) setPartyOfferReason(data.partyOfferReason);
-      if(data.ownerRejectReason !== undefined) setOwnerRejectReason(data.ownerRejectReason);
       
-      // 复杂对象与历史记录
-      if(data.govRulingHistory !== undefined) setGovRulingHistory(data.govRulingHistory);
-      if(data.epcBid !== undefined) setEpcBid(data.epcBid);
-      if(data.epcBidHistory !== undefined) setEpcBidHistory(data.epcBidHistory);
-      if(data.epcViolations !== undefined) setEpcViolations(data.epcViolations);
-
-      // 数值类
-      if(data.tenderDuration !== undefined) setTenderDuration(data.tenderDuration);
-      if(data.delayPenalty !== undefined) setDelayPenalty(data.delayPenalty);
-      if(data.earlyBonus !== undefined) setEarlyBonus(data.earlyBonus);
-      if(data.tenderLimitPrice !== undefined) setTenderLimitPrice(data.tenderLimitPrice);
-      if(data.ngoDemandAmount !== undefined) setNgoDemandAmount(data.ngoDemandAmount);
-      if(data.offerAmount !== undefined) setOfferAmount(data.offerAmount);
-      if(data.govRulingAmount !== undefined) setGovRulingAmount(data.govRulingAmount);
+      if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
+      if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
+      if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
       
-      // 资金进度
-      if(data.bankDisbursedPct !== undefined) setBankDisbursedPct(data.bankDisbursedPct);
-      if(data.ownerPaidPct !== undefined) setOwnerPaidPct(data.ownerPaidPct);
-      if(data.finalContractPrice !== undefined) setFinalContractPrice(data.finalContractPrice);
-
-      // 危机管理
-      if(data.crisisQueue !== undefined) setCrisisQueue(data.crisisQueue); 
-      if(data.currentCrisis !== undefined) setCurrentCrisis(data.currentCrisis); 
-      if(data.protestHandler !== undefined) setProtestHandler(data.protestHandler);
-      if(data.bankFreezeDecision !== undefined) setBankFreezeDecision(data.bankFreezeDecision);
+      if(data.ownerRespEsmp !== undefined) setOwnerRespEsmp(data.ownerRespEsmp); // Fix for multi
+      if(data.tenderDuration) setTenderDuration(data.tenderDuration);
+      if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
+      if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
+      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); 
+      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); 
       
-      // 日志同步
       if(data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);
       }
-      
-      // 启动计时器
       if (data.stage >= 1) setIsTimerRunning(true);
   };
 
@@ -1475,38 +1385,24 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       act.set('room', parseInt(roomNumber));
       act.set('type', type);
       act.set('payload', payload);
-      // 设置ACL保证所有玩家可读
-      const acl = new AV.ACL();
-      acl.setPublicReadAccess(true);
-      acl.setPublicWriteAccess(true);
-      act.setACL(acl);
-      
-      act.save().catch(console.error);
+      act.save();
   };
   
   const broadcastState = (overrides = {}) => {
       if (mode !== 'multi') return;
       
-      // 优先使用 override 中的 logs，否则使用当前 state 的 logs
       const currentLogs = overrides.logs || logs;
 
-      // 构建全量 Payload，使用三元运算符防止 undefined 覆盖现有值
       const payload = {
           stage: overrides.stage !== undefined ? overrides.stage : stage,
           activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
           playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
-          
-          // 核心阶段状态机
           s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
           s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
           s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
           s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
-          inspectionState: overrides.inspectionState !== undefined ? overrides.inspectionState : inspectionState,
-          protestState: overrides.protestState !== undefined ? overrides.protestState : protestState,
-
           lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
           
-          // 列表数据
           govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
           accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
           accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
@@ -1515,65 +1411,35 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           govEscpMandates: overrides.govEscpMandates !== undefined ? overrides.govEscpMandates : govEscpMandates,
           mdbEscpMandates: overrides.mdbEscpMandates !== undefined ? overrides.mdbEscpMandates : mdbEscpMandates,
           
-          // 选单数据
           ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
           ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
           ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
           confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
           confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
 
-          // EPC/S3/S4 数据
-          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
           epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
           ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
           previousAuditItems: overrides.previousAuditItems !== undefined ? overrides.previousAuditItems : previousAuditItems,
-          epcViolations: overrides.epcViolations !== undefined ? overrides.epcViolations : epcViolations,
-          epcBid: overrides.epcBid !== undefined ? overrides.epcBid : epcBid,
-          epcBidHistory: overrides.epcBidHistory !== undefined ? overrides.epcBidHistory : epcBidHistory,
 
-          // 文本原因
-          ownerRejectReason: overrides.ownerRejectReason !== undefined ? overrides.ownerRejectReason : ownerRejectReason,
           ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
           partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
-          
-          // 裁决历史与S5
+
           govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
           partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
           ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
-          
-          ownerPayProposal: overrides.ownerPayProposal !== undefined ? overrides.ownerPayProposal : ownerPayProposal,
-          ownerFeedback: overrides.ownerFeedback !== undefined ? overrides.ownerFeedback : ownerFeedback,
-          epcClaimProposal: overrides.epcClaimProposal !== undefined ? overrides.epcClaimProposal : epcClaimProposal,
-          epcClaimReason: overrides.epcClaimReason !== undefined ? overrides.epcClaimReason : epcClaimReason,
-          s5GovRuling: overrides.s5GovRuling !== undefined ? overrides.s5GovRuling : s5GovRuling,
-          s5GovRulingReason: overrides.s5GovRulingReason !== undefined ? overrides.s5GovRulingReason : s5GovRulingReason,
-
-          // 数值参数
+          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
           tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
-          tenderLimitPrice: overrides.tenderLimitPrice !== undefined ? overrides.tenderLimitPrice : tenderLimitPrice,
           delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
           earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
           
-          ngoDemandAmount: overrides.ngoDemandAmount !== undefined ? overrides.ngoDemandAmount : ngoDemandAmount,
-          offerAmount: overrides.offerAmount !== undefined ? overrides.offerAmount : offerAmount,
-          govRulingAmount: overrides.govRulingAmount !== undefined ? overrides.govRulingAmount : govRulingAmount,
-
-          bankDisbursedPct: overrides.bankDisbursedPct !== undefined ? overrides.bankDisbursedPct : bankDisbursedPct,
-          ownerPaidPct: overrides.ownerPaidPct !== undefined ? overrides.ownerPaidPct : ownerPaidPct,
-          finalContractPrice: overrides.finalContractPrice !== undefined ? overrides.finalContractPrice : finalContractPrice,
-
-          // 危机与流程控制
           crisisQueue: overrides.crisisQueue !== undefined ? overrides.crisisQueue : crisisQueue,
           currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
-          protestHandler: overrides.protestHandler !== undefined ? overrides.protestHandler : protestHandler,
-          bankFreezeDecision: overrides.bankFreezeDecision !== undefined ? overrides.bankFreezeDecision : bankFreezeDecision,
-          confirmedParties: overrides.confirmedParties !== undefined ? overrides.confirmedParties : confirmedParties,
-          s5ConfirmedParties: overrides.s5ConfirmedParties !== undefined ? overrides.s5ConfirmedParties : s5ConfirmedParties,
           
           logs: currentLogs 
       };
       syncToCloud('SYNC_STATE_FULL', payload);
   };
+
 
   const addFloatEffect = (role, value) => {
     const key = `${role}-${value}-${Date.now()}`;
