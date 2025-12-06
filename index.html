@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title>1 SunLink ESG Simulator by TJU GIPC</title>
+    <title>2 SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -799,29 +799,44 @@ const GameEntryWrapper = ({ children }) => {
   if (appState === 'multi_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {/* 复用 ProjectIntroView，但在多人模式下，onNext 指向 startMultiRoles */}
-             {React.cloneElement(children, { 
-                 assignedRole: myRole, 
-                 mode: 'multi', 
-                 initialViewMode: 'intro_only', // 通知子组件只显示简介
-                 onNext: startMultiRoles,       // 点击下一步跳转到角色档案
-                 onExit: () => setAppState('cover') 
-             })}
+             {/* 直接渲染项目介绍组件 */}
+             <ProjectIntroView 
+                 mode="multi" 
+                 assignedRole={myRole} 
+                 onStart={startMultiRoles} // 点击下一步，进入角色页
+             />
          </div>
       );
   }
 
   if (appState === 'multi_roles') {
-      // 定义点击“进入游戏”时的行为
       const handleRoleViewStart = () => {
           if (myRole === 'owner') {
-              startGame(); // 房主触发广播
+              startGame(); // 房主广播开始信号
           } else {
               alert("请等待房主(Owner)点击开始游戏..."); 
-              // 非房主其实不需要点击，GameEntryWrapper 的轮询(Polling)检测到房主开始后，
-              // 会自动将 appState 切换为 'playing'，从而自动进入游戏。
           }
       };
+
+      return (
+         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
+             {/* 直接渲染角色档案组件 */}
+             <RoleDetailView 
+                 onStartGame={handleRoleViewStart} 
+                 isGameRunning={false} 
+                 onBackToGame={()=>{}}
+             />
+             {/* 底部状态条 */}
+             <div className="absolute bottom-0 left-0 w-full bg-slate-800 text-white p-2 text-center text-xs flex justify-between items-center px-6 z-50">
+                 <span>当前身份: {INITIAL_STATES[myRole]?.label || myRole}</span>
+                 {myRole === 'owner' 
+                    ? <span className="text-green-400 font-bold">你是房主，全员准备好后请点击中间的“进入游戏”</span>
+                    : <span className="text-yellow-400 animate-pulse">等待房主启动游戏...</span>
+                 }
+             </div>
+         </div>
+      );
+  }
 
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -946,12 +961,14 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   if (appState === 'playing') {
+      // 关键：传入 initialViewMode="game"
+      // 这样主组件就不会再显示一次介绍或角色页，而是直接进入 Dashboard
       const gameContent = React.cloneElement(children, { 
          assignedRole: myRole, 
          mode: mode,
          roomNumber: roomNumber,
          playerList: roomPlayers,
-         initialViewMode: 'game',
+         initialViewMode: 'game', // 强制进入游戏视图
          onExit: () => setAppState('cover')
      });
 
@@ -962,7 +979,6 @@ const GameEntryWrapper = ({ children }) => {
             </div>
         )
      }
-
      return gameContent;
   }
   
