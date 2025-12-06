@@ -1,207 +1,25 @@
-
-	      <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
   <head>
-    <title>SunLink ESG Simulator by TJU GIPC</title>
+    <title>1 SunLink ESG Simulator by TJU GIPC (Multiplayer Fixed)</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <script type="importmap">
-      {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
-    </script>
-
-    <script>
-      window.addEventListener("error", function (event) {
-        const errorObj = {
-          message: event.message,
-          source: event.filename,
-          lineno: event.lineno,
-          colno: event.colno,
-          stack: event.error ? event.error.stack : null
-        };
-        window.parent.postMessage(
-          { action: "error", error: JSON.stringify(errorObj) },
-          "*"
-        );
-        event.preventDefault();
-      });
-
-  function handleImportError(error) {
-    throw new Error('Import module failed: ' + error.target.src);
-  }
-
-  const observer = new MutationObserver(mutations => {
-    mutations.forEach(mutation => {
-      mutation.addedNodes.forEach(node => {
-        if (node.tagName === 'SCRIPT' && node.type === 'module') {
-          node.onerror = handleImportError;
-        }
-      });
-    });
-  });
-
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-
-  document.querySelectorAll('script[type="module"]').forEach(script => {
-    script.onerror = handleImportError;
-  });
-
-  
-window.console = new Proxy(console, {
-  get(target, prop) {
-    if (['log', 'warn', 'error'].includes(prop)) {
-      return new Proxy(target[prop], {
-        apply(fn, thisArg, args) {
-          fn.apply(thisArg, args);
-          window.parent.postMessage({ action: 'console', 
-            type: prop, 
-            args: args.map((arg) => {
-              try {
-                return JSON.stringify(arg).replace(/^["']|["']$/g, '');
-              } catch (e) {
-                return arg;
-              }
-            }) 
-          }, '*');
-        }
-      });
-    }
-    return target[prop];
-  }
-});
-
-
-    </script>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
-    <style type="text/tailwindcss">
-      @layer base {
-        :root {
-          --background: 0 0% 100%;
-          --foreground: 222.2 47.4% 11.2%;
-
-          --muted: 210 40% 96.1%;
-          --muted-foreground: 215.4 16.3% 46.9%;
-
-          --popover: 0 0% 100%;
-          --popover-foreground: 222.2 47.4% 11.2%;
-
-          --border: 214.3 31.8% 91.4%;
-          --input: 214.3 31.8% 91.4%;
-
-          --card: 0 0% 100%;
-          --card-foreground: 222.2 47.4% 11.2%;
-
-          --primary: 222.2 47.4% 11.2%;
-          --primary-foreground: 210 40% 98%;
-
-          --secondary: 210 40% 96.1%;
-          --secondary-foreground: 222.2 47.4% 11.2%;
-
-          --accent: 210 40% 96.1%;
-          --accent-foreground: 222.2 47.4% 11.2%;
-
-          --destructive: 0 100% 50%;
-          --destructive-foreground: 210 40% 98%;
-
-          --ring: 215 20.2% 65.1%;
-
-          --radius: 0.5rem;
-        }
-
-        .dark {
-          --background: 224 71% 4%;
-          --foreground: 213 31% 91%;
-
-          --muted: 223 47% 11%;
-          --muted-foreground: 215.4 16.3% 56.9%;
-
-          --accent: 216 34% 17%;
-          --accent-foreground: 210 40% 98%;
-
-          --popover: 224 71% 4%;
-          --popover-foreground: 215 20.2% 65.1%;
-
-          --border: 216 34% 17%;
-          --input: 216 34% 17%;
-
-          --card: 224 71% 4%;
-          --card-foreground: 213 31% 91%;
-
-          --primary: 210 40% 98%;
-          --primary-foreground: 222.2 47.4% 1.2%;
-
-          --secondary: 222.2 47.4% 11.2%;
-          --secondary-foreground: 210 40% 98%;
-
-          --destructive: 0 63% 31%;
-          --destructive-foreground: 210 40% 98%;
-
-          --ring: 216 34% 17%;
-
-          --radius: 0.5rem;
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.3.1",
+          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+          "lucide-react": "https://esm.sh/lucide-react?external=react,react-dom"
         }
       }
-    </style>
-    <script type="module">
-          import defaultTheme from "tailwindcss/defaultTheme"
-          import tailwindcssAnimate from "tailwindcss-animate"
+    </script>
 
-          const fontFamily = defaultTheme.fontFamily;
-
-          tailwind.config = {
-            darkMode: ["class"],
-        content: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
         theme: {
-          container: {
-            center: true,
-            padding: "2rem",
-            screens: {
-              "2xl": "1400px",
-            },
-          },
           extend: {
-            colors: {
-              border: "hsl(var(--border))",
-              input: "hsl(var(--input))",
-              ring: "hsl(var(--ring))",
-              background: "hsl(var(--background))",
-              foreground: "hsl(var(--foreground))",
-              primary: {
-                DEFAULT: "hsl(var(--primary))",
-                foreground: "hsl(var(--primary-foreground))",
-              },
-              secondary: {
-                DEFAULT: "hsl(var(--secondary))",
-                foreground: "hsl(var(--secondary-foreground))",
-              },
-              destructive: {
-                DEFAULT: "hsl(var(--destructive))",
-                foreground: "hsl(var(--destructive-foreground))",
-              },
-              muted: {
-                DEFAULT: "hsl(var(--muted))",
-                foreground: "hsl(var(--muted-foreground))",
-              },
-              accent: {
-                DEFAULT: "hsl(var(--accent))",
-                foreground: "hsl(var(--accent-foreground))",
-              },
-              popover: {
-                DEFAULT: "hsl(var(--popover))",
-                foreground: "hsl(var(--popover-foreground))",
-              },
-              card: {
-                DEFAULT: "hsl(var(--card))",
-                foreground: "hsl(var(--card-foreground))",
-              },
-            },
-            borderRadius: {
-              lg: `var(--radius)`,
-              md: `calc(var(--radius) - 2px)`,
-              sm: "calc(var(--radius) - 4px)",
-            },
-            fontFamily: {
-              sans: [...fontFamily.sans],
-            },
-
             keyframes: {
               "accordion-down": {
                 from: { height: "0" },
@@ -218,40 +36,136 @@ window.console = new Proxy(console, {
             },
           },
         },
-        plugins: [tailwindcssAnimate]
       }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.27.0/babel.min.js"></script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js"></script>
   </head>
-  <body>
+  <body class="bg-slate-50">
     <div id="root"></div>
+
     <script type="text/babel" data-type="module">
-      		  import {createRoot} from "react-dom/client";
-            
-      		  
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Button } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Checkbox } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Input } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Badge } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Alert, AlertTitle, AlertDescription } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { ScrollArea } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Textarea } from "https://esm.sh/shadcdn?external=react,react-dom";
+      import React, { useState, useEffect, useRef } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { 
+        User, Building2, Landmark, Globe, Users, Activity, 
+        ArrowRight, FileText, CheckCircle2, MapPin, 
+        Banknote, Clock, ShieldAlert, AlertTriangle,
+        Timer, Gavel, BookOpen, Reply,
+        ClipboardCheck, Award, Megaphone, Handshake, Eye,
+        Zap, HardHat, ListChecks,
+        PieChart, BarChart3, ScrollText, Target, Scale,
+        LogIn, Users2, Loader2, Network,
+        UserPlus, ArrowBigRight, Info
+      } from 'lucide-react';
 
-import { 
-  User, Building2, Landmark, Globe, Users, Activity, 
-  ArrowRight, FileText, CheckCircle2, MapPin, 
-  Banknote, Clock, ShieldAlert, AlertTriangle,
-  Timer, Gavel, BookOpen, Reply,
-  ClipboardCheck, Award, Megaphone, Handshake, Eye,
-  Zap, HardHat, ListChecks,
-  PieChart, BarChart3, ScrollText, Target, Scale,
-  LogIn, Users2, Loader2, Network,
-  UserPlus, ArrowBigRight, Info
-} from 'lucide-react';
+      // --- UI Component Polyfills (Replacing the broken shadcdn imports) ---
+      
+      const cn = (...classes) => classes.filter(Boolean).join(' ');
 
-// --- 静态配置 ---
+      const Card = ({ className, children }) => (
+        <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm bg-white", className)}>
+          {children}
+        </div>
+      );
+      
+      const CardHeader = ({ className, children }) => (
+        <div className={cn("flex flex-col space-y-1.5 p-6", className)}>
+          {children}
+        </div>
+      );
+      
+      const CardTitle = ({ className, children }) => (
+        <h3 className={cn("text-2xl font-semibold leading-none tracking-tight", className)}>
+          {children}
+        </h3>
+      );
+      
+      const CardContent = ({ className, children }) => (
+        <div className={cn("p-6 pt-0", className)}>
+          {children}
+        </div>
+      );
+
+      const Button = ({ className, variant = "default", size = "default", children, ...props }) => {
+        const variants = {
+          default: "bg-slate-900 text-white hover:bg-slate-900/90",
+          destructive: "bg-red-500 text-white hover:bg-red-500/90",
+          outline: "border border-slate-200 bg-white hover:bg-slate-100 text-slate-900",
+          secondary: "bg-slate-100 text-slate-900 hover:bg-slate-100/80",
+          ghost: "hover:bg-slate-100 hover:text-slate-900",
+        };
+        const sizes = {
+          default: "h-10 px-4 py-2",
+          sm: "h-9 rounded-md px-3",
+          lg: "h-11 rounded-md px-8",
+          icon: "h-10 w-10",
+        };
+        return (
+          <button 
+            className={cn("inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50", variants[variant] || variants.default, sizes[size] || sizes.default, className)}
+            {...props}
+          >
+            {children}
+          </button>
+        );
+      };
+
+      const Checkbox = ({ className, checked, onCheckedChange, disabled }) => (
+        <input 
+          type="checkbox" 
+          className={cn("peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 accent-slate-900", className)}
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onCheckedChange && onCheckedChange(e.target.checked)}
+        />
+      );
+
+      const Input = ({ className, ...props }) => (
+        <input
+          className={cn("flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", className)}
+          {...props}
+        />
+      );
+
+      const Textarea = ({ className, ...props }) => (
+        <textarea
+          className={cn("flex min-h-[80px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", className)}
+          {...props}
+        />
+      );
+
+      const Badge = ({ className, variant="default", children }) => {
+        const variants = {
+          default: "border-transparent bg-slate-900 text-slate-50 hover:bg-slate-900/80",
+          secondary: "border-transparent bg-slate-100 text-slate-900 hover:bg-slate-100/80",
+          destructive: "border-transparent bg-red-500 text-slate-50 hover:bg-red-500/80",
+          outline: "text-slate-950 border-slate-200 border",
+        };
+        return (
+          <div className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2", variants[variant] || variants.default, className)}>
+            {children}
+          </div>
+        );
+      };
+
+      const Alert = ({ className, variant="default", children }) => (
+        <div role="alert" className={cn("relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-slate-950", className)}>
+          {children}
+        </div>
+      );
+
+      const AlertTitle = ({ className, children }) => (
+        <h5 className={cn("mb-1 font-medium leading-none tracking-tight", className)}>{children}</h5>
+      );
+
+      const AlertDescription = ({ className, children }) => (
+        <div className={cn("text-sm [&_p]:leading-relaxed", className)}>{children}</div>
+      );
+
+      // --- 静态配置 ---
 const PROJECT_INFO = {
   name: "SunLink 光伏+输变电项目", 
   location: "A国 (虚构发展中国家) - 北部干旱荒漠与'绿洲'湿地保护区的交界地带",
@@ -564,33 +478,35 @@ const GameEntryWrapper = ({ children }) => {
   const pollingRef = useRef(null);
 
   useEffect(() => {
+      // 检查 LeanCloud 是否已经加载
+      const checkAV = () => {
+         if (window.AV) {
+            try {
+               const AV = window.AV;
+               if (!AV.applicationId) {
+                   AV.init({
+                      appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
+                      appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
+                      serverURL: "https://oxljnef7.api.lncldglobal.com" 
+                   });
+               }
+               setSdkReady(true);
+            } catch(e) { console.error("AV init error:", e) }
+         }
+      };
+      
       if (window.AV) {
-          setSdkReady(true);
-          return;
+          checkAV();
+      } else {
+          // 等待脚本加载
+          const interval = setInterval(() => {
+              if (window.AV) {
+                  clearInterval(interval);
+                  checkAV();
+              }
+          }, 500);
+          return () => clearInterval(interval);
       }
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; 
-      script.async = true;
-      script.onload = () => {
-          console.log("LeanCloud SDK Loaded via CDN");
-          try {
-             const AV = window.AV;
-             if (AV && !AV.applicationId) {
-                 AV.init({
-                    appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
-                    appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
-                    serverURL: "https://oxljnef7.api.lncldglobal.com" 
-                 });
-             }
-             setSdkReady(true);
-          } catch (e) {
-             console.error("AV Init failed:", e);
-          }
-      };
-      script.onerror = () => {
-          console.warn("Failed to load AV SDK");
-      };
-      document.body.appendChild(script);
   }, []);
 
   useEffect(() => {
@@ -607,7 +523,7 @@ const GameEntryWrapper = ({ children }) => {
            }
       };
       fetchOnlineCount();
-      const timer = setInterval(fetchOnlineCount, 30000); // Reduced frequency
+      const timer = setInterval(fetchOnlineCount, 30000); 
       return () => clearInterval(timer);
   }, [sdkReady]);
 
@@ -623,6 +539,7 @@ const GameEntryWrapper = ({ children }) => {
       const poll = async () => {
           try {
               if (!AV) return;
+              // Poll Players
               const pQuery = new AV.Query('GamePlayer');
               pQuery.equalTo('room', rNum);
               pQuery.ascending('createdAt');
@@ -633,6 +550,7 @@ const GameEntryWrapper = ({ children }) => {
                   id: p.id
               })));
 
+              // Poll Game Start
               const aQuery = new AV.Query('GameAction');
               aQuery.equalTo('room', rNum);
               aQuery.equalTo('type', 'SYNC_STATE_FULL');
@@ -642,7 +560,7 @@ const GameEntryWrapper = ({ children }) => {
 
               if (latestAction) {
                   const payload = latestAction.get('payload');
-                  if (payload && payload.stage === 1) {
+                  if (payload && payload.stage >= 1) {
                       console.log("Detected Game Start Signal via Polling!");
                       setAppState('playing');
                   }
@@ -653,7 +571,7 @@ const GameEntryWrapper = ({ children }) => {
       };
 
       poll();
-      pollingRef.current = setInterval(poll, 3000);
+      pollingRef.current = setInterval(poll, 2000); // 增加轮询频率
 
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -1039,7 +957,7 @@ const TransitionOverlay = ({ isVisible, stageTitle, extraText, onComplete }) => 
     
     useEffect(() => {
         if (isVisible) {
-            setCount(3); // 重置倒计时
+            setCount(3); 
             const timer = setInterval(() => {
                 setCount(prev => {
                     if (prev <= 1) {
@@ -1051,12 +969,10 @@ const TransitionOverlay = ({ isVisible, stageTitle, extraText, onComplete }) => 
             }, 1000);
             return () => clearInterval(timer);
         }
-    }, [isVisible]); // 监听 isVisible
+    }, [isVisible]); 
 
-    // 当倒计时结束时调用 onComplete
     useEffect(() => {
         if (isVisible && count === 0) {
-            // 增加一点微小的延迟，防止闪烁
             const timeout = setTimeout(() => {
                 onComplete();
             }, 100);
@@ -1282,7 +1198,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   
   const applyStatePayload = (data) => {
       if(!data) return;
-      const isMyTurn = assignedRole && assignedRole === data.activeRole;
+      // const isMyTurn = assignedRole && assignedRole === data.activeRole;
 
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
@@ -1293,40 +1209,46 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.s4State) setS4State(data.s4State);
       if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
       
+      // Sync S1 Data
+      if(data.govMandates) setGovMandates(data.govMandates);
       if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
       if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
+      if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
+      if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
+      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
+      
+      // Sync S2 Data
+      if(data.riskLevel) setRiskLevel(data.riskLevel);
       if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
       if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
-      
-      if (!isMyTurn || !assignedRole) {
-          if(data.govMandates) setGovMandates(data.govMandates);
-          if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
-          if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
-          if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
-          if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
-          if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
-          if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
-          if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
-          if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
-          if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
-      }
-
-      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
+      if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
+      if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
+      if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
       if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
+      
+      // Sync S3 Data (CRITICAL FIX: Syncing Bid Data)
+      if(data.tenderLimitPrice) setTenderLimitPrice(data.tenderLimitPrice);
+      if(data.tenderDuration) setTenderDuration(data.tenderDuration);
+      if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
+      if(data.epcBid) setEpcBid(data.epcBid);
+      if(data.epcBidHistory) setEpcBidHistory(data.epcBidHistory);
+      if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
+      if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
 
+      // Sync S4 Data
+      if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
+      if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
+      if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
+      if(data.epcViolations) setEpcViolations(data.epcViolations);
+      if(data.crisisQueue) setCrisisQueue(data.crisisQueue);
+      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis);
+
+      // Sync Crisis Logic
       if(data.ngoDemandReason !== undefined) setNgoDemandReason(data.ngoDemandReason);
       if(data.partyOfferReason !== undefined) setPartyOfferReason(data.partyOfferReason);
-      
       if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
       if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
       if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
-      
-      if(data.ownerRespEsmp !== undefined) setOwnerRespEsmp(data.ownerRespEsmp); // Fix for multi
-      if(data.tenderDuration) setTenderDuration(data.tenderDuration);
-      if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
-      if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
-      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); 
-      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); 
       
       if(data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);
@@ -1345,21 +1267,12 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
               const q = new AV.Query('GameAction');
               q.equalTo('room', parseInt(roomNumber));
               q.descending('createdAt');
-              q.limit(5); 
+              q.limit(1); // Get ONLY the latest action
               
-              const actions = await q.find();
-              const reversedActions = [...actions].reverse();
-              
-              let latestStatePayload = null;
-              
-              reversedActions.forEach(act => {
-                   if (act.get('type') === 'SYNC_STATE_FULL') {
-                       latestStatePayload = act.get('payload');
-                   }
-              });
+              const latestAction = await q.first();
 
-              if (latestStatePayload) {
-                   applyStatePayload(latestStatePayload);
+              if (latestAction && latestAction.get('type') === 'SYNC_STATE_FULL') {
+                   applyStatePayload(latestAction.get('payload'));
               }
 
           } catch (e) {
@@ -1368,12 +1281,12 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       };
 
       pollState();
-      pollingRef.current = setInterval(pollState, 3000);
+      pollingRef.current = setInterval(pollState, 2000); // 2 seconds poll
       
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
       }
-  }, [mode, roomNumber, assignedRole]); 
+  }, [mode, roomNumber]); 
 
   const syncToCloud = (type, payload) => {
       if (mode !== 'multi') return;
@@ -1388,54 +1301,61 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       act.save();
   };
   
+  // FIX: broadcastState now accepts overrides to solve closure staleness
   const broadcastState = (overrides = {}) => {
       if (mode !== 'multi') return;
       
-      const currentLogs = overrides.logs || logs;
-
       const payload = {
           stage: overrides.stage !== undefined ? overrides.stage : stage,
           activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
           playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
-          s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
-          s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
-          s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
-          s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
+          logs: overrides.logs || logs,
           lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
           
+          // S1
+          s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
+          ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
+          confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
+          ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
           govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
-          accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
-          accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
-          accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs !== undefined ? overrides.accumulatedGovEscpReqs : accumulatedGovEscpReqs,
-          accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs !== undefined ? overrides.accumulatedMdbEscpReqs : accumulatedMdbEscpReqs,
+          accumulatedGovMandates: overrides.accumulatedGovMandates || accumulatedGovMandates,
+          accumulatedNgoReqs: overrides.accumulatedNgoReqs || accumulatedNgoReqs,
+
+          // S2
+          s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
+          riskLevel: overrides.riskLevel !== undefined ? overrides.riskLevel : riskLevel,
+          ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
+          confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
           govEscpMandates: overrides.govEscpMandates !== undefined ? overrides.govEscpMandates : govEscpMandates,
           mdbEscpMandates: overrides.mdbEscpMandates !== undefined ? overrides.mdbEscpMandates : mdbEscpMandates,
-          
-          ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
-          ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
-          ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
-          confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
-          confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
+          accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs || accumulatedGovEscpReqs,
+          accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs || accumulatedMdbEscpReqs,
 
-          epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
-          ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
-          previousAuditItems: overrides.previousAuditItems !== undefined ? overrides.previousAuditItems : previousAuditItems,
-
-          ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
-          partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
-
-          govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
-          partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
-          ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
-          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
+          // S3
+          s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
+          tenderLimitPrice: overrides.tenderLimitPrice !== undefined ? overrides.tenderLimitPrice : tenderLimitPrice,
           tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
           delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
           earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
-          
-          crisisQueue: overrides.crisisQueue !== undefined ? overrides.crisisQueue : crisisQueue,
-          currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
-          
-          logs: currentLogs 
+          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
+          epcBid: overrides.epcBid !== undefined ? overrides.epcBid : epcBid,
+          epcBidHistory: overrides.epcBidHistory !== undefined ? overrides.epcBidHistory : epcBidHistory,
+
+          // S4
+          s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
+          epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
+          ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
+          epcViolations: overrides.epcViolations !== undefined ? overrides.epcViolations : epcViolations,
+          previousAuditItems: overrides.previousAuditItems || previousAuditItems,
+          crisisQueue: overrides.crisisQueue || crisisQueue,
+          currentCrisis: overrides.currentCrisis || currentCrisis,
+
+          // Crisis
+          ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
+          partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
+          govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
+          partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
+          ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
       };
       syncToCloud('SYNC_STATE_FULL', payload);
   };
@@ -1741,7 +1661,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       const newLogs = getUpdatedLogs(`政府批准ESIA。政府声誉变动: ${netRepChange}`, netRepChange >= 0 ? 'green' : 'orange');
       broadcastState({ logs: newLogs, playerState: newState });
       
-      // 恢复：进入Stage 2的过渡
       triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程");
       
       return; 
@@ -1806,6 +1725,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     broadcastState({ 
         s2State: 'owner_escp', 
         activeRole: 'owner',
+        riskLevel: lvl, // Fixed: Pass riskLevel
         lastActionInfo: newLastAction,
         logs: newLogs
     });
@@ -1936,6 +1856,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
 
   const s3OwnerTender = () => {
+    // Logic updated to ensure broadcast
     setEpcRespEsmp(ESMP_LIBRARY.map(i => i.id).filter(id => !ownerRespEsmp.includes(id)));
     
     const selfManagedCount = ownerRespEsmp.length;
@@ -1960,6 +1881,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
         lastActionInfo: newLastAction,
         ownerRespEsmp: ownerRespEsmp, 
         tenderDuration: tenderDuration,
+        tenderLimitPrice: tenderLimitPrice,
         delayPenalty: delayPenalty,
         earlyBonus: earlyBonus,
         logs: newLogs
@@ -1969,12 +1891,24 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   const s3EpcBid = () => {
     setOwnerRejectReason("");
     const newBid = { ...epcBid, duration: tenderDuration, round: epcBidHistory.length + 1 };
-    setEpcBidHistory([...epcBidHistory, newBid]);
-    setS3State('owner_eval'); setActiveRole('owner');
-    const newLastAction = updateLastAction('epc', `投标报价: $${epcBid.price}万`);
-    const newLogs = getUpdatedLogs(`S3: EPC承包商提交第${newBid.round}轮报价: $${epcBid.price}万。`, 'orange');
+    const newHistory = [...epcBidHistory, newBid];
     
-    broadcastState({ s3State: 'owner_eval', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
+    setEpcBid(newBid);
+    setEpcBidHistory(newHistory);
+
+    setS3State('owner_eval'); setActiveRole('owner');
+    const newLastAction = updateLastAction('epc', `投标报价: $${newBid.price}万`);
+    const newLogs = getUpdatedLogs(`S3: EPC承包商提交第${newBid.round}轮报价: $${newBid.price}万。`, 'orange');
+    
+    // Explicitly passing bid data
+    broadcastState({ 
+        s3State: 'owner_eval', 
+        activeRole: 'owner', 
+        lastActionInfo: newLastAction, 
+        logs: newLogs,
+        epcBid: newBid,
+        epcBidHistory: newHistory
+    });
   };
 
   const s3OwnerEval = (accept) => {
@@ -2051,7 +1985,9 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     
     setPreviousAuditItems([...ownerAuditItems]); 
 
+    // Re-calculating locally for broadcast
     const violations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
+    setEpcViolations(violations);
     
     let newLastAction;
     let newLogs;
@@ -2063,12 +1999,11 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
        newState = updateStat('epc', 'reputation', -repDrop, newState);
        setPlayerState(newState); 
 
-       setEpcViolations(violations);
        setS4State('s4_punish_decide'); setActiveRole('owner'); 
        newLastAction = updateLastAction('owner', `发现${violations.length}项违规`);
        newLogs = getUpdatedLogs(`S4: 审计发现 ${violations.length} 项违规！承包商声誉 -${repDrop}。`, 'red');
        
-       broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction, logs: newLogs, previousAuditItems: ownerAuditItems });
+       broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction, logs: newLogs, previousAuditItems: ownerAuditItems, epcViolations: violations });
     } else {
        newLastAction = updateLastAction('owner', '审计通过');
        newLogs = getUpdatedLogs('S4: 审计通过。等待承包商确认。', 'green');
@@ -2105,7 +2040,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
      setS4State('s4_owner_reaudit'); setActiveRole('owner');
      const newLastAction = updateLastAction('epc', '提交整改方案');
      const newLogs = getUpdatedLogs('S4: EPC承包商提交整改方案。', 'orange');
-     broadcastState({ s4State: 's4_owner_reaudit', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
+     broadcastState({ s4State: 's4_owner_reaudit', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, epcExecPlan: epcExecPlan });
   };
 
   const s4OwnerReaudit = () => {
@@ -2136,7 +2071,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
             alert(`复查不通过！发现 ${currentViolations.length} 项遗漏。请责令整改或选择风险通过。`);
 
             setS4State('s4_punish_decide'); setActiveRole('owner');
-            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, playerState: newState });
+            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, playerState: newState, epcViolations: currentViolations });
         } else {
              newLastAction = updateLastAction('owner', '复查通过');
              newLogs = getUpdatedLogs(`${logPrefix}整改复查通过，确认无遗漏。`, 'green');
@@ -2151,7 +2086,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
             newLogs = getUpdatedLogs(`${logPrefix}复查检测到 ${currentViolations.length} 项未执行。`, 'red');
             alert(`复查不通过！仍有未执行项目。`);
             setS4State('s4_punish_decide'); setActiveRole('owner');
-            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, playerState: newState });
+            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, playerState: newState, epcViolations: currentViolations });
          } else {
              newLastAction = updateLastAction('owner', '复查通过');
              newLogs = getUpdatedLogs(`${logPrefix}整改复查通过。`, 'green');
@@ -2206,7 +2141,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
     const newLogs = getUpdatedLogs(`资金流转: 业主支付预付款$${ownerPay}万(20%)。`, 'green');
     
-    broadcastState({ crisisQueue: queue, logs: newLogs });
+    broadcastState({ crisisQueue: queue, logs: newLogs, playerState: newState });
   }
 
   const startNextCrisis = (queue, index) => {
@@ -2856,7 +2791,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.48</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.49 (Sync Fix)</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
