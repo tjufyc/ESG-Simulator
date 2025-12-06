@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title>SunLink ESG Simulator by TJU GIPC</title>
+    <title> 1 SunLink ESG Simulator by TJU GIPC </title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -611,54 +611,148 @@ const GameEntryWrapper = ({ children }) => {
       return () => clearInterval(timer);
   }, [sdkReady]);
 
-  useEffect(() => {
-      if (lobbyStatus !== 'waiting' || !roomNumber || !sdkReady) {
-          if (pollingRef.current) clearInterval(pollingRef.current);
-          return;
+// Polling Logic for Game State (Fixes 403)
+useEffect(() => {
+  if (mode !== 'multi' || !roomNumber) return;
+  const AV = window.AV;
+  if (!AV) return;
+
+  // v7.45 优化: 轮询频率降低到 2.5 秒，减少 API 请求次数
+  const POLLING_INTERVAL = 2500; 
+  let intervalId;
+
+  const pollState = async () => {
+    try {
+      const q = new AV.Query('GameAction');
+      q.equalTo('room', parseInt(roomNumber));
+      q.descending('createdAt');
+      // v7.45 优化: 每次获取最近 10 条记录，确保能抓取到最近的 SYNC_STATE_FULL
+      q.limit(10); 
+      const actions = await q.find();
+
+      // Process logs (reverse order because actions are descending)
+      const reversedActions = [...actions].reverse();
+
+      let latestStatePayload = null;
+      let newLogs = logs;
+      let latestActionTime = 0;
+      
+      // 遍历所有动作，找到最新的完整状态
+      reversedActions.forEach(act => {
+        const time = new Date(act.createdAt).getTime();
+        if (time > latestActionTime) {
+            latestActionTime = time;
+        }
+        
+        if (act.get('type') === 'SYNC_STATE_FULL') {
+          latestStatePayload = act.get('payload');
+        } 
+        
+        // 额外的操作类型可以按需处理，但 SYNC_STATE_FULL 已经包含了所有信息
+      });
+
+      if (latestStatePayload) {
+        // v7.45 修复逻辑：只在接收到的最新状态比当前状态新时才更新
+        if (latestActionTime > lastSyncTime) {
+          // 更新日志和最后同步时间
+          newLogs = latestStatePayload.logs || logs;
+          setLastSyncTime(latestActionTime); 
+          
+          // v7.45 修复：应用收到的最新状态
+          setStage(latestStatePayload.stage);
+          setActiveRole(latestStatePayload.activeRole);
+          setPlayerState(latestStatePayload.playerState);
+          setS1State(latestStatePayload.s1State);
+          setS2State(latestStatePayload.s2State);
+          setS3State(latestStatePayload.s3State);
+          setS4State(latestStatePayload.s4State);
+          setInspectionState(latestStatePayload.inspectionState);
+          setLogs(newLogs);
+          setLastActionInfo(latestStatePayload.lastActionInfo);
+          setIsTimerRunning(latestStatePayload.isTimerRunning);
+          setGameTime(latestStatePayload.gameTime);
+          
+          // 更新 S4 危机状态
+          setCurrentCrisis(latestStatePayload.currentCrisis);
+          setProtestState(latestStatePayload.protestState);
+          
+          // 更新其他所有状态变量... (省略，确保所有状态都被更新)
+          // 确保所有在 broadcastState 中的变量都在此被更新，以实现完整同步
+
+          // S1 & S2
+          setOwnerEsiaSelection(latestStatePayload.ownerEsiaSelection);
+          setConfirmedEsiaSelection(latestStatePayload.confirmedEsiaSelection);
+          setNgoRequirements(latestStatePayload.ngoRequirements);
+          setGovMandates(latestStatePayload.govMandates);
+          setAccumulatedGovMandates(latestStatePayload.accumulatedGovMandates);
+          setAccumulatedNgoReqs(latestStatePayload.accumulatedNgoReqs);
+          setRiskLevel(latestStatePayload.riskLevel);
+          setMdbEscpReqs(latestStatePayload.mdbEscpReqs);
+          setAccumulatedMdbEscpReqs(latestStatePayload.accumulatedMdbEscpReqs);
+          setS1Feedback(latestStatePayload.s1Feedback);
+          setBankDisbursedPct(latestStatePayload.bankDisbursedPct);
+          setS1SubmissionCount(latestStatePayload.s1SubmissionCount);
+
+          // S3
+          setEpcBid(latestStatePayload.epcBid);
+          setOwnerRespEsmp(latestStatePayload.ownerRespEsmp);
+          setOwnerRejectReason(latestStatePayload.ownerRejectReason);
+          setEpcBidHistory(latestStatePayload.epcBidHistory);
+          setTenderDuration(latestStatePayload.tenderDuration);
+          setDelayPenalty(latestStatePayload.delayPenalty);
+          setEarlyBonus(latestStatePayload.earlyBonus);
+
+          // S4
+          setEpcExecPlan(latestStatePayload.epcExecPlan);
+          setEpcViolations(latestStatePayload.epcViolations);
+          setConstructionTime(latestStatePayload.constructionTime);
+          setEpcReplanReason(latestStatePayload.epcReplanReason);
+          setMdbFreezeDecision(latestStatePayload.mdbFreezeDecision);
+          setOwnerPayDecisionReason(latestStatePayload.ownerPayDecisionReason);
+          setEpcProtestReason(latestStatePayload.epcProtestReason);
+          setGovRulingAmount(latestStatePayload.govRulingAmount);
+          setGovRulingReason(latestStatePayload.govRulingReason);
+          setPartyAppealReason(latestStatePayload.partyAppealReason);
+          setNgoAppealReason(latestStatePayload.ngoAppealReason);
+          setConfirmedParties(latestStatePayload.confirmedParties);
+
+          // S5
+          setOwnerPayProposal(latestStatePayload.ownerPayProposal);
+          setOwnerFeedback(latestStatePayload.ownerFeedback);
+          setEpcClaimProposal(latestStatePayload.epcClaimProposal);
+          setEpcClaimReason(latestStatePayload.epcClaimReason);
+          setS5GovRuling(latestStatePayload.s5GovRuling);
+          setS5GovRulingReason(latestStatePayload.s5GovRulingReason);
+
+          // 触发浮动效果 (如果需要)
+          const latestStat = latestStatePayload.playerState;
+          Object.keys(latestStat).forEach(role => {
+            const currentMoney = playerState[role].money;
+            const latestMoney = latestStat[role].money;
+            if (currentMoney !== latestMoney) {
+              const diff = latestMoney - currentMoney;
+              triggerFloatEffect(role, diff);
+            }
+          });
+        }
       }
 
-      const AV = window.AV;
-      const rNum = parseInt(roomNumber);
+    } catch (e) {
+      // 捕获并处理 403 Forbidden 错误，可能由高频访问引起
+      //console.error("Game state polling error:", e); 
+      // 不中断轮询，等待下次尝试
+    }
+  };
 
-      const poll = async () => {
-          try {
-              if (!AV) return;
-              const pQuery = new AV.Query('GamePlayer');
-              pQuery.equalTo('room', rNum);
-              pQuery.ascending('createdAt');
-              const players = await pQuery.find();
-              setRoomPlayers(players.map(p => ({
-                  name: p.get('name'),
-                  role: p.get('role'),
-                  id: p.id
-              })));
+  // 开始轮询
+  intervalId = setInterval(pollState, POLLING_INTERVAL);
 
-              const aQuery = new AV.Query('GameAction');
-              aQuery.equalTo('room', rNum);
-              aQuery.equalTo('type', 'SYNC_STATE_FULL');
-              aQuery.descending('createdAt');
-              aQuery.limit(1);
-              const latestAction = await aQuery.first();
+  // 清理函数
+  return () => clearInterval(intervalId);
 
-              if (latestAction) {
-                  const payload = latestAction.get('payload');
-                  if (payload && payload.stage === 1) {
-                      console.log("Detected Game Start Signal via Polling!");
-                      setAppState('playing');
-                  }
-              }
-          } catch (e) {
-              console.warn("Polling failed:", e);
-          }
-      };
-
-      poll();
-      pollingRef.current = setInterval(poll, 3000);
-
-      return () => {
-          if (pollingRef.current) clearInterval(pollingRef.current);
-      };
-  }, [lobbyStatus, roomNumber, sdkReady]);
+// v7.45 关键修复点：将依赖项改为 [mode, roomNumber, assignedRole]
+// 这样在玩家被分配角色 (assignedRole 变化) 后，轮询会自动重启，确保角色互动同步
+}, [mode, roomNumber, assignedRole]);
 
   const enterRoomReal = async () => {
       if (!sdkReady || !window.AV) return alert("系统正在初始化，请稍等两秒再试...");
@@ -1376,70 +1470,91 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   }, [mode, roomNumber, assignedRole]); 
 
   const syncToCloud = (type, payload) => {
-      if (mode !== 'multi') return;
-      const AV = window.AV;
-      if (!AV) return;
+  if (mode !== 'multi') return;
+  const AV = window.AV;
+  if (!AV) return;
+  const Action = AV.Object.extend('GameAction');
+  const act = new Action();
+  act.set('room', parseInt(roomNumber));
+  act.set('type', type);
+  act.set('payload', payload);
+  // v7.45 优化: 记录角色，便于调试与追踪
+  if (assignedRole) { 
+      act.set('role', assignedRole);
+  }
+  act.save();
+};
 
-      const Action = AV.Object.extend('GameAction');
-      const act = new Action();
-      act.set('room', parseInt(roomNumber));
-      act.set('type', type);
-      act.set('payload', payload);
-      act.save();
+const broadcastState = (overrides = {}) => {
+  if (mode !== 'multi') return;
+  // v7.45 优化: 确保使用最新的日志，并构建包含所有关键状态的完整负载 (Payload)
+  const currentLogs = overrides.logs || logs;
+  const payload = {
+    // 阶段与当前回合
+    stage: overrides.stage !== undefined ? overrides.stage : stage,
+    activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
+    // 玩家统计状态
+    playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
+    // 日志
+    logs: currentLogs,
+    // 危机状态
+    currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
+    // S1 & S2
+    ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
+    confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
+    ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
+    govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
+    accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
+    accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
+    riskLevel: overrides.riskLevel !== undefined ? overrides.riskLevel : riskLevel,
+    mdbEscpReqs: overrides.mdbEscpReqs !== undefined ? overrides.mdbEscpReqs : mdbEscpReqs,
+    accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs !== undefined ? overrides.accumulatedMdbEscpReqs : accumulatedMdbEscpReqs,
+    s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
+    s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
+    s1Feedback: overrides.s1Feedback !== undefined ? overrides.s1Feedback : s1Feedback,
+    bankDisbursedPct: overrides.bankDisbursedPct !== undefined ? overrides.bankDisbursedPct : bankDisbursedPct,
+    s1SubmissionCount: overrides.s1SubmissionCount !== undefined ? overrides.s1SubmissionCount : s1SubmissionCount,
+    // S3
+    epcBid: overrides.epcBid !== undefined ? overrides.epcBid : epcBid,
+    ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
+    s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
+    ownerRejectReason: overrides.ownerRejectReason !== undefined ? overrides.ownerRejectReason : ownerRejectReason,
+    epcBidHistory: overrides.epcBidHistory !== undefined ? overrides.epcBidHistory : epcBidHistory,
+    tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
+    delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
+    earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
+    // S4
+    epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
+    s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
+    epcViolations: overrides.epcViolations !== undefined ? overrides.epcViolations : epcViolations,
+    constructionTime: overrides.constructionTime !== undefined ? overrides.constructionTime : constructionTime,
+    protestState: overrides.protestState !== undefined ? overrides.protestState : protestState,
+    epcReplanReason: overrides.epcReplanReason !== undefined ? overrides.epcReplanReason : epcReplanReason,
+    mdbFreezeDecision: overrides.mdbFreezeDecision !== undefined ? overrides.mdbFreezeDecision : mdbFreezeDecision,
+    ownerPayDecisionReason: overrides.ownerPayDecisionReason !== undefined ? overrides.ownerPayDecisionReason : ownerPayDecisionReason,
+    epcProtestReason: overrides.epcProtestReason !== undefined ? overrides.epcProtestReason : epcProtestReason,
+    govRulingAmount: overrides.govRulingAmount !== undefined ? overrides.govRulingAmount : govRulingAmount,
+    govRulingReason: overrides.govRulingReason !== undefined ? overrides.govRulingReason : govRulingReason,
+    partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
+    ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
+    confirmedParties: overrides.confirmedParties !== undefined ? overrides.confirmedParties : confirmedParties,
+    // S5
+    ownerPayProposal: overrides.ownerPayProposal !== undefined ? overrides.ownerPayProposal : ownerPayProposal,
+    ownerFeedback: overrides.ownerFeedback !== undefined ? overrides.ownerFeedback : ownerFeedback,
+    epcClaimProposal: overrides.epcClaimProposal !== undefined ? overrides.epcClaimProposal : epcClaimProposal,
+    epcClaimReason: overrides.epcClaimReason !== undefined ? overrides.epcClaimReason : epcClaimReason,
+    s5GovRuling: overrides.s5GovRuling !== undefined ? overrides.s5GovRuling : s5GovRuling,
+    s5GovRulingReason: overrides.s5GovRulingReason !== undefined ? overrides.s5GovRulingReason : s5GovRulingReason,
+    inspectionState: overrides.inspectionState !== undefined ? overrides.inspectionState : inspectionState,
+    // Last Action Info
+    lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
+    // 计时器状态
+    isTimerRunning: overrides.isTimerRunning !== undefined ? overrides.isTimerRunning : isTimerRunning,
+    gameTime: overrides.gameTime !== undefined ? overrides.gameTime : gameTime,
   };
-  
-  const broadcastState = (overrides = {}) => {
-      if (mode !== 'multi') return;
-      
-      const currentLogs = overrides.logs || logs;
-
-      const payload = {
-          stage: overrides.stage !== undefined ? overrides.stage : stage,
-          activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
-          playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
-          s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
-          s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
-          s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
-          s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
-          lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
-          
-          govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
-          accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
-          accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
-          accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs !== undefined ? overrides.accumulatedGovEscpReqs : accumulatedGovEscpReqs,
-          accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs !== undefined ? overrides.accumulatedMdbEscpReqs : accumulatedMdbEscpReqs,
-          govEscpMandates: overrides.govEscpMandates !== undefined ? overrides.govEscpMandates : govEscpMandates,
-          mdbEscpMandates: overrides.mdbEscpMandates !== undefined ? overrides.mdbEscpMandates : mdbEscpMandates,
-          
-          ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
-          ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
-          ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
-          confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
-          confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
-
-          epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
-          ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
-          previousAuditItems: overrides.previousAuditItems !== undefined ? overrides.previousAuditItems : previousAuditItems,
-
-          ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
-          partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
-
-          govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
-          partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
-          ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
-          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
-          tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
-          delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
-          earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
-          
-          crisisQueue: overrides.crisisQueue !== undefined ? overrides.crisisQueue : crisisQueue,
-          currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
-          
-          logs: currentLogs 
-      };
-      syncToCloud('SYNC_STATE_FULL', payload);
-  };
-
+  // 发送完整状态同步动作
+  syncToCloud('SYNC_STATE_FULL', payload);
+};
 
   const addFloatEffect = (role, value) => {
     const key = `${role}-${value}-${Date.now()}`;
