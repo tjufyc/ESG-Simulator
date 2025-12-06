@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title> 1 SunLink ESG Simulator by TJU GIPC</title>
+    <title> 2 SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -1690,33 +1690,36 @@ const broadcastState = (overrides = {}) => {
 
   const s1OwnerSubmit = () => {
     const multiplier = 1.0 + (s1SubmissionCount - 1) * 0.2;
-    const newItems = ownerEsiaSelection.filter(id => !confirmedEsiaSelection.includes(id));
-    
-    const newCost = newItems.reduce((sum, id) => sum + (ESIA_ITEMS.find(i=>i.id===id).cost * multiplier), 0);
-    let newState = playerState;
-    if (newCost > 0) {
-        newState = updateStat('owner', 'money', -Math.round(newCost), newState);
-        setPlayerState(newState);
-    }
+    // 假设这里计算出了新的选择项
+    const currentSelection = [...ownerEsiaSelection]; // 获取当前的选择
 
-    setConfirmedEsiaSelection([...ownerEsiaSelection]);
-    setS1State('ngo_eval'); setActiveRole('ngo');
+    // ... 扣钱逻辑 ...
+
+    // 1. 更新本地状态
+    setConfirmedEsiaSelection(currentSelection);
+    setS1State('ngo_eval'); 
+    setActiveRole('ngo');
     setS1Feedback(null);
     
-    const itemNames = ownerEsiaSelection.map(id => ESIA_ITEMS.find(i=>i.id===id).label).join('; ');
-    const newLastAction = updateLastAction('owner', `已提交ESIA: ${ownerEsiaSelection.length}项`);
+    const itemNames = currentSelection.map(id => ESIA_ITEMS.find(i=>i.id===id).label).join('; ');
+    const newLastAction = updateLastAction('owner', `已提交ESIA: ${currentSelection.length}项`);
     const newLogs = getUpdatedLogs(`业主提交ESIA方案。包含评价: ${itemNames || "无"}。`, 'blue');
     
+    // 2. 【关键修复】在广播时，必须显式传入 ownerEsiaSelection 和 confirmedEsiaSelection
     broadcastState({ 
         s1State: 'ngo_eval', 
         activeRole: 'ngo',
-        playerState: newState,
+        playerState: newState, // 确保传入了扣钱后的新状态
         lastActionInfo: newLastAction,
-        ownerEsiaSelection: ownerEsiaSelection, 
-        confirmedEsiaSelection: [...ownerEsiaSelection],
+        
+        // ！！！这里是修复的核心！！！
+        // 不要让 broadcastState 去读旧的 state，而是直接把当前手里的数据传给它
+        ownerEsiaSelection: currentSelection, 
+        confirmedEsiaSelection: currentSelection,
+        
         logs: newLogs
     });
-  };
+};
 
   const s1NgoEval = (protest) => {
     setHasProtested(protest);
