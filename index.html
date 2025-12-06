@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title>3 SunLink ESG Simulator by TJU GIPC</title>
+    <title>4 SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -707,21 +707,52 @@ const GameEntryWrapper = ({ children }) => {
              const act = new Action();
              act.set('room', parseInt(roomNumber));
              act.set('type', 'SYNC_STATE_FULL');
-             act.set('payload', {
+             
+             // 【关键修复】初始化所有列表变量，防止接收端 .map() 报错
+             const initialPayload = {
                  stage: 1,
                  activeRole: 'owner',
                  s1State: 'owner_draft',
+                 
+                 // 必须显式初始化的空数组
+                 accumulatedGovMandates: [],
+                 accumulatedNgoReqs: [],
+                 accumulatedGovEscpReqs: [],
+                 accumulatedMdbEscpReqs: [],
+                 
+                 govMandates: [],
+                 govEscpMandates: [],
+                 mdbEscpMandates: [],
+                 ngoRequirements: [],
+                 
+                 ownerEsiaSelection: [],
+                 ownerEscpSelection: [],
+                 confirmedEsiaSelection: [],
+                 confirmedEscpSelection: [],
+                 confirmedParties: [],
+                 
+                 // 初始日志
                  logs: [{msg: '游戏开始，进入立项审批阶段。', type: 'info', time: '0分0秒'}]
-             });
+             };
+
+             act.set('payload', initialPayload);
+
+             // 设置 ACL 权限
+             const acl = new AV.ACL();
+             acl.setPublicReadAccess(true);
+             acl.setPublicWriteAccess(true);
+             act.setACL(acl);
+
              await act.save();
-             console.log("Initial state broadcasted by Owner.");
+             console.log("Initial state broadcasted by Owner.", initialPayload);
           } catch (e) {
              console.error("Failed to init game state", e);
-             alert("启动失败，请重试");
+             alert("启动失败: " + e.message);
              return;
           }
       }
       
+      // 本地状态切换
       setAppState('playing');
   };
 
@@ -799,11 +830,12 @@ const GameEntryWrapper = ({ children }) => {
     if (appState === 'multi_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {/* 修复：传递 onNext 而非 onStart，且补全 assignedRole */}
+             {/* 【关键修复】同时传递 onStart 和 onNext，确保无论组件定义用哪个名字都能触发 */}
              <ProjectIntroView 
                  mode="multi" 
                  assignedRole={myRole} 
-                 onNext={startMultiRoles} 
+                 onStart={startMultiRoles} 
+                 onNext={startMultiRoles}
              />
          </div>
       );
@@ -818,27 +850,29 @@ const GameEntryWrapper = ({ children }) => {
           }
       };
 
-      // 安全检查：如果角色未定义，先显示加载中，防止崩溃
-      if (!myRole || !INITIAL_STATES[myRole]) {
-          return <div className="h-screen w-screen bg-slate-900 flex items-center justify-center text-white">加载角色数据中...</div>;
-      }
+      // 【关键修复】防止 INITIAL_STATES 未定义或 myRole 为空导致的白屏
+      // 如果 myRole 为空，先渲染一个加载占位符
+      if (!myRole) return <div className="p-10 text-white">正在加载角色信息...</div>;
+
+      // 安全获取角色名称
+      const roleLabel = (window.INITIAL_STATES || INITIAL_STATES)?.[myRole]?.label || myRole;
 
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {/* 核心修复：添加 assignedRole={myRole} */}
+             {/* 【关键修复】assignedRole必传，且同时传递 onStart/onStartGame */}
              <RoleDetailView 
                  assignedRole={myRole} 
                  onStartGame={handleRoleViewStart} 
+                 onStart={handleRoleViewStart}
                  isGameRunning={false} 
                  onBackToGame={()=>{}}
              />
              
-             {/* 底部提示条 */}
              <div className="absolute bottom-0 left-0 w-full bg-slate-800 text-white p-3 text-center text-xs flex justify-between items-center px-8 z-50 border-t border-slate-700">
-                 <span className="font-mono text-slate-300">当前身份: <span className="text-white font-bold">{INITIAL_STATES[myRole].label}</span></span>
+                 <span className="font-mono text-slate-300">当前身份: <span className="text-white font-bold">{roleLabel}</span></span>
                  {myRole === 'owner' 
-                    ? <span className="text-green-400 font-bold animate-pulse">你是房主，全员准备好后请点击中间的“进入游戏”</span>
-                    : <span className="text-yellow-400 flex items-center gap-2">等待房主启动游戏...</span>
+                    ? <span className="text-green-400 font-bold cursor-pointer animate-pulse" onClick={handleRoleViewStart}>你是房主，点击屏幕中央或此处【进入游戏】</span>
+                    : <span className="text-yellow-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> 等待房主启动游戏...</span>
                  }
              </div>
          </div>
@@ -968,20 +1002,30 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   if (appState === 'playing') {
-      // 确保 roomPlayers 是数组，防止 .map 报错
+      // 【关键修复】确保 roomPlayers 即使为 undefined 也是空数组
       const safePlayerList = Array.isArray(roomPlayers) ? roomPlayers : [];
 
-      // 使用 cloneElement 注入必要的 props
-      // 添加 key={mode} 确保从单人切换到多人时彻底重绘
+      // 【关键修复】添加 key={mode} 强迫 React 在模式切换时重建组件
+      // 传入 initialViewMode='game' 跳过介绍
       const gameContent = React.cloneElement(children, { 
-         key: mode, 
+         key: mode || 'default', 
          assignedRole: myRole, 
          mode: mode,
          roomNumber: roomNumber,
          playerList: safePlayerList,
-         initialViewMode: 'game', // 强制跳过片头
+         initialViewMode: 'game', 
          onExit: () => setAppState('cover')
      });
+
+     if (mode === 'single') {
+        return (
+            <div className="h-screen w-screen bg-slate-900 overflow-hidden">
+               {gameContent}
+            </div>
+        )
+     }
+     return gameContent;
+  }
 
      if (mode === 'single') {
         return (
