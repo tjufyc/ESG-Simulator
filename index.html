@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title> 1 SunLink ESG Simulator by TJU GIPC</title>
+    <title> F SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -630,7 +630,7 @@ const GameEntryWrapper = ({ children }) => {
            }
       };
       fetchOnlineCount();
-      const timer = setInterval(fetchOnlineCount, 30000); 
+      const timer = setInterval(fetchOnlineCount, 30000); // Reduced frequency
       return () => clearInterval(timer);
   }, [sdkReady]);
 
@@ -676,7 +676,6 @@ const GameEntryWrapper = ({ children }) => {
       };
 
       poll();
-      // Increase polling frequency for better responsiveness during waiting
       pollingRef.current = setInterval(poll, 3000);
 
       return () => {
@@ -1322,7 +1321,6 @@ function SunLinkV7_51_TransitionRestore({ assignedRole, mode, onExit, onNext, ro
       if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
       if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
       
-      // 核心修复：如果是我的回合，不要用云端的旧数据覆盖我的本地输入
       if (!isMyTurn || !assignedRole) {
           if(data.govMandates) setGovMandates(data.govMandates);
           if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
@@ -1393,7 +1391,6 @@ function SunLinkV7_51_TransitionRestore({ assignedRole, mode, onExit, onNext, ro
       };
 
       pollState();
-      // 核心修复：提高轮询频率至3秒
       pollingRef.current = setInterval(pollState, 3000);
       
       return () => {
@@ -1521,6 +1518,7 @@ function SunLinkV7_51_TransitionRestore({ assignedRole, mode, onExit, onNext, ro
   };
 
   const triggerStageTransition = (targetStage, title, extraText="", crisisIndex=null) => {
+      // 强制进入过渡状态
       setIsTransitioning(true);
       setTransitionContext({
           targetStage,
@@ -1622,7 +1620,11 @@ function SunLinkV7_51_TransitionRestore({ assignedRole, mode, onExit, onNext, ro
       setTimeStart1(0); 
       setViewMode('game');
       setIsTimerRunning(true);
-      triggerStageTransition(1, "项目立项审批阶段");
+      if (mode === 'multi') {
+          onNext();
+      } else {
+          triggerStageTransition(1, "项目立项审批阶段");
+      }
   }
 
   const gotoRoles = () => {
@@ -1762,6 +1764,7 @@ function SunLinkV7_51_TransitionRestore({ assignedRole, mode, onExit, onNext, ro
       const newLogs = getUpdatedLogs(`政府批准ESIA。政府声誉变动: ${netRepChange}`, netRepChange >= 0 ? 'green' : 'orange');
       broadcastState({ logs: newLogs, playerState: newState });
       
+      // 恢复：进入Stage 2的过渡
       triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程");
       
       return; 
