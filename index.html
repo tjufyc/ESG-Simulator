@@ -1,25 +1,207 @@
-<!DOCTYPE html>
+
+	      <!DOCTYPE html>
 <html>
   <head>
-    <title>1 SunLink ESG Simulator by TJU GIPC (Multiplayer Fixed)</title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeSandbox</title>
 
     <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@18.3.1",
-          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-          "lucide-react": "https://esm.sh/lucide-react?external=react,react-dom"
-        }
-      }
+      {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
     </script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = {
+      window.addEventListener("error", function (event) {
+        const errorObj = {
+          message: event.message,
+          source: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          stack: event.error ? event.error.stack : null
+        };
+        window.parent.postMessage(
+          { action: "error", error: JSON.stringify(errorObj) },
+          "*"
+        );
+        event.preventDefault();
+      });
+
+  function handleImportError(error) {
+    throw new Error('Import module failed: ' + error.target.src);
+  }
+
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.tagName === 'SCRIPT' && node.type === 'module') {
+          node.onerror = handleImportError;
+        }
+      });
+    });
+  });
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  document.querySelectorAll('script[type="module"]').forEach(script => {
+    script.onerror = handleImportError;
+  });
+
+  
+window.console = new Proxy(console, {
+  get(target, prop) {
+    if (['log', 'warn', 'error'].includes(prop)) {
+      return new Proxy(target[prop], {
+        apply(fn, thisArg, args) {
+          fn.apply(thisArg, args);
+          window.parent.postMessage({ action: 'console', 
+            type: prop, 
+            args: args.map((arg) => {
+              try {
+                return JSON.stringify(arg).replace(/^["']|["']$/g, '');
+              } catch (e) {
+                return arg;
+              }
+            }) 
+          }, '*');
+        }
+      });
+    }
+    return target[prop];
+  }
+});
+
+
+    </script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
+    <style type="text/tailwindcss">
+      @layer base {
+        :root {
+          --background: 0 0% 100%;
+          --foreground: 222.2 47.4% 11.2%;
+
+          --muted: 210 40% 96.1%;
+          --muted-foreground: 215.4 16.3% 46.9%;
+
+          --popover: 0 0% 100%;
+          --popover-foreground: 222.2 47.4% 11.2%;
+
+          --border: 214.3 31.8% 91.4%;
+          --input: 214.3 31.8% 91.4%;
+
+          --card: 0 0% 100%;
+          --card-foreground: 222.2 47.4% 11.2%;
+
+          --primary: 222.2 47.4% 11.2%;
+          --primary-foreground: 210 40% 98%;
+
+          --secondary: 210 40% 96.1%;
+          --secondary-foreground: 222.2 47.4% 11.2%;
+
+          --accent: 210 40% 96.1%;
+          --accent-foreground: 222.2 47.4% 11.2%;
+
+          --destructive: 0 100% 50%;
+          --destructive-foreground: 210 40% 98%;
+
+          --ring: 215 20.2% 65.1%;
+
+          --radius: 0.5rem;
+        }
+
+        .dark {
+          --background: 224 71% 4%;
+          --foreground: 213 31% 91%;
+
+          --muted: 223 47% 11%;
+          --muted-foreground: 215.4 16.3% 56.9%;
+
+          --accent: 216 34% 17%;
+          --accent-foreground: 210 40% 98%;
+
+          --popover: 224 71% 4%;
+          --popover-foreground: 215 20.2% 65.1%;
+
+          --border: 216 34% 17%;
+          --input: 216 34% 17%;
+
+          --card: 224 71% 4%;
+          --card-foreground: 213 31% 91%;
+
+          --primary: 210 40% 98%;
+          --primary-foreground: 222.2 47.4% 1.2%;
+
+          --secondary: 222.2 47.4% 11.2%;
+          --secondary-foreground: 210 40% 98%;
+
+          --destructive: 0 63% 31%;
+          --destructive-foreground: 210 40% 98%;
+
+          --ring: 216 34% 17%;
+
+          --radius: 0.5rem;
+        }
+      }
+    </style>
+    <script type="module">
+          import defaultTheme from "tailwindcss/defaultTheme"
+          import tailwindcssAnimate from "tailwindcss-animate"
+
+          const fontFamily = defaultTheme.fontFamily;
+
+          tailwind.config = {
+            darkMode: ["class"],
+        content: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
         theme: {
+          container: {
+            center: true,
+            padding: "2rem",
+            screens: {
+              "2xl": "1400px",
+            },
+          },
           extend: {
+            colors: {
+              border: "hsl(var(--border))",
+              input: "hsl(var(--input))",
+              ring: "hsl(var(--ring))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
+              primary: {
+                DEFAULT: "hsl(var(--primary))",
+                foreground: "hsl(var(--primary-foreground))",
+              },
+              secondary: {
+                DEFAULT: "hsl(var(--secondary))",
+                foreground: "hsl(var(--secondary-foreground))",
+              },
+              destructive: {
+                DEFAULT: "hsl(var(--destructive))",
+                foreground: "hsl(var(--destructive-foreground))",
+              },
+              muted: {
+                DEFAULT: "hsl(var(--muted))",
+                foreground: "hsl(var(--muted-foreground))",
+              },
+              accent: {
+                DEFAULT: "hsl(var(--accent))",
+                foreground: "hsl(var(--accent-foreground))",
+              },
+              popover: {
+                DEFAULT: "hsl(var(--popover))",
+                foreground: "hsl(var(--popover-foreground))",
+              },
+              card: {
+                DEFAULT: "hsl(var(--card))",
+                foreground: "hsl(var(--card-foreground))",
+              },
+            },
+            borderRadius: {
+              lg: `var(--radius)`,
+              md: `calc(var(--radius) - 2px)`,
+              sm: "calc(var(--radius) - 4px)",
+            },
+            fontFamily: {
+              sans: [...fontFamily.sans],
+            },
+
             keyframes: {
               "accordion-down": {
                 from: { height: "0" },
@@ -36,136 +218,39 @@
             },
           },
         },
+        plugins: [tailwindcssAnimate]
       }
     </script>
-
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <script src="https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.27.0/babel.min.js"></script>
   </head>
-  <body class="bg-slate-50">
+  <body>
     <div id="root"></div>
-
     <script type="text/babel" data-type="module">
-      import React, { useState, useEffect, useRef } from 'react';
-      import { createRoot } from 'react-dom/client';
-      import { 
-        User, Building2, Landmark, Globe, Users, Activity, 
-        ArrowRight, FileText, CheckCircle2, MapPin, 
-        Banknote, Clock, ShieldAlert, AlertTriangle,
-        Timer, Gavel, BookOpen, Reply,
-        ClipboardCheck, Award, Megaphone, Handshake, Eye,
-        Zap, HardHat, ListChecks,
-        PieChart, BarChart3, ScrollText, Target, Scale,
-        LogIn, Users2, Loader2, Network,
-        UserPlus, ArrowBigRight, Info
-      } from 'lucide-react';
+      		  import {createRoot} from "react-dom/client";
+            
+      		  
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { Button } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { Checkbox } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { Input } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { Badge } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { Alert, AlertTitle, AlertDescription } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { ScrollArea } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { Textarea } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { 
+  User, Building2, Landmark, Globe, Users, Activity, 
+  ArrowRight, FileText, CheckCircle2, Info, MapPin, 
+  Banknote, Clock, ShieldAlert, XCircle, AlertTriangle,
+  Timer, Image as ImageIcon, Gavel, BookOpen, Reply,
+  ClipboardCheck, Award, Megaphone, Handshake, Eye,
+  Sun, Zap, Truck, HardHat, FileSignature, ListChecks,
+  Lock, PieChart, BarChart3, ScrollText, Target, Scale,
+  Menu, LogIn, Users2, Loader2, Gamepad2, Network, Cloud,
+  Mail, UserPlus, Check, Smartphone, RefreshCw, ArrowBigRight
+} from 'lucide-react';
 
-      // --- UI Component Polyfills (Replacing the broken shadcdn imports) ---
-      
-      const cn = (...classes) => classes.filter(Boolean).join(' ');
-
-      const Card = ({ className, children }) => (
-        <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm bg-white", className)}>
-          {children}
-        </div>
-      );
-      
-      const CardHeader = ({ className, children }) => (
-        <div className={cn("flex flex-col space-y-1.5 p-6", className)}>
-          {children}
-        </div>
-      );
-      
-      const CardTitle = ({ className, children }) => (
-        <h3 className={cn("text-2xl font-semibold leading-none tracking-tight", className)}>
-          {children}
-        </h3>
-      );
-      
-      const CardContent = ({ className, children }) => (
-        <div className={cn("p-6 pt-0", className)}>
-          {children}
-        </div>
-      );
-
-      const Button = ({ className, variant = "default", size = "default", children, ...props }) => {
-        const variants = {
-          default: "bg-slate-900 text-white hover:bg-slate-900/90",
-          destructive: "bg-red-500 text-white hover:bg-red-500/90",
-          outline: "border border-slate-200 bg-white hover:bg-slate-100 text-slate-900",
-          secondary: "bg-slate-100 text-slate-900 hover:bg-slate-100/80",
-          ghost: "hover:bg-slate-100 hover:text-slate-900",
-        };
-        const sizes = {
-          default: "h-10 px-4 py-2",
-          sm: "h-9 rounded-md px-3",
-          lg: "h-11 rounded-md px-8",
-          icon: "h-10 w-10",
-        };
-        return (
-          <button 
-            className={cn("inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50", variants[variant] || variants.default, sizes[size] || sizes.default, className)}
-            {...props}
-          >
-            {children}
-          </button>
-        );
-      };
-
-      const Checkbox = ({ className, checked, onCheckedChange, disabled }) => (
-        <input 
-          type="checkbox" 
-          className={cn("peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 accent-slate-900", className)}
-          checked={checked}
-          disabled={disabled}
-          onChange={(e) => onCheckedChange && onCheckedChange(e.target.checked)}
-        />
-      );
-
-      const Input = ({ className, ...props }) => (
-        <input
-          className={cn("flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", className)}
-          {...props}
-        />
-      );
-
-      const Textarea = ({ className, ...props }) => (
-        <textarea
-          className={cn("flex min-h-[80px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", className)}
-          {...props}
-        />
-      );
-
-      const Badge = ({ className, variant="default", children }) => {
-        const variants = {
-          default: "border-transparent bg-slate-900 text-slate-50 hover:bg-slate-900/80",
-          secondary: "border-transparent bg-slate-100 text-slate-900 hover:bg-slate-100/80",
-          destructive: "border-transparent bg-red-500 text-slate-50 hover:bg-red-500/80",
-          outline: "text-slate-950 border-slate-200 border",
-        };
-        return (
-          <div className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2", variants[variant] || variants.default, className)}>
-            {children}
-          </div>
-        );
-      };
-
-      const Alert = ({ className, variant="default", children }) => (
-        <div role="alert" className={cn("relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-slate-950", className)}>
-          {children}
-        </div>
-      );
-
-      const AlertTitle = ({ className, children }) => (
-        <h5 className={cn("mb-1 font-medium leading-none tracking-tight", className)}>{children}</h5>
-      );
-
-      const AlertDescription = ({ className, children }) => (
-        <div className={cn("text-sm [&_p]:leading-relaxed", className)}>{children}</div>
-      );
-
-      // --- 静态配置 ---
+// --- 静态配置 (保持不变) ---
 const PROJECT_INFO = {
   name: "SunLink 光伏+输变电项目", 
   location: "A国 (虚构发展中国家) - 北部干旱荒漠与'绿洲'湿地保护区的交界地带",
@@ -190,37 +275,27 @@ const ROLE_DETAILS = {
   owner: { 
       label: "业主", 
       desc: "投资方 GreenGen 集团 (跨国能源巨头)", 
-      task: "你需要对总部的财务报表负责，首要目标是控制投资和按期并网发电。虽然你知道ESG很重要，但同时也意味着昂贵的成本。",
-      icon: User,
-      color: "text-blue-600 bg-blue-50 border-blue-200"
+      task: "你需要对总部的财务报表负责，首要目标是控制投资和按期并网发电。虽然你知道ESG很重要，但同时也意味着昂贵的成本。" 
   },
   gov: { 
       label: "政府", 
       desc: "A国能源与环境部 (监管者)", 
-      task: "你处于夹缝之中。一方面，你需要这个项目带来的电力和税收政绩；另一方面，你必须依据法律监管环境问题，否则会被国际社会指责甚至引发国内动荡。你的审批权是你最大的筹码。",
-      icon: Landmark,
-      color: "text-green-600 bg-green-50 border-green-200"
+      task: "你处于夹缝之中。一方面，你需要这个项目带来的电力和税收政绩；另一方面，你必须依据法律监管环境问题，否则会被国际社会指责甚至引发国内动荡。你的审批权是你最大的筹码。" 
   },
   mdb: { 
       label: "多边开发银行", 
       desc: "世界基础设施银行 (WIB) (贷款方)", 
-      task: "你为项目提供关键的低息贷款，遵循世界银行《环境社会框架》（ESF），期望通过项目促进当地经济社会发展并支持当地能力建设。你的《环境社会标准》（ESS）是项目的紧箍咒，你并不直接管理项目建设，但如果项目出现丑闻，声誉风险是你无法接受的。",
-      icon: Globe,
-      color: "text-purple-600 bg-purple-50 border-purple-200"
+      task: "你为项目提供关键的低息贷款，遵循世界银行《环境社会框架》（ESF），期望通过项目促进当地经济社会发展并支持当地能力建设。你的《环境社会标准》（ESS）是项目的紧箍咒，你并不直接管理项目建设，但如果项目出现丑闻，声誉风险是你无法接受的。" 
   },
   epc: { 
       label: "EPC承包商", 
       desc: "GIP国际工程公司 (总包方)", 
-      task: "你是项目的总承包商。你的目标是争取对自己有利的合同条件，在合同谈判阶段与业主划分ESG责任，并在报价中考虑自己需要负责的环境社会管理计划（ESMP）。建设阶段按合同办事，落实ESMP会增加成本，但也需要考虑企业声誉的影响。",
-      icon: Building2,
-      color: "text-orange-600 bg-orange-50 border-orange-200"
+      task: "你是项目的总承包商。你的目标是争取对自己有利的合同条件，在合同谈判阶段与业主划分ESG责任，并在报价中考虑自己需要负责的环境社会管理计划（ESMP）。建设阶段按合同办事，落实ESMP会增加成本，但也需要考虑企业声誉的影响。" 
   },
   ngo: { 
       label: "公众", 
       desc: "当地受影响社区及NGO (监督者)", 
-      task: "你们资源最少，但声音最大。你们不反对项目，但反对以牺牲环境为代价的发展，希望社区从中获益，担心生态环境破坏。如果诉求得不到满足，你们会抗议、甚至阻工。",
-      icon: Users,
-      color: "text-red-600 bg-red-50 border-red-200"
+      task: "你们资源最少，但声音最大。你们不反对项目，但反对以牺牲环境为代价的发展，希望社区从中获益，担心生态环境破坏。如果诉求得不到满足，你们会抗议、甚至阻工。" 
   }
 };
 
@@ -264,174 +339,6 @@ const RISK_TABLE = [
   { level: '中风险', basis: '（i）项目具有有限的潜在不利环境和社会影响；（ii）影响并非前所未有；（iii）不存在或者仅有少量影响是不可逆的或累积性的', req: '要求客户对项目的环境和社会风险及影响进行初步审查' },
   { level: '低风险', basis: '项目可能产生极少或不存在环境和社会不利影响', req: '不要求进行环境和社会评估' }
 ];
-
-// --- 页面组件 ---
-
-const ProjectIntroView = ({ onStart, mode, assignedRole }) => {
-    return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-800 overflow-y-auto pb-10">
-            <div className="max-w-5xl mx-auto p-6 md:p-12">
-                <div className="mb-8 animate-in slide-in-from-top-5 duration-700">
-                    <div className="flex items-center gap-3 mb-4">
-                         <Activity size={32} className="text-blue-600"/>
-                         <Badge variant="outline" className="text-sm px-3 py-1 border-blue-200 text-blue-700 bg-blue-50">Project Background</Badge>
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 leading-tight tracking-tight">{PROJECT_INFO.name}</h1>
-                    <div className="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
-                        <div className="flex items-center gap-1"><MapPin size={16}/> {PROJECT_INFO.location}</div>
-                        <div className="flex items-center gap-2 text-orange-700 font-bold bg-orange-50 px-3 py-1 rounded border border-orange-200 shadow-sm">
-                            <Clock size={16}/> 计划并网发电时间：24个月 (游戏中1分钟代表1个月)
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                     <Card className="md:col-span-2 border-0 shadow-lg bg-white overflow-hidden">
-                        <div className="h-2 bg-blue-500"></div>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-xl"><FileText className="text-blue-500"/> 项目背景与挑战</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-slate-600 leading-relaxed">
-                            <p>{PROJECT_INFO.background}</p>
-                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 italic text-slate-700">
-                                <span className="font-bold text-blue-600 not-italic block mb-2">核心任务:</span>
-                                "{PROJECT_INFO.mission}"
-                            </div>
-                        </CardContent>
-                     </Card>
-
-                     <div className="space-y-6">
-                        <Card className="border-0 shadow-md bg-blue-600 text-white">
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2"><Target size={20}/> 项目建设内容</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-2 text-sm text-blue-50">
-                                    {PROJECT_INFO.scope_items.map((item, i) => (
-                                        <li key={i} className="flex items-start gap-2">
-                                            <span className="mt-1 w-1.5 h-1.5 bg-blue-300 rounded-full shrink-0"></span>
-                                            <span>{item}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                        
-                        <Card className="border-0 shadow-md bg-white">
-                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-wider">ESG 关键风险点</CardTitle>
-                             </CardHeader>
-                             <CardContent className="space-y-2">
-                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-red-100 text-red-600 rounded"><AlertTriangle size={12}/></span> 濒危物种保护</div>
-                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-orange-100 text-orange-600 rounded"><Users size={12}/></span> 原住民水权</div>
-                                 <div className="flex items-center gap-2 text-sm text-slate-700"><span className="p-1 bg-purple-100 text-purple-600 rounded"><ShieldAlert size={12}/></span> 劳工涌入风险</div>
-                             </CardContent>
-                        </Card>
-                     </div>
-                </div>
-                
-                <div className="mb-12">
-                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><ListChecks className="text-slate-400"/> 全流程模拟阶段</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        {PROJECT_INFO.stages_visual.map((stage) => (
-                            <div key={stage.id} className={`p-3 rounded-lg border ${stage.color} flex flex-col justify-between h-24 transition-all hover:scale-105 cursor-default shadow-sm`}>
-                                <div className="text-xs font-bold opacity-60">Stage 0{stage.id}</div>
-                                <div>
-                                    <div className="font-bold text-sm mb-1">{stage.title}</div>
-                                    <div className="text-[10px] opacity-80 leading-tight">{stage.task}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex justify-center">
-                     <Button size="lg" onClick={onStart} className="h-14 px-8 text-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xl hover:shadow-2xl transition-all rounded-full flex items-center gap-2 animate-bounce">
-                        下一步：查看角色档案 <ArrowRight size={20}/>
-                     </Button>
-                </div>
-                
-                <div className="text-center text-slate-400 text-xs mt-8">
-                    {mode === 'multi' && assignedRole ? `当前身份: ${INITIAL_STATES[assignedRole].label}` : "单机模式"}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame }) => {
-    return (
-        <div className="min-h-screen bg-slate-100 font-sans p-4 md:p-8 overflow-y-auto">
-            <div className="max-w-6xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                     <div>
-                        <h1 className="text-3xl font-black text-slate-800">角色档案</h1>
-                        <p className="text-slate-500">Stakeholder Profiles</p>
-                     </div>
-                     {isGameRunning ? (
-                         <Button onClick={onBackToGame} variant="outline" className="border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
-                            <Reply className="mr-2" size={16}/> 返回游戏
-                         </Button>
-                     ) : (
-                         <Button onClick={onStartGame} size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg">
-                            <Zap className="mr-2" size={16}/> 进入游戏
-                         </Button>
-                     )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                     {Object.keys(ROLE_DETAILS).map(key => {
-                         const role = ROLE_DETAILS[key];
-                         const Icon = role.icon;
-                         return (
-                             <Card key={key} className="border-0 shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group">
-                                 <div className={`h-2 ${role.color.split(' ')[0].replace('text','bg')}`}></div>
-                                 <CardHeader className="pb-2">
-                                     <div className="flex justify-between items-start">
-                                         <div className={`p-2 rounded-lg ${role.color} bg-opacity-20`}>
-                                             <Icon size={24} className={role.color.split(' ')[0]}/>
-                                         </div>
-                                         <Badge variant="outline" className="text-slate-400">Role 0{Object.keys(ROLE_DETAILS).indexOf(key)+1}</Badge>
-                                     </div>
-                                     <CardTitle className="text-xl mt-4">{role.label}</CardTitle>
-                                     <div className="text-sm font-medium text-slate-500">{role.desc}</div>
-                                 </CardHeader>
-                                 <CardContent className="text-sm text-slate-600 space-y-4">
-                                     <div className="bg-slate-50 p-3 rounded border border-slate-100">
-                                         <span className="font-bold text-slate-800 block mb-1">核心诉求:</span>
-                                         {role.task}
-                                     </div>
-                                 </CardContent>
-                             </Card>
-                         )
-                     })}
-                     
-                     <Card className="border-0 shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group bg-slate-50 border-t-4 border-slate-500">
-                         <CardHeader className="pb-2">
-                             <div className="flex justify-between items-start">
-                                 <div className="p-2 rounded-lg bg-slate-200">
-                                     <ScrollText size={24} className="text-slate-600"/>
-                                 </div>
-                                 <Badge variant="outline" className="text-slate-400">Notice</Badge>
-                             </div>
-                             <CardTitle className="text-xl mt-4">知情同意书</CardTitle>
-                         </CardHeader>
-                         <CardContent className="text-sm text-slate-600 space-y-3">
-                             <p className="font-medium text-slate-700">您即将参与的是一项关于国际工程项目ESG管理的行为实验，由天津大学全球工程经营实验室开发。</p>
-                             <ul className="space-y-2 text-xs bg-white p-3 rounded border border-slate-200">
-                                 <li><strong className="text-slate-800">自愿性：</strong>参与本实验完全自愿，您有权在任何时候关闭页面退出。</li>
-                                 <li><strong className="text-slate-800">无风险：</strong>本实验不涉及任何商业利益或个人隐私风险。</li>
-                                 <li><strong className="text-slate-800">匿名性：</strong>您的所有决策都不带任何个人标识，将被严格保密。</li>
-                             </ul>
-                         </CardContent>
-                     </Card>
-                </div>
-            </div>
-        </div>
-    )
-};
-
-// --- 主要游戏组件的逻辑与视图路由 ---
 
 const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn }) => {
   const isActive = active === role;
@@ -478,39 +385,37 @@ const GameEntryWrapper = ({ children }) => {
   const pollingRef = useRef(null);
 
   useEffect(() => {
-      // 检查 LeanCloud 是否已经加载
-      const checkAV = () => {
-         if (window.AV) {
-            try {
-               const AV = window.AV;
-               if (!AV.applicationId) {
-                   AV.init({
-                      appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
-                      appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
-                      serverURL: "https://oxljnef7.api.lncldglobal.com" 
-                   });
-               }
-               setSdkReady(true);
-            } catch(e) { console.error("AV init error:", e) }
-         }
-      };
-      
       if (window.AV) {
-          checkAV();
-      } else {
-          // 等待脚本加载
-          const interval = setInterval(() => {
-              if (window.AV) {
-                  clearInterval(interval);
-                  checkAV();
-              }
-          }, 500);
-          return () => clearInterval(interval);
+          setSdkReady(true);
+          return;
       }
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js'; 
+      script.async = true;
+      script.onload = () => {
+          console.log("LeanCloud SDK Loaded via CDN");
+          try {
+             const AV = window.AV;
+             if (!AV.applicationId) {
+                 AV.init({
+                    appId: "oxljnef7788g0vxPG8KFVbov-MdYXbMMI",
+                    appKey: "w3iUN3cMVOVBaPAMh96Dr2VX",
+                    serverURL: "https://oxljnef7.api.lncldglobal.com" 
+                 });
+             }
+             setSdkReady(true);
+          } catch (e) {
+             console.error("AV Init failed:", e);
+          }
+      };
+      script.onerror = () => {
+          alert("错误：SDK加载失败！请关闭广告拦截插件(AdBlock/uBlock)或切换网络后刷新重试。");
+      };
+      document.body.appendChild(script);
   }, []);
 
   useEffect(() => {
-      if (!sdkReady || !window.AV) return;
+      if (!sdkReady) return;
       const AV = window.AV;
       
       const fetchOnlineCount = async () => {
@@ -523,7 +428,7 @@ const GameEntryWrapper = ({ children }) => {
            }
       };
       fetchOnlineCount();
-      const timer = setInterval(fetchOnlineCount, 30000); 
+      const timer = setInterval(fetchOnlineCount, 20000);
       return () => clearInterval(timer);
   }, [sdkReady]);
 
@@ -538,8 +443,6 @@ const GameEntryWrapper = ({ children }) => {
 
       const poll = async () => {
           try {
-              if (!AV) return;
-              // Poll Players
               const pQuery = new AV.Query('GamePlayer');
               pQuery.equalTo('room', rNum);
               pQuery.ascending('createdAt');
@@ -550,7 +453,6 @@ const GameEntryWrapper = ({ children }) => {
                   id: p.id
               })));
 
-              // Poll Game Start
               const aQuery = new AV.Query('GameAction');
               aQuery.equalTo('room', rNum);
               aQuery.equalTo('type', 'SYNC_STATE_FULL');
@@ -560,7 +462,7 @@ const GameEntryWrapper = ({ children }) => {
 
               if (latestAction) {
                   const payload = latestAction.get('payload');
-                  if (payload && payload.stage >= 1) {
+                  if (payload && payload.stage === 1) {
                       console.log("Detected Game Start Signal via Polling!");
                       setAppState('playing');
                   }
@@ -571,7 +473,8 @@ const GameEntryWrapper = ({ children }) => {
       };
 
       poll();
-      pollingRef.current = setInterval(poll, 2000); // 增加轮询频率
+      // Requirement 1: Reduce Sync Frequency to 3000ms
+      pollingRef.current = setInterval(poll, 3000);
 
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -584,7 +487,7 @@ const GameEntryWrapper = ({ children }) => {
 
       const rNum = parseInt(roomNumber); 
       if (!playerName.trim()) return alert("请输入昵称");
-      if (isNaN(rNum) || rNum < 1 || rNum > 100) return alert("请输入有效的房间号 (1-99)");
+      if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
 
       try {
           setLobbyStatus('waiting');
@@ -701,6 +604,7 @@ const GameEntryWrapper = ({ children }) => {
       )
   }
 
+  // ... (Cover, Intro, Lobby renders omitted for brevity, same as before) ...
   if (appState === 'cover') {
       return (
         <div className="min-h-screen flex flex-col justify-between bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
@@ -725,7 +629,7 @@ const GameEntryWrapper = ({ children }) => {
                 
                 <div className="flex flex-col md:flex-row gap-6 justify-center w-full max-w-lg px-4">
                     <Button size="lg" className="flex-1 h-auto py-4 text-base bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(37,99,235,0.5)] transition-all transform hover:scale-105 border border-blue-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('single'); setAppState('single_intro'); }}>
-                        <Award size={24} />
+                        <Smartphone size={24} />
                         <div className="flex flex-col items-center">
                             <span>单机体验版</span>
                             <span className="text-xs opacity-70 font-normal">一人分饰五角·自由探索</span>
@@ -751,7 +655,7 @@ const GameEntryWrapper = ({ children }) => {
         </div>
       );
   }
-  
+  // ... (Other initial states for single/multi/lobby same as before) ...
   if (appState === 'single_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -807,7 +711,7 @@ const GameEntryWrapper = ({ children }) => {
                            <Input placeholder="例如: Player1" value={playerName} onChange={e=>setPlayerName(e.target.value)} className="text-center text-lg h-12"/>
                         </div>
                         <div className="space-y-2">
-                           <span className="text-xs font-bold text-slate-600">房间号 (1-99)</span>
+                           <span className="text-xs font-bold text-slate-600">房间号 (1-20)</span>
                            <Input type="number" min={1} max={20} placeholder="请输入房间号" value={roomNumber} onChange={e=>setRoomNumber(e.target.value)} className="text-center text-lg h-12 font-mono"/>
                         </div>
                         <Button className="w-full h-12 text-lg font-bold bg-purple-600 hover:bg-purple-700" onClick={enterRoomReal}>
@@ -923,7 +827,7 @@ const SummaryForm = ({ role, onSubmit }) => {
 
   const handleSubmit = () => {
      const allScoresFilled = Object.keys(INITIAL_STATES).every(k => scores[k] && scores[k] !== "");
-     if(!pros || !cons || !allScoresFilled) { alert("请填写优点/不足，并完成所有满意度评价"); return; }
+     if(!pros || !cons || !allScoresFilled) { alert("请填写优点、不足，并完成所有满意度评价"); return; }
      onSubmit(role, { pros, cons, scores });
   };
 
@@ -954,7 +858,6 @@ const SummaryForm = ({ role, onSubmit }) => {
 
 const TransitionOverlay = ({ isVisible, stageTitle, extraText, onComplete }) => {
     const [count, setCount] = useState(3);
-    
     useEffect(() => {
         if (isVisible) {
             setCount(3); 
@@ -969,14 +872,11 @@ const TransitionOverlay = ({ isVisible, stageTitle, extraText, onComplete }) => 
             }, 1000);
             return () => clearInterval(timer);
         }
-    }, [isVisible]); 
+    }, [isVisible]);
 
     useEffect(() => {
         if (isVisible && count === 0) {
-            const timeout = setTimeout(() => {
-                onComplete();
-            }, 100);
-            return () => clearTimeout(timeout);
+            onComplete();
         }
     }, [count, isVisible, onComplete]);
 
@@ -1031,7 +931,7 @@ const CrisisContextBox = ({ crisis }) => {
 // 主游戏组件
 // ------------------------------------------------------------------
 
-function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNumber, playerList, initialViewMode }) {
+function SunLinkESGSimV7_43_CheckboxFix({ assignedRole, mode, onExit, onNext, roomNumber, playerList, initialViewMode }) {
   const [viewMode, setViewMode] = useState('intro'); 
   
   useEffect(() => {
@@ -1110,7 +1010,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   const [epcExecPlan, setEpcExecPlan] = useState([]);
   const [originalEpcExecPlan, setOriginalEpcExecPlan] = useState([]); 
   const [ownerAuditItems, setOwnerAuditItems] = useState([]);
-  const [previousAuditItems, setPreviousAuditItems] = useState([]); 
   const [s3Phase, setS3Phase] = useState('planning'); 
   const [epcViolations, setEpcViolations] = useState([]); 
 
@@ -1172,7 +1071,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   const [isSummarySubmitted, setIsSummarySubmitted] = useState({});
 
   const scrollRef = useRef(null);
-  const pollingRef = useRef(null); 
+  const pollingRef = useRef(null); // For Game State Polling
 
   useEffect(() => {
       if (mode === 'multi' && assignedRole) {
@@ -1198,7 +1097,8 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   
   const applyStatePayload = (data) => {
       if(!data) return;
-      // const isMyTurn = assignedRole && assignedRole === data.activeRole;
+      // !!! IMPORTANT FIX ISSUE 1: Do not overwrite local selection state if it is my turn !!!
+      const isMyTurn = assignedRole && assignedRole === data.activeRole;
 
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
@@ -1209,46 +1109,43 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.s4State) setS4State(data.s4State);
       if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
       
-      // Sync S1 Data
-      if(data.govMandates) setGovMandates(data.govMandates);
+      // Sync Mandates
       if(data.accumulatedGovMandates) setAccumulatedGovMandates(data.accumulatedGovMandates);
       if(data.accumulatedNgoReqs) setAccumulatedNgoReqs(data.accumulatedNgoReqs);
-      if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
-      if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
-      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
-      
-      // Sync S2 Data
-      if(data.riskLevel) setRiskLevel(data.riskLevel);
       if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
       if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
-      if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
-      if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
-      if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
-      if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
       
-      // Sync S3 Data (CRITICAL FIX: Syncing Bid Data)
-      if(data.tenderLimitPrice) setTenderLimitPrice(data.tenderLimitPrice);
-      if(data.tenderDuration) setTenderDuration(data.tenderDuration);
-      if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
-      if(data.epcBid) setEpcBid(data.epcBid);
-      if(data.epcBidHistory) setEpcBidHistory(data.epcBidHistory);
-      if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
-      if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
+      // PROTECT LOCAL STATE: Only update these if it is NOT my turn (or I am not assigned)
+      // This prevents the checkbox from unchecking itself when polling happens.
+      if (!isMyTurn || !assignedRole) {
+          if(data.govMandates) setGovMandates(data.govMandates);
+          if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
+          if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
+          if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
+          if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
+          if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
+          if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
+          if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
+          if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
+      }
 
-      // Sync S4 Data
-      if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
-      if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
-      if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
-      if(data.epcViolations) setEpcViolations(data.epcViolations);
-      if(data.crisisQueue) setCrisisQueue(data.crisisQueue);
-      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis);
+      // Always sync confirmed/history lists
+      if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
+      if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
 
-      // Sync Crisis Logic
+      // Sync Crisis Reasons
       if(data.ngoDemandReason !== undefined) setNgoDemandReason(data.ngoDemandReason);
       if(data.partyOfferReason !== undefined) setPartyOfferReason(data.partyOfferReason);
+      
       if(data.govRulingHistory) setGovRulingHistory(data.govRulingHistory);
       if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
       if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
+      
+      if(data.tenderDuration) setTenderDuration(data.tenderDuration);
+      if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
+      if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
+      if(data.crisisQueue) setCrisisQueue(data.crisisQueue); // Sync Crisis Queue
+      if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); // Sync Current Crisis
       
       if(data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);
@@ -1267,12 +1164,21 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
               const q = new AV.Query('GameAction');
               q.equalTo('room', parseInt(roomNumber));
               q.descending('createdAt');
-              q.limit(1); // Get ONLY the latest action
+              q.limit(5); 
               
-              const latestAction = await q.first();
+              const actions = await q.find();
+              const reversedActions = [...actions].reverse();
+              
+              let latestStatePayload = null;
+              
+              reversedActions.forEach(act => {
+                   if (act.get('type') === 'SYNC_STATE_FULL') {
+                       latestStatePayload = act.get('payload');
+                   }
+              });
 
-              if (latestAction && latestAction.get('type') === 'SYNC_STATE_FULL') {
-                   applyStatePayload(latestAction.get('payload'));
+              if (latestStatePayload) {
+                   applyStatePayload(latestStatePayload);
               }
 
           } catch (e) {
@@ -1281,12 +1187,13 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       };
 
       pollState();
-      pollingRef.current = setInterval(pollState, 2000); // 2 seconds poll
+      // Requirement 1: Reduce Sync Frequency to 3000ms
+      pollingRef.current = setInterval(pollState, 3000);
       
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
       }
-  }, [mode, roomNumber]); 
+  }, [mode, roomNumber, assignedRole]); // Add assignedRole dependency
 
   const syncToCloud = (type, payload) => {
       if (mode !== 'multi') return;
@@ -1301,61 +1208,55 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       act.save();
   };
   
-  // FIX: broadcastState now accepts overrides to solve closure staleness
   const broadcastState = (overrides = {}) => {
       if (mode !== 'multi') return;
       
+      const currentLogs = overrides.logs || logs;
+
       const payload = {
           stage: overrides.stage !== undefined ? overrides.stage : stage,
           activeRole: overrides.activeRole !== undefined ? overrides.activeRole : activeRole,
           playerState: overrides.playerState !== undefined ? overrides.playerState : playerState,
-          logs: overrides.logs || logs,
+          s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
+          s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
+          s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
+          s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
           lastActionInfo: overrides.lastActionInfo !== undefined ? overrides.lastActionInfo : lastActionInfo,
           
-          // S1
-          s1State: overrides.s1State !== undefined ? overrides.s1State : s1State,
-          ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
-          confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
-          ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
+          // Explicitly broadcast all selection states to ensure latest state is saved
           govMandates: overrides.govMandates !== undefined ? overrides.govMandates : govMandates,
-          accumulatedGovMandates: overrides.accumulatedGovMandates || accumulatedGovMandates,
-          accumulatedNgoReqs: overrides.accumulatedNgoReqs || accumulatedNgoReqs,
-
-          // S2
-          s2State: overrides.s2State !== undefined ? overrides.s2State : s2State,
-          riskLevel: overrides.riskLevel !== undefined ? overrides.riskLevel : riskLevel,
-          ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
-          confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
+          accumulatedGovMandates: overrides.accumulatedGovMandates !== undefined ? overrides.accumulatedGovMandates : accumulatedGovMandates,
+          accumulatedNgoReqs: overrides.accumulatedNgoReqs !== undefined ? overrides.accumulatedNgoReqs : accumulatedNgoReqs,
+          accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs !== undefined ? overrides.accumulatedGovEscpReqs : accumulatedGovEscpReqs,
+          accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs !== undefined ? overrides.accumulatedMdbEscpReqs : accumulatedMdbEscpReqs,
           govEscpMandates: overrides.govEscpMandates !== undefined ? overrides.govEscpMandates : govEscpMandates,
           mdbEscpMandates: overrides.mdbEscpMandates !== undefined ? overrides.mdbEscpMandates : mdbEscpMandates,
-          accumulatedGovEscpReqs: overrides.accumulatedGovEscpReqs || accumulatedGovEscpReqs,
-          accumulatedMdbEscpReqs: overrides.accumulatedMdbEscpReqs || accumulatedMdbEscpReqs,
+          
+          ownerEsiaSelection: overrides.ownerEsiaSelection !== undefined ? overrides.ownerEsiaSelection : ownerEsiaSelection,
+          ownerEscpSelection: overrides.ownerEscpSelection !== undefined ? overrides.ownerEscpSelection : ownerEscpSelection,
+          ngoRequirements: overrides.ngoRequirements !== undefined ? overrides.ngoRequirements : ngoRequirements,
+          confirmedEsiaSelection: overrides.confirmedEsiaSelection !== undefined ? overrides.confirmedEsiaSelection : confirmedEsiaSelection,
+          confirmedEscpSelection: overrides.confirmedEscpSelection !== undefined ? overrides.confirmedEscpSelection : confirmedEscpSelection,
 
-          // S3
-          s3State: overrides.s3State !== undefined ? overrides.s3State : s3State,
-          tenderLimitPrice: overrides.tenderLimitPrice !== undefined ? overrides.tenderLimitPrice : tenderLimitPrice,
-          tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
-          delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
-          earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
-          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
-          epcBid: overrides.epcBid !== undefined ? overrides.epcBid : epcBid,
-          epcBidHistory: overrides.epcBidHistory !== undefined ? overrides.epcBidHistory : epcBidHistory,
-
-          // S4
-          s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
           epcExecPlan: overrides.epcExecPlan !== undefined ? overrides.epcExecPlan : epcExecPlan,
           ownerAuditItems: overrides.ownerAuditItems !== undefined ? overrides.ownerAuditItems : ownerAuditItems,
-          epcViolations: overrides.epcViolations !== undefined ? overrides.epcViolations : epcViolations,
-          previousAuditItems: overrides.previousAuditItems || previousAuditItems,
-          crisisQueue: overrides.crisisQueue || crisisQueue,
-          currentCrisis: overrides.currentCrisis || currentCrisis,
 
-          // Crisis
+          // Broadcast Reasons
           ngoDemandReason: overrides.ngoDemandReason !== undefined ? overrides.ngoDemandReason : ngoDemandReason,
           partyOfferReason: overrides.partyOfferReason !== undefined ? overrides.partyOfferReason : partyOfferReason,
+
           govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
           partyAppealReason: overrides.partyAppealReason !== undefined ? overrides.partyAppealReason : partyAppealReason,
           ngoAppealReason: overrides.ngoAppealReason !== undefined ? overrides.ngoAppealReason : ngoAppealReason,
+          ownerRespEsmp: overrides.ownerRespEsmp !== undefined ? overrides.ownerRespEsmp : ownerRespEsmp,
+          tenderDuration: overrides.tenderDuration !== undefined ? overrides.tenderDuration : tenderDuration,
+          delayPenalty: overrides.delayPenalty !== undefined ? overrides.delayPenalty : delayPenalty,
+          earlyBonus: overrides.earlyBonus !== undefined ? overrides.earlyBonus : earlyBonus,
+          
+          crisisQueue: overrides.crisisQueue !== undefined ? overrides.crisisQueue : crisisQueue,
+          currentCrisis: overrides.currentCrisis !== undefined ? overrides.currentCrisis : currentCrisis,
+          
+          logs: currentLogs 
       };
       syncToCloud('SYNC_STATE_FULL', payload);
   };
@@ -1372,6 +1273,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     });
   };
 
+  // Requirement 10: Helper to robustly update state
   const updateStat = (role, key, val, baseState = null) => {
     if (val === 0) return baseState || playerState;
     const stateToUse = baseState || playerState;
@@ -1383,6 +1285,8 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
         } 
     };
     
+    // Only set state if not providing baseState (meaning we are doing a single update)
+    // If baseState is provided, we assume the caller will handle setPlayerState finalization
     if (!baseState) {
         setPlayerState(newPlayerState);
     }
@@ -1396,6 +1300,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     return newInfo;
   };
 
+  // Fix Issue 3: Helper to add log and return the new logs array for broadcasting
   const getUpdatedLogs = (msg, type = 'info') => {
     const fixedMsg = msg.replace(/EPC/g, "EPC承包商");
     const t = `${Math.floor(gameTime/60)}分${gameTime%60}秒`;
@@ -1405,6 +1310,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     return newLogs;
   };
 
+  // Legacy helper for local only updates (avoid if possible in critical path)
   const addLog = (msg, type = 'info') => {
      getUpdatedLogs(msg, type);
   }
@@ -1415,7 +1321,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
 
   const triggerStageTransition = (targetStage, title, extraText="", crisisIndex=null) => {
-      // 强制进入过渡状态
       setIsTransitioning(true);
       setTransitionContext({
           targetStage,
@@ -1517,15 +1422,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       setTimeStart1(0); 
       setViewMode('game');
       setIsTimerRunning(true);
-      if (mode === 'multi') {
-          onNext();
-      } else {
-          triggerStageTransition(1, "项目立项审批阶段");
-      }
-  }
-
-  const gotoRoles = () => {
-      setViewMode('roles');
+      triggerStageTransition(1, "项目立项审批阶段");
   }
 
   const processScheduledPayment = (crisisIndex) => {
@@ -1541,6 +1438,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
      if (actualBankDisbursed > 0.1) { 
          const bankPay = loanAmount * (actualBankDisbursed / 100);
+         // Requirement 7 & 10: Update state carefully
          newState = updateStat('owner', 'money', bankPay, newState);
          setBankDisbursedPct(nextBankPct);
          setFinancialAlert('owner', `银行拨付${ratioTxt}贷款: +$${bankPay.toFixed(1)}万`);
@@ -1559,7 +1457,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
          setFinancialAlert('epc', `收到进度款: +$${ownerPay.toFixed(1)}万`);
      }
      
-     setPlayerState(newState); 
+     setPlayerState(newState); // Final commit of state changes
      const newLogs = getUpdatedLogs(`资金流转(自动): 银行拨付${ratioTxt}，业主支付${ratioTxt}进度款。`, 'green');
      return { ownerPayAmt, newState, newLogs };
   };
@@ -1601,14 +1499,16 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     let newLastAction = lastActionInfo;
     let newLogs;
 
+    // Requirement 2: Fix NGO values not updating in UI
     if (protest) {
        const newReqs = ngoRequirements.filter(id => !accumulatedNgoReqs.includes(id));
        if (newReqs.length > 0) {
          const protestCost = newReqs.length * 2;
          const repGain = newReqs.length * 2;
+         // Use chain update pattern
          newState = updateStat('ngo', 'benefit', -protestCost, newState); 
          newState = updateStat('ngo', 'reputation', repGain, newState);
-         setPlayerState(newState); 
+         setPlayerState(newState); // Ensure React updates
          setAccumulatedNgoReqs(prev => [...prev, ...newReqs]);
        }
        const reqNames = ngoRequirements.map(id => ESIA_ITEMS.find(i=>i.id===id).label).join('; ');
@@ -1646,6 +1546,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     
     let newState = playerState;
     
+    // Requirement 2: Fix Gov Cost not updating
     if (newGovMandates.length > 0) {
         const govCost = newGovMandates.length * 2;
         newState = updateStat('gov', 'cost', govCost, newState);
@@ -1654,15 +1555,14 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     if (netRepChange !== 0) {
         newState = updateStat('gov', 'reputation', netRepChange, newState);
     }
-    setPlayerState(newState); 
+    setPlayerState(newState); // Ensure React updates
 
     if (approve) {
       updateLastAction('gov', `批准立项。`);
       const newLogs = getUpdatedLogs(`政府批准ESIA。政府声誉变动: ${netRepChange}`, netRepChange >= 0 ? 'green' : 'orange');
       broadcastState({ logs: newLogs, playerState: newState });
       
-      triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程");
-      
+      triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程。");
       return; 
       
     } else {
@@ -1725,7 +1625,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     broadcastState({ 
         s2State: 'owner_escp', 
         activeRole: 'owner',
-        riskLevel: lvl, // Fixed: Pass riskLevel
         lastActionInfo: newLastAction,
         logs: newLogs
     });
@@ -1764,10 +1663,11 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     let newLogs;
     let nextAccumulated = accumulatedGovEscpReqs;
 
+    // Requirement 3: Fix S2 Gov Cost not updating
     const addedItems = govEscpMandates.filter(id => !accumulatedGovEscpReqs.includes(id));
     if (addedItems.length > 0) {
           const costIncrease = addedItems.length * 2; 
-          newState = updateStat('gov', 'cost', costIncrease, newState); 
+          newState = updateStat('gov', 'cost', costIncrease, newState); // Chain update
           
           nextAccumulated = [...accumulatedGovEscpReqs, ...addedItems];
           setAccumulatedGovEscpReqs(nextAccumulated);
@@ -1777,7 +1677,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       setS2State('mdb_sign'); setActiveRole('mdb');
       newLastAction = updateLastAction('gov', '通过业主ESCP');
       newLogs = getUpdatedLogs('S2: 政府通过业主ESCP。', 'green');
-      setPlayerState(newState); 
+      setPlayerState(newState); // Commit
       broadcastState({ s2State: 'mdb_sign', activeRole: 'mdb', lastActionInfo: newLastAction, logs: newLogs, playerState: newState, accumulatedGovEscpReqs: nextAccumulated });
     } else {
       if (addedItems.length > 0) {
@@ -1786,7 +1686,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
           newState = updateStat('gov', 'reputation', repIncrease, newState);
           newState = updateStat('owner', 'reputation', -ownerRepDrop, newState);
-          setPlayerState(newState); 
+          setPlayerState(newState); // Commit
       }
       setS2State('owner_escp'); setActiveRole('owner');
       setS2SubmissionCount(c => c + 1); 
@@ -1825,6 +1725,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       return;
     } else {
       const addedItems = mdbEscpMandates.filter(id => !confirmedEscpSelection.includes(id)); 
+      // Requirement 3: Fix S2 MDB Cost not updating
       if (addedItems.length > 0) {
         const costIncrease = addedItems.length * 2; 
         const repIncrease = addedItems.length * 2; 
@@ -1833,7 +1734,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
         newState = updateStat('mdb', 'cost', costIncrease, newState);
         newState = updateStat('mdb', 'reputation', repIncrease, newState);
         newState = updateStat('owner', 'reputation', -ownerRepDrop, newState);
-        setPlayerState(newState); 
+        setPlayerState(newState); // Commit
 
         nextAccumulated = [...accumulatedMdbEscpReqs, ...addedItems];
         setAccumulatedMdbEscpReqs(nextAccumulated);
@@ -1856,18 +1757,18 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
 
   const s3OwnerTender = () => {
-    // Logic updated to ensure broadcast
     setEpcRespEsmp(ESMP_LIBRARY.map(i => i.id).filter(id => !ownerRespEsmp.includes(id)));
     
     const selfManagedCount = ownerRespEsmp.length;
     const cost = selfManagedCount * 20;
     const repGain = selfManagedCount * 10;
 
+    // Requirement 5: Fix owner money update for self-managed ESMP
     let newState = playerState;
     if (selfManagedCount > 0) {
         newState = updateStat('owner', 'money', -cost, newState);
         newState = updateStat('owner', 'reputation', repGain, newState);
-        setPlayerState(newState); 
+        setPlayerState(newState); // Commit
     }
 
     setS3State('epc_bid'); setActiveRole('epc');
@@ -1881,7 +1782,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
         lastActionInfo: newLastAction,
         ownerRespEsmp: ownerRespEsmp, 
         tenderDuration: tenderDuration,
-        tenderLimitPrice: tenderLimitPrice,
         delayPenalty: delayPenalty,
         earlyBonus: earlyBonus,
         logs: newLogs
@@ -1891,24 +1791,12 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   const s3EpcBid = () => {
     setOwnerRejectReason("");
     const newBid = { ...epcBid, duration: tenderDuration, round: epcBidHistory.length + 1 };
-    const newHistory = [...epcBidHistory, newBid];
-    
-    setEpcBid(newBid);
-    setEpcBidHistory(newHistory);
-
+    setEpcBidHistory([...epcBidHistory, newBid]);
     setS3State('owner_eval'); setActiveRole('owner');
-    const newLastAction = updateLastAction('epc', `投标报价: $${newBid.price}万`);
-    const newLogs = getUpdatedLogs(`S3: EPC承包商提交第${newBid.round}轮报价: $${newBid.price}万。`, 'orange');
+    const newLastAction = updateLastAction('epc', `投标报价: $${epcBid.price}万`);
+    const newLogs = getUpdatedLogs(`S3: EPC承包商提交第${newBid.round}轮报价: $${epcBid.price}万。`, 'orange');
     
-    // Explicitly passing bid data
-    broadcastState({ 
-        s3State: 'owner_eval', 
-        activeRole: 'owner', 
-        lastActionInfo: newLastAction, 
-        logs: newLogs,
-        epcBid: newBid,
-        epcBidHistory: newHistory
-    });
+    broadcastState({ s3State: 'owner_eval', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
   };
 
   const s3OwnerEval = (accept) => {
@@ -1942,28 +1830,10 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
   
   const s3EpcSignConfirm = () => {
-      // 恢复：EPC签署合同后，进入Stage 4的过渡
-      triggerStageTransition(
-          4, 
-          "项目建设阶段", 
-          `合同签约完成\n合同价: $${epcBid.price}万\n工期: ${tenderDuration}个月\n误期罚款: ${delayPenalty}万/月\n提前奖励: ${earlyBonus}万/月`
-      );
+      triggerStageTransition(4, "项目建设阶段", `合同签约完成。\n合同价: $${epcBid.price}万\n工期: ${tenderDuration}个月\n误期罚款: ${delayPenalty}万/月\n提前奖励: ${earlyBonus}万/月`);
   };
 
   const s4EpcPlan = () => {
-    const itemsToPayFor = epcExecPlan.filter(id => !ownerRespEsmp.includes(id));
-    const cost = itemsToPayFor.reduce((sum, id) => {
-        const item = ESMP_LIBRARY.find(i => i.id === id);
-        return sum + (item ? item.cost : 0);
-    }, 0);
-
-    let newState = playerState;
-    if (cost > 0) {
-        newState = updateStat('epc', 'money', -cost, newState);
-        setPlayerState(newState);
-        setFinancialAlert('epc', `ESMP执行投入: -$${cost}万`);
-    }
-
     setOriginalEpcExecPlan([...epcExecPlan]);
     setS4State('s4_audit'); setActiveRole('owner');
     const newLastAction = updateLastAction('epc', '提交执行方案');
@@ -1971,7 +1841,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     broadcastState({ 
         s4State: 's4_audit', 
         activeRole: 'owner', 
-        playerState: newState, 
         lastActionInfo: newLastAction, 
         epcExecPlan: epcExecPlan,
         logs: newLogs 
@@ -1980,37 +1849,35 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
   const s4OwnerAudit = () => {
     const auditCost = ownerAuditItems.length * 5;
+    // Requirement 7: Fix s4 audit cost update logic
     let newState = updateStat('owner', 'money', -auditCost, playerState);
-    setFinancialAlert('owner', `审计支出: -$${auditCost}万`);
     
-    setPreviousAuditItems([...ownerAuditItems]); 
-
-    // Re-calculating locally for broadcast
     const violations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
-    setEpcViolations(violations);
     
     let newLastAction;
     let newLogs;
 
+    // Log audit cost first
     newLogs = getUpdatedLogs(`S4: 业主执行抽查，花费$${auditCost}万。`, 'blue');
 
     if (violations.length > 0) {
        const repDrop = violations.length * 5;
        newState = updateStat('epc', 'reputation', -repDrop, newState);
-       setPlayerState(newState); 
+       setPlayerState(newState); // Commit
 
+       setEpcViolations(violations);
        setS4State('s4_punish_decide'); setActiveRole('owner'); 
        newLastAction = updateLastAction('owner', `发现${violations.length}项违规`);
        newLogs = getUpdatedLogs(`S4: 审计发现 ${violations.length} 项违规！承包商声誉 -${repDrop}。`, 'red');
        
-       broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction, logs: newLogs, previousAuditItems: ownerAuditItems, epcViolations: violations });
+       broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', playerState: newState, lastActionInfo: newLastAction, logs: newLogs });
     } else {
        newLastAction = updateLastAction('owner', '审计通过');
        newLogs = getUpdatedLogs('S4: 审计通过。等待承包商确认。', 'green');
-       setPlayerState(newState); 
+       setPlayerState(newState); // Commit
        
        setS4State('epc_audit_pass_confirm'); setActiveRole('epc');
-       broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', playerState: newState, lastActionInfo: newLastAction, logs: newLogs, previousAuditItems: ownerAuditItems });
+       broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', playerState: newState, lastActionInfo: newLastAction, logs: newLogs });
     }
   };
 
@@ -2040,58 +1907,46 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
      setS4State('s4_owner_reaudit'); setActiveRole('owner');
      const newLastAction = updateLastAction('epc', '提交整改方案');
      const newLogs = getUpdatedLogs('S4: EPC承包商提交整改方案。', 'orange');
-     broadcastState({ s4State: 's4_owner_reaudit', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, epcExecPlan: epcExecPlan });
+     broadcastState({ s4State: 's4_owner_reaudit', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
   };
 
   const s4OwnerReaudit = () => {
-     const newlyAdded = ownerAuditItems.filter(id => !previousAuditItems.includes(id));
-     const reauditCost = newlyAdded.length * 5;
-     let newState = playerState;
-     
-     if (reauditCost > 0) {
-         newState = updateStat('owner', 'money', -reauditCost, newState);
-         setPlayerState(newState);
-         setFinancialAlert('owner', `复查追加支出: -$${reauditCost}万`);
-     }
-
      const stillViolating = epcViolations.filter(id => !epcExecPlan.includes(id));
      let newLastAction;
      let newLogs;
      
-     const logPrefix = reauditCost > 0 ? `S4: 复查花费$${reauditCost}万。` : `S4: 执行复查。`;
-
      if (stillViolating.length > 0) {
         const currentViolations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
         
         if (currentViolations.length > 0) {
             setEpcViolations(currentViolations); 
             newLastAction = updateLastAction('owner', `复查仍发现 ${currentViolations.length}项违规`);
-            newLogs = getUpdatedLogs(`${logPrefix}复查发现仍有 ${currentViolations.length} 项违规！必须整改或风险通过。`, 'red');
+            newLogs = getUpdatedLogs(`S4: 复查发现仍有 ${currentViolations.length} 项违规！必须整改或风险通过。`, 'red');
             
             alert(`复查不通过！发现 ${currentViolations.length} 项遗漏。请责令整改或选择风险通过。`);
 
             setS4State('s4_punish_decide'); setActiveRole('owner');
-            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, playerState: newState, epcViolations: currentViolations });
+            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
         } else {
              newLastAction = updateLastAction('owner', '复查通过');
-             newLogs = getUpdatedLogs(`${logPrefix}整改复查通过，确认无遗漏。`, 'green');
+             newLogs = getUpdatedLogs('S4: 整改复查通过，确认无遗漏。', 'green');
              setS4State('epc_audit_pass_confirm'); setActiveRole('epc');
-             broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs, playerState: newState });
+             broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
         }
      } else {
          const currentViolations = ownerAuditItems.filter(id => !epcExecPlan.includes(id) && epcRespEsmp.includes(id));
          if (currentViolations.length > 0) {
             setEpcViolations(currentViolations);
             newLastAction = updateLastAction('owner', '复查不通过');
-            newLogs = getUpdatedLogs(`${logPrefix}复查检测到 ${currentViolations.length} 项未执行。`, 'red');
+            newLogs = getUpdatedLogs(`S4: 复查检测到 ${currentViolations.length} 项未执行。`, 'red');
             alert(`复查不通过！仍有未执行项目。`);
             setS4State('s4_punish_decide'); setActiveRole('owner');
-            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs, playerState: newState, epcViolations: currentViolations });
+            broadcastState({ s4State: 's4_punish_decide', activeRole: 'owner', lastActionInfo: newLastAction, logs: newLogs });
          } else {
              newLastAction = updateLastAction('owner', '复查通过');
-             newLogs = getUpdatedLogs(`${logPrefix}整改复查通过。`, 'green');
+             newLogs = getUpdatedLogs('S4: 整改复查通过。', 'green');
              setS4State('epc_audit_pass_confirm'); setActiveRole('epc');
-             broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs, playerState: newState });
+             broadcastState({ s4State: 'epc_audit_pass_confirm', activeRole: 'epc', lastActionInfo: newLastAction, logs: newLogs });
          }
      }
   };
@@ -2127,12 +1982,13 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
        title: item.crisisTitle,
        desc: item.crisisDesc
     }));
-    setCrisisQueue(queue); 
+    setCrisisQueue(queue); // IMPORTANT: Set Local
     
     const ownerPay = finalContractPrice * 0.2;
+    // Requirement 7: Fix S4 state update
     let newState = updateStat('owner', 'money', -ownerPay, playerState);
     newState = updateStat('epc', 'money', ownerPay, newState);
-    setPlayerState(newState); 
+    setPlayerState(newState); // Commit
     
     setOwnerPaidPct(20);
     
@@ -2141,7 +1997,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
     const newLogs = getUpdatedLogs(`资金流转: 业主支付预付款$${ownerPay}万(20%)。`, 'green');
     
-    broadcastState({ crisisQueue: queue, logs: newLogs, playerState: newState });
+    broadcastState({ crisisQueue: queue, logs: newLogs });
   }
 
   const startNextCrisis = (queue, index) => {
@@ -2162,6 +2018,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
      let newLastAction = lastActionInfo;
      let newLogs;
      if (claim) {
+        // Requirement 7: Ensure state update logic works
         newState = updateStat('ngo', 'benefit', -10, newState);
         newState = updateStat('ngo', 'reputation', 10, newState);
         setPlayerState(newState);
@@ -2177,9 +2034,9 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
         
         newLastAction = updateLastAction('ngo', '放弃索赔');
         newLogs = getUpdatedLogs('公众放弃索赔 (声誉-10)。项目继续。', 'gray');
+        // Must broadcast state before resolving
         broadcastState({ playerState: newState, lastActionInfo: newLastAction, logs: newLogs });
-        
-        resolveCrisis(false, true, "公众放弃索赔，危机解除。", newState); 
+        resolveCrisis(false, true, "公众放弃索赔，危机解除。"); 
      }
   };
 
@@ -2188,6 +2045,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     let responsible = 'epc';
     if (ownerRespEsmp.includes(esmpId)) responsible = 'owner';
     
+    // Requirement 8: Crisis penalty is -20
     let newState = updateStat(responsible, 'reputation', -20, playerState);
     const other = responsible === 'owner' ? 'epc' : 'owner';
     newState = updateStat(other, 'reputation', -10, newState);
@@ -2254,6 +2112,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
   const protestNgoResponse = (accept) => {
      if (accept) {
+        // Requirement 7: Update money state
         let newState = updateStat(protestHandler, 'money', -offerAmount, playerState);
         newState = updateStat('ngo', 'benefit', offerAmount, newState);
         setPlayerState(newState);
@@ -2299,10 +2158,11 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
      }
      
      if (count >= 3) {
-        let newState = updateStat(protestHandler, 'reputation', -10, playerState);
+        // Requirement 8: Final ruling penalty -30 for responsible party
+        let newState = updateStat(protestHandler, 'reputation', -30, playerState);
         setPlayerState(newState);
          
-        const finalLogs = getUpdatedLogs(`政府终局裁决: $${numAmount}万。强制执行。责任方声誉惩罚 -10。`, 'purple');
+        const finalLogs = getUpdatedLogs(`政府终局裁决: $${numAmount}万。强制执行。责任方声誉惩罚 -30。`, 'purple');
         setProtestState('ruling_result_display'); setActiveRole('all');
         broadcastState({ activeRole: 'all', govRulingHistory: newHistory, lastActionInfo: newLastAction, logs: finalLogs, playerState: newState });
      } else {
@@ -2327,6 +2187,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
      if (hasNgo && hasParty) {
          const numAmount = Number(govRulingAmount);
+         // Requirement 7: Update money state
          let newState = updateStat(protestHandler, 'money', -numAmount, playerState);
          newState = updateStat('ngo', 'benefit', numAmount, newState);
          setPlayerState(newState);
@@ -2366,6 +2227,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     if (protestState === 'parties_react_ruling' && partyResponse && ngoResponse) {
         const rulingVal = Number(govRulingAmount);
         if (partyResponse === 'accept' && ngoResponse === 'accept') {
+           // Requirement 7: Update money state
            let newState = updateStat(protestHandler, 'money', -rulingVal, playerState);
            newState = updateStat('ngo', 'benefit', rulingVal, newState);
            setPlayerState(newState);
@@ -2421,6 +2283,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
         if (actualBankDisbursed > 0.1) {
             const bankPay = loanAmount * (actualBankDisbursed/100);
+            // Requirement 7: Update state
             newState = updateStat('owner', 'money', bankPay, newState); 
             setBankDisbursedPct(nextBankPct);
             setFinancialAlert('owner', `银行拨款: +$${bankPay.toFixed(1)}万`);
@@ -2435,6 +2298,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
         
         if (actualOwnerPaid > 0.1) {
             const ownerPay = finalContractPrice * (actualOwnerPaid/100);
+            // Requirement 7: Update state
             newState = updateStat('owner', 'money', -ownerPay, newState);
             newState = updateStat('epc', 'money', ownerPay, newState);
             setPlayerState(newState);
@@ -2445,6 +2309,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
             
             newLogs = getUpdatedLogs(`业主决定: 支付${ratioTxt}进度款。通知承包商。`, 'green');
             msg = `业主决定继续支付进度款 ($${ownerPay.toFixed(1)}万)。`;
+            // Important: Broadcast state before resolving
             broadcastState({logs: newLogs, playerState: newState});
             resolveCrisis(false, false, msg);
         } else {
@@ -2481,19 +2346,12 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       }
   };
 
-  const resolveCrisis = (skipped, autoPay, customMsg, inputState = null) => {
-     let newState = inputState || playerState;
+  const resolveCrisis = (skipped, autoPay, customMsg) => {
+     let newState = playerState;
      let newLogs = logs;
-     
      if (autoPay) {
         const res = processScheduledPayment(currentCrisis.index);
-        const paidState = res.newState; 
-        if (inputState) {
-             newState = updateStat('owner', 'money', (paidState.owner.money - playerState.owner.money), newState);
-             newState = updateStat('epc', 'money', (paidState.epc.money - playerState.epc.money), newState);
-        } else {
-             newState = paidState;
-        }
+        newState = res.newState;
         newLogs = res.newLogs;
      }
      
@@ -2504,7 +2362,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
 
      const finalLogs = [...newLogs, {msg: '危机结束。进入结算界面。', type: 'green', time: `${Math.floor(gameTime/60)}分${gameTime%60}秒`}];
      setLogs(finalLogs);
-     setPlayerState(newState);
      
      broadcastState({ s4State: 's4_resolution', activeRole: 'all', playerState: newState, logs: finalLogs });
 
@@ -2630,11 +2487,11 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
              bonusPenaltyText = "项目按期完工。";
       }
 
-      setPlayerState(newState); 
+      setPlayerState(newState); // Final commit
       const newLogs = getUpdatedLogs(`结算完成。最终支付比例: ${finalPct}%。${bonusPenaltyText}`, 'green');
       broadcastState({logs: newLogs});
       
-      triggerStageTransition(6, "完工总结阶段", "项目已完成结算，顺利进入并网发电，请填写项目总结");
+      triggerStageTransition(6, "完工总结阶段", "项目已完成结算，顺利进入并网发电，请填写项目总结。");
   };
 
   const submitSummary = (role, data) => {
@@ -2700,6 +2557,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       )
   };
 
+  // ... approved list functions ...
   const renderS1ApprovedEsiaListFull = () => (
       <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col shrink-0">
         <div className="bg-slate-100 text-xs px-2 py-1 font-bold border-b border-slate-200 text-slate-700 flex justify-between items-center shrink-0">
@@ -2791,7 +2649,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Activity className="text-blue-600" />
-          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.49 (Sync Fix)</span>
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.45</span>
           {mode === 'multi' && assignedRole && (
              <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
           )}
@@ -2818,18 +2676,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       </div>
     </div>
   );
-
-  // --- View Rendering Logic ---
-  
-  if (viewMode === 'intro') {
-      return <ProjectIntroView onStart={gotoRoles} mode={mode} assignedRole={assignedRole} />;
-  }
-  
-  if (viewMode === 'roles') {
-      return <RoleDetailView onStartGame={startSim} isGameRunning={stage > 1 || isTimerRunning} onBackToGame={()=>setViewMode('game')} />;
-  }
-
-  // --- Main Game View ---
 
   const renderRoleColumn = (roleKey, title, Icon, colorClass) => {
     const isActive = activeRole === roleKey || activeRole === 'all' 
@@ -2926,7 +2772,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
 
   const renderRoleContent = (role) => {
-      // ... (Role Content Logic from previous version, unchanged)
       if (stage === 6) {
        if (isSummarySubmitted[role]) {
           return <div className="text-center text-green-600 pt-4"><CheckCircle2 className="mx-auto mb-2"/> 已提交总结</div>
@@ -2976,6 +2821,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
         );
     }
 
+    // --- Owner Roles ---
     if (role === 'owner') {
       if (stage === 1 && s1State === 'owner_draft') {
         const multiplier = 1.0 + (s1SubmissionCount - 1) * 0.2;
@@ -3062,8 +2908,8 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
              <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">控制价($万) <span className="text-red-500">*</span></span><Input type="number" onChange={e=>setTenderLimitPrice(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
              <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">合同工期(月)</span><Input type="number" defaultValue={20} onChange={e=>setTenderDuration(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
              <div className="grid grid-cols-2 gap-2">
-                 <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">误期损害赔偿费（万/月）</span><Input type="number" min={0} defaultValue={0} onChange={e=>setDelayPenalty(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
-                 <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">提前完工奖励（万/月）</span><Input type="number" min={0} defaultValue={0} onChange={e=>setEarlyBonus(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
+                 <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">误期罚款</span><Input type="number" min={0} defaultValue={0} onChange={e=>setDelayPenalty(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
+                 <div className="space-y-0.5"><span className="text-xs font-bold text-blue-800">提前奖励</span><Input type="number" min={0} defaultValue={0} onChange={e=>setEarlyBonus(Number(e.target.value))} className="h-8 md:h-6 text-sm bg-white"/></div>
              </div>
            </div>
            
@@ -3104,25 +2950,24 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
            <div className="bg-white border rounded flex-1 overflow-y-auto min-h-0">{ESMP_LIBRARY.map(item => {
                const isOwnerResp = ownerRespEsmp.includes(item.id);
                const isViolation = s4State === 's4_owner_reaudit' && epcViolations.includes(item.id);
-               const isAlreadyAudited = s4State === 's4_owner_reaudit' && previousAuditItems.includes(item.id);
                
                return (
-                   <div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp || isAlreadyAudited ? 'opacity-50 bg-slate-50' : ''} ${isViolation ? 'bg-red-50' : ''}`}>
+                   <div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-50' : ''} ${isViolation ? 'bg-red-50' : ''}`}>
                        <Checkbox 
                            className="h-5 w-5 md:h-4 md:w-4" 
                            checked={ownerAuditItems.includes(item.id)} 
-                           disabled={isOwnerResp || isAlreadyAudited} // Disable if owner responsible OR already audited
+                           disabled={isOwnerResp} 
                            onCheckedChange={c=>c?setOwnerAuditItems([...ownerAuditItems,item.id]):setOwnerAuditItems(ownerAuditItems.filter(x=>x!==item.id))}
                        />
                        <div className="flex flex-col justify-center">
                            <span className="text-sm leading-none text-slate-700">{item.label}</span>
                            {isOwnerResp && <span className="text-[10px] text-blue-500 leading-none">业主负责 (不可选)</span>}
-                           {isAlreadyAudited && <span className="text-[10px] text-gray-500 leading-none">已审计 (无需付费)</span>}
                            {isViolation && <span className="text-[10px] text-red-500 font-bold leading-none">重点复查对象</span>}
                        </div>
                    </div>
                )
            })}</div>
+           {/* Requirement 7: Audit cost hint */}
            {s4State === 's4_audit' && <div className="text-xs text-slate-500 text-center">本次审计成本: {ownerAuditItems.length * 5}万</div>}
            {s4State === 's4_audit' ? <Button size="sm" className="w-full h-12 md:h-8 text-sm shrink-0 font-bold" onClick={s4OwnerAudit}>执行审计 (花费{ownerAuditItems.length*5}万)</Button> : <Button size="sm" className="w-full h-12 md:h-8 text-sm bg-orange-600 shrink-0 font-bold" onClick={s4OwnerReaudit}>执行复查 (确认漏项已修复)</Button>}
         </div>
@@ -3190,7 +3035,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
          <div className="space-y-2 bg-purple-50 p-2 rounded border border-purple-200">
              <CrisisContextBox crisis={currentCrisis} />
              <div className="font-bold text-purple-800 text-xs">银行决定: {bankFreezeDecision==='freeze'?'暂停拨付':'继续拨付'}</div>
-             <div className="text-xs mb-2 text-slate-700">是否因危机暂停当前 {currentCrisis?.index === 3 ? '15%' : '20%'} 的进度款支付?</div>
+             <div className="text-xs mb-2 text-slate-700">是否继续支付EPC承包商进度款 ({currentCrisis?.index === 3 ? '15%' : '20%'})?</div>
              <Input type="text" placeholder="理由(可选)" className="h-12 md:h-7 text-sm bg-white mb-1" onChange={e=>setOwnerPayDecisionReason(e.target.value)}/>
              <Button size="sm" className="w-full bg-green-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerPayDecision(true)}>支付</Button>
              <Button size="sm" className="w-full bg-red-600 h-12 md:h-7 text-sm font-bold" onClick={()=>protestOwnerPayDecision(false)}>暂停支付</Button>
@@ -3206,8 +3051,9 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       );
       if (stage === 5 && inspectionState === 'owner_decide_pay') return (
         <div className="space-y-2 bg-orange-50 p-2 rounded border border-orange-200">
-           <div className="font-bold text-orange-800 flex items-center gap-1"><ClipboardCheck size={12}/> 竣工验收决策</div>
+           <div className="font-bold text-orange-800 flex items-center gap-1 text-xs"><ClipboardCheck size={12}/> 竣工验收决策</div>
            <div className="grid grid-cols-2 gap-2 text-xs mb-2"><div className="bg-white p-1 rounded">银行拨付: {bankDisbursedPct}%</div><div className="bg-white p-1 rounded">业主已付: {ownerPaidPct}%</div></div>
+           {/* Requirement 9: S5 Payment >= Prompt */}
            <div className="space-y-1"><div className="text-xs font-bold text-slate-700">支付合同额比例至(%) ({`>= ${ownerPaidPct}%`}):</div><Input type="number" className="h-12 md:h-7 text-sm" min={ownerPaidPct} max={100} onChange={e=>setOwnerPayProposal(e.target.value)}/></div>
            <div className="space-y-1"><div className="text-xs font-bold text-slate-700">反馈意见:</div><Textarea className="h-20 md:h-12 text-sm bg-white" onChange={e=>setOwnerFeedback(e.target.value)} placeholder="解释支付比例..."/></div>
            <Button size="sm" className="w-full bg-green-600 mt-2 h-12 md:h-7 text-sm font-bold" onClick={s5OwnerSubmitProposal}>通过质量验收</Button>
@@ -3215,6 +3061,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       );
     }
 
+    // --- Gov Roles ---
     if (role === 'gov') {
        if (stage === 1 && s1State === 'gov_review') {
          const hasNewMandates = govMandates.filter(id => !accumulatedGovMandates.includes(id)).length > 0;
@@ -3314,6 +3161,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
        );
     }
 
+    // --- MDB Roles ---
     if (role === 'mdb') {
        if (stage === 2 && s2State === 'risk_assess') return (
           <div className="flex flex-col h-full">
@@ -3350,6 +3198,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
              <div className="flex gap-2 mt-1 shrink-0">
                 <div className="flex-1">
                     <Button size="sm" className="w-full bg-purple-600 h-12 md:h-8 text-sm font-bold" onClick={()=>s2MdbSign(true)}>签署1500万贷款协议</Button>
+                    {/* Requirement 4: Added Note */}
                     <div className="text-[10px] text-slate-500 mt-1 text-center">分阶段拨付，当前支付20%</div>
                 </div>
                 <Button size="sm" variant="outline" className="w-full flex-1 h-12 md:h-8 text-sm font-bold" onClick={()=>s2MdbSign(false)} disabled={!hasNewMandates}>驳回</Button>
@@ -3369,6 +3218,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
        );
     }
 
+    // --- EPC Roles ---
     if (role === 'epc') {
        if (stage === 3 && s3State === 'epc_bid') return (
           <div className="space-y-2 flex flex-col h-full">
@@ -3413,6 +3263,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
                  let displayCost = item.cost;
                  if (s4State === 's4_epc_replan' && isViolation) displayCost = Math.round(item.cost * 1.2);
                  
+                 // Requirement 6: Owner ESMP grayed out and labeled
                  return (
                    <div key={item.id} className={`flex gap-2 py-2 md:py-1 px-2 items-center border-b last:border-0 ${isOwnerResp ? 'opacity-50 bg-slate-100 grayscale' : ''}`}>
                        <Checkbox className="h-5 w-5 md:h-4 md:w-4" checked={isOwnerResp ? false : (isForced ? true : epcExecPlan.includes(item.id))} disabled={isOwnerResp || isForced} onCheckedChange={c=>c?setEpcExecPlan([...epcExecPlan,item.id]):setEpcExecPlan(epcExecPlan.filter(x=>x!==item.id))}/>
@@ -3515,6 +3366,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       );
     }
 
+    // --- NGO Roles ---
     if (role === 'ngo') {
       if (stage === 1 && s1State === 'ngo_eval') {
          const hasNewReqs = ngoRequirements.filter(id => !accumulatedNgoReqs.includes(id)).length > 0;
@@ -3675,6 +3527,134 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
     );
   };
 
+  // ... (Intro/Roles views remain same) ...
+  if (viewMode === 'intro_only' || viewMode === 'intro') {
+      const isMulti = viewMode === 'intro_only';
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 font-sans">
+            <Card className="w-full max-w-5xl shadow-2xl border-t-4 border-blue-600 bg-white/95 backdrop-blur">
+                <CardHeader className="border-b border-slate-100 pb-4">
+                    <div className="flex justify-between items-center"><div className="space-y-1"><CardTitle className="text-3xl font-black text-slate-800 tracking-tight">{PROJECT_INFO.name}</CardTitle><div className="flex items-center gap-2 text-slate-500 text-sm font-medium"><MapPin size={14} /> {PROJECT_INFO.location}</div></div><Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 text-lg px-3 py-1">{isMulti ? "多人模式" : "v7.45"}</Badge></div>
+                </CardHeader>
+                <CardContent className="space-y-8 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-2 space-y-4">
+                            <div className="space-y-2"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><FileText size={20} className="text-blue-500"/> 项目背景</h3><p className="text-slate-600 leading-relaxed text-justify text-sm">{PROJECT_INFO.background}</p></div>
+                            <div className="space-y-2"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Target size={20} className="text-red-500"/> 挑战与使命</h3><p className="text-slate-600 leading-relaxed text-justify text-sm font-medium bg-slate-50 p-3 rounded border-l-4 border-slate-300">{PROJECT_INFO.mission}</p></div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm"><h3 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Zap size={18}/> 工程范围</h3><ul className="space-y-2 text-xs text-blue-900">{PROJECT_INFO.scope_items.map((item, i) => (<li key={i} className="flex gap-2 items-start"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span><span>{item}</span></li>))}</ul></div>
+                            <div className="bg-green-50 p-4 rounded-xl border border-green-100 shadow-sm"><h3 className="font-bold text-green-800 mb-2 flex items-center gap-2"><Clock size={18}/> 并网发电进度目标</h3><div className="text-2xl font-black text-green-600">24个月</div><div className="text-xs text-green-700 mt-1 opacity-80">游戏中 1分钟 ≈ 现实 1个月</div></div>
+                        </div>
+                    </div>
+                    <div className="space-y-4"><h3 className="font-bold text-lg flex items-center gap-2 text-slate-800"><Scale size={20} className="text-purple-500"/> 模拟阶段概览</h3><div className="grid grid-cols-2 md:grid-cols-5 gap-2">{PROJECT_INFO.stages_visual.map((s) => (<div key={s.id} className={`border p-3 rounded-lg text-center hover:shadow-md transition-all group ${s.color}`}><div className="w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm flex items-center justify-center text-sm font-bold mb-2 mx-auto shadow-sm">{s.id}</div><div className="font-bold text-xs mb-1">{s.title}</div><div className="text-[10px] opacity-80 leading-tight">{s.task}</div></div>))}</div></div>
+                    
+                    <div className="pt-4 flex justify-center gap-4">
+                        <Button size="lg" variant="outline" onClick={onExit}>返回主菜单</Button>
+                        {isMulti ? (
+                             <Button size="lg" className="w-full md:w-1/3 bg-slate-900 hover:bg-slate-800 text-white shadow-xl" onClick={onNext}>下一步: 查阅角色档案</Button>
+                        ) : (
+                             <Button size="lg" className="w-full md:w-1/3 bg-slate-900 hover:bg-slate-800 text-white shadow-xl transform hover:-translate-y-1 transition-all" onClick={()=>setViewMode('roles')}>下一步: 查阅角色档案</Button>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+      );
+  }
+
+  if (viewMode === 'roles_only') {
+    return (
+        <div className="min-h-screen bg-slate-50 p-4 font-sans overflow-y-auto">
+           <div className="max-w-6xl mx-auto">
+             <div className="flex justify-between items-center mb-6">
+               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                   角色档案 <Badge variant="secondary">多人模式</Badge>
+               </h2>
+               <div className="flex gap-2">
+                  <Button onClick={onExit} variant="outline">返回大厅</Button>
+               </div>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {Object.entries(ROLE_DETAILS).map(([key, info]) => {
+                   const Icon = key==='owner'?User : key==='gov'?Landmark : key==='mdb'?Globe : key==='epc'?Building2 : Users;
+                   const styles = key==='owner'? 'border-blue-500 bg-blue-50/30' : key==='gov'? 'border-green-600 bg-green-50/30' : key==='mdb'? 'border-purple-600 bg-purple-50/30' : key==='epc'? 'border-orange-500 bg-orange-50/30' : 'border-red-500 bg-red-50/30';
+                   const iconColor = key==='owner'?'text-blue-600':key==='gov'?'text-green-600':key==='mdb'?'text-purple-600':key==='epc'?'text-orange-500':'text-red-600';
+                   const descBg = key==='owner'?'bg-blue-100 text-blue-900':key==='gov'?'bg-green-100 text-green-900':key==='mdb'?'bg-purple-100 text-purple-900':key==='epc'?'bg-orange-100 text-orange-900':'bg-red-100 text-red-900';
+                   const statBg = key==='owner'?'bg-blue-50 border-blue-200':key==='gov'?'bg-green-50 border-green-200':key==='mdb'?'bg-purple-50 border-purple-200':key==='epc'?'bg-orange-50 border-orange-200':'bg-red-50 border-red-200';
+                   
+                   const isAssigned = assignedRole === key;
+                   const isBlurred = assignedRole && assignedRole !== key;
+    
+                   return (
+                     <Card key={key} className={`border-t-8 hover:shadow-xl transition-all bg-white ${styles} min-h-[320px] ${isAssigned ? 'ring-4 ring-offset-2 ring-green-500 transform scale-105 z-10' : ''} ${isBlurred ? 'opacity-60 grayscale' : ''}`}>
+                         <CardHeader className="pb-4 relative">
+                             <CardTitle className={`flex items-center gap-3 text-xl ${iconColor}`}><div className="p-2 bg-white rounded-full shadow-sm"><Icon size={24}/></div> {INITIAL_STATES[key].label}</CardTitle>
+                             {isAssigned && <Badge className="absolute top-0 right-0 bg-green-600">您的身份</Badge>}
+                         </CardHeader>
+                         <CardContent className="space-y-5 text-base text-slate-700"><div className={`p-3 rounded-md font-bold text-sm ${descBg}`}>{info.desc}</div><div className="bg-white p-4 rounded-md text-sm italic border-l-4 border-slate-400 shadow-sm leading-relaxed">{info.task}</div><div className="grid grid-cols-2 gap-4 pt-2"><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">{key==='owner' ? "初始资金" : key==='epc' ? "初始资金" : (key==='gov'||key==='mdb') ? "初始监督成本" : "社会效益"}</span><span className="text-xl">${key==='owner' ? INITIAL_STATES[key].money : key==='epc' ? INITIAL_STATES[key].money : (key==='gov'||key==='mdb') ? INITIAL_STATES[key].cost : INITIAL_STATES[key].benefit}万</span></div><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">初始声誉</span><span className="text-xl">{INITIAL_STATES[key].reputation}分</span></div></div></CardContent>
+                     </Card>
+                   )
+                })}
+             </div>
+             <div className="text-center pb-8">
+               {assignedRole === 'owner' ? (
+                 <Button size="lg" className="bg-green-600 hover:bg-green-700 px-12 py-6 text-xl shadow-md font-bold rounded-full" onClick={onNext}>
+                     开始游戏
+                 </Button>
+               ) : (
+                 <div className="flex flex-col items-center gap-2">
+                    <Button disabled size="lg" className="bg-slate-300 text-slate-500 px-12 py-6 text-xl font-bold rounded-full">
+                       <Loader2 className="mr-2 animate-spin"/> 等待房主(业主)开始...
+                    </Button>
+                    <div className="text-xs text-slate-400">提示：房主点击开始后，您将自动进入游戏</div>
+                 </div>
+               )}
+             </div>
+           </div>
+        </div>
+      );
+  }
+
+  if (viewMode === 'roles') return (
+    <div className="min-h-screen bg-slate-50 p-4 font-sans overflow-y-auto">
+       <div className="max-w-6xl mx-auto">
+         <div className="flex justify-between items-center mb-6">
+           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+               角色档案 
+           </h2>
+           <Button onClick={()=>setViewMode('game')} variant="outline"><Reply className="mr-2" size={16}/>返回游戏</Button>
+         </div>
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <Card className="border-t-8 border-slate-600 bg-white hover:shadow-xl transition-all min-h-[320px]"><CardHeader className="pb-4"><CardTitle className="flex items-center gap-3 text-xl text-slate-700"><div className="p-2 bg-slate-100 rounded-full shadow-sm"><ScrollText size={24}/></div> 知情同意书</CardTitle></CardHeader><CardContent className="text-sm text-slate-600 space-y-3 leading-relaxed"><p>您即将参与的是一项关于国际工程项目ESG管理的决策行为实验，由天津大学全球工程经营实验室开发。</p><p>匿名性：您的所有回答将被严格保密，系统仅记录去标识化的决策数据用于科研统计分析。</p><p>自愿性：参与本实验完全自愿，您有权在任何时候关闭页面退出。</p><p>无风险：本实验不涉及任何商业利益或个人隐私风险。</p></CardContent></Card>
+            {Object.entries(ROLE_DETAILS).map(([key, info]) => {
+               const Icon = key==='owner'?User : key==='gov'?Landmark : key==='mdb'?Globe : key==='epc'?Building2 : Users;
+               const styles = key==='owner'? 'border-blue-500 bg-blue-50/30' : key==='gov'? 'border-green-600 bg-green-50/30' : key==='mdb'? 'border-purple-600 bg-purple-50/30' : key==='epc'? 'border-orange-500 bg-orange-50/30' : 'border-red-500 bg-red-50/30';
+               const iconColor = key==='owner'?'text-blue-600':key==='gov'?'text-green-600':key==='mdb'?'text-purple-600':key==='epc'?'text-orange-500':'text-red-600';
+               const descBg = key==='owner'?'bg-blue-100 text-blue-900':key==='gov'?'bg-green-100 text-green-900':key==='mdb'?'bg-purple-100 text-purple-900':key==='epc'?'bg-orange-100 text-orange-900':'bg-red-100 text-red-900';
+               const statBg = key==='owner'?'bg-blue-50 border-blue-200':key==='gov'?'bg-green-50 border-green-200':key==='mdb'?'bg-purple-50 border-purple-200':key==='epc'?'bg-orange-50 border-orange-200':'bg-red-50 border-red-200';
+               
+               return (
+                 <Card key={key} className={`border-t-8 hover:shadow-xl transition-all bg-white ${styles} min-h-[320px]`}>
+                     <CardHeader className="pb-4 relative">
+                         <CardTitle className={`flex items-center gap-3 text-xl ${iconColor}`}><div className="p-2 bg-white rounded-full shadow-sm"><Icon size={24}/></div> {INITIAL_STATES[key].label}</CardTitle>
+                     </CardHeader>
+                     <CardContent className="space-y-5 text-base text-slate-700"><div className={`p-3 rounded-md font-bold text-sm ${descBg}`}>{info.desc}</div><div className="bg-white p-4 rounded-md text-sm italic border-l-4 border-slate-400 shadow-sm leading-relaxed">{info.task}</div><div className="grid grid-cols-2 gap-4 pt-2"><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">{key==='owner' ? "初始资金" : key==='epc' ? "初始资金" : (key==='gov'||key==='mdb') ? "初始监督成本" : "社会效益"}</span><span className="text-xl">${key==='owner' ? INITIAL_STATES[key].money : key==='epc' ? INITIAL_STATES[key].money : (key==='gov'||key==='mdb') ? INITIAL_STATES[key].cost : INITIAL_STATES[key].benefit}万</span></div><div className={`p-3 border rounded-md font-semibold flex flex-col items-center justify-center ${statBg}`}><span className="text-xs text-slate-500 mb-1">初始声誉</span><span className="text-xl">{INITIAL_STATES[key].reputation}分</span></div></div></CardContent>
+                 </Card>
+               )
+            })}
+         </div>
+         <div className="text-center pb-8">
+           <Button size="lg" className="bg-green-600 hover:bg-green-700 px-12 py-6 text-xl shadow-md font-bold rounded-full" onClick={() => {
+               startSim();
+           }}>
+               开始模拟
+           </Button>
+         </div>
+       </div>
+    </div>
+  );
+  
   const isResultDisplay = stage===4 && protestState==='ruling_result_display';
 
   return (
@@ -3795,17 +3775,17 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   );
 }
 
-function SunLinkV7_51_TransitionRestore() {
+function SunLinkV7_45_Fixed() {
     return (
         <GameEntryWrapper>
-            <SunLinkESGSimV7_47_Refined />
+            <SunLinkESGSimV7_43_CheckboxFix />
         </GameEntryWrapper>
     );
 }
 
       		  createRoot(document.getElementById("root")).render(
              <>
-      		    <SunLinkV7_51_TransitionRestore />
+      		    <SunLinkV7_45_Fixed />
               </>
       		    );
               window.parent.postMessage({ action: "ready" }, "*");
