@@ -799,7 +799,7 @@ const GameEntryWrapper = ({ children }) => {
     if (appState === 'multi_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {/* 修复：直接渲染简介组件，不要复用主游戏组件 */}
+             {/* 修复：直接使用视图组件，避免主游戏组件因未初始化而崩溃 */}
              <ProjectIntroView 
                  mode="multi" 
                  assignedRole={myRole} 
@@ -809,30 +809,33 @@ const GameEntryWrapper = ({ children }) => {
       );
   }
 
-  if (appState === 'multi_roles') {
+   if (appState === 'multi_roles') {
+      // 定义点击行为：房主触发开始，非房主提示等待
       const handleRoleViewStart = () => {
           if (myRole === 'owner') {
-              startGame(); // 房主触发广播
+              startGame(); 
           } else {
               alert("请等待房主(Owner)点击开始游戏..."); 
           }
       };
 
+      // 安全获取角色标签，防止 myRole 为空导致报错
+      const roleLabel = myRole && INITIAL_STATES[myRole] ? INITIAL_STATES[myRole].label : "未知角色";
+
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {/* 修复：直接渲染角色档案组件 */}
              <RoleDetailView 
-                 onStartGame={handleRoleViewStart} 
-                 isGameRunning={false} 
-                 onBackToGame={()=>{}}
+                onStartGame={handleRoleViewStart} 
+                isGameRunning={false} 
+                onBackToGame={()=>{}}
              />
              
-             {/* 底部状态提示条 */}
-             <div className="absolute bottom-0 left-0 w-full bg-slate-800 text-white p-2 text-center text-xs flex justify-between items-center px-6 z-50 border-t border-slate-700">
-                 <span>当前身份: {INITIAL_STATES[myRole]?.label || myRole}</span>
+             {/* 底部提示条 */}
+             <div className="absolute bottom-0 left-0 w-full bg-slate-800 text-white p-3 text-center text-xs flex justify-between items-center px-8 z-50 border-t border-slate-700 shadow-lg">
+                 <span className="font-mono text-slate-300">当前身份: <span className="text-white font-bold">{roleLabel}</span></span>
                  {myRole === 'owner' 
                     ? <span className="text-green-400 font-bold animate-pulse">你是房主，全员准备好后请点击中间的“进入游戏”</span>
-                    : <span className="text-yellow-400">等待房主启动游戏...</span>
+                    : <span className="text-yellow-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> 等待房主启动游戏...</span>
                  }
              </div>
          </div>
@@ -962,8 +965,8 @@ const GameEntryWrapper = ({ children }) => {
   }
 
   if (appState === 'playing') {
-      // 关键修复：传入 initialViewMode='game'
-      // 这样主组件加载后，会直接跳过简介，显示游戏面板
+      // 关键修复：强制 initialViewMode 为 'game'
+      // 如果不加这行，主组件可能会再次渲染 Intro，导致逻辑死循环或显示错误
       const gameContent = React.cloneElement(children, { 
          assignedRole: myRole, 
          mode: mode,
