@@ -1,8 +1,7 @@
-
-	      <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
   <head>
-    <title> SunLink ESG Simulator by TJU GIPC </title>
+    <title> 1 SunLink ESG Simulator by TJU GIPC </title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -1274,7 +1273,14 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           if(data.s2State) setS2State(data.s2State);
           if(data.s3State) setS3State(data.s3State);
           if(data.s4State) setS4State(data.s4State);
+          if(data.protestState) setProtestState(data.protestState); // Added missing protestState
+          if(data.inspectionState) setInspectionState(data.inspectionState); // Added missing inspectionState
           if(data.lastActionInfo) setLastActionInfo(data.lastActionInfo);
+          
+          if(data.s1SubmissionCount) setS1SubmissionCount(data.s1SubmissionCount); // Added count sync
+          if(data.s2SubmissionCount) setS2SubmissionCount(data.s2SubmissionCount); // Added count sync
+          if(data.govRulingCount) setGovRulingCount(data.govRulingCount); // Added count sync
+          if(data.s3Phase) setS3Phase(data.s3Phase); // Added phase sync
           
           // 2. 【关键】确保同步 Stage 1 的数组数据
           // 只有这两行加上了，公众端才能看到业主选了什么
@@ -1312,6 +1318,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
           if(data.crisisQueue) setCrisisQueue(data.crisisQueue); 
           if(data.currentCrisis) setCurrentCrisis(data.currentCrisis); 
+          if(data.s5ConfirmedParties) setS5ConfirmedParties(data.s5ConfirmedParties);
           
           // 5. 日志与计时器
           if(data.logs && Array.isArray(data.logs)) {
@@ -1410,6 +1417,12 @@ const broadcastState = (overrides = {}) => {
         s4State: overrides.s4State !== undefined ? overrides.s4State : s4State,
         inspectionState: overrides.inspectionState !== undefined ? overrides.inspectionState : inspectionState,
         protestState: overrides.protestState !== undefined ? overrides.protestState : protestState,
+        s3Phase: overrides.s3Phase !== undefined ? overrides.s3Phase : s3Phase,
+
+        // 计数器
+        s1SubmissionCount: overrides.s1SubmissionCount !== undefined ? overrides.s1SubmissionCount : s1SubmissionCount,
+        s2SubmissionCount: overrides.s2SubmissionCount !== undefined ? overrides.s2SubmissionCount : s2SubmissionCount,
+        govRulingCount: overrides.govRulingCount !== undefined ? overrides.govRulingCount : govRulingCount,
 
         // 3. 详细业务数据 (使用 || 机制，优先使用 override 的值，否则使用当前 state 的值)
         
@@ -1459,7 +1472,6 @@ const broadcastState = (overrides = {}) => {
         govRulingAmount: overrides.govRulingAmount !== undefined ? overrides.govRulingAmount : govRulingAmount,
         govRulingReason: overrides.govRulingReason !== undefined ? overrides.govRulingReason : govRulingReason,
         govRulingHistory: overrides.govRulingHistory !== undefined ? overrides.govRulingHistory : govRulingHistory,
-        govRulingCount: overrides.govRulingCount !== undefined ? overrides.govRulingCount : govRulingCount,
         
         bankFreezeDecision: overrides.bankFreezeDecision !== undefined ? overrides.bankFreezeDecision : bankFreezeDecision,
         ownerPayDecisionReason: overrides.ownerPayDecisionReason !== undefined ? overrides.ownerPayDecisionReason : ownerPayDecisionReason,
