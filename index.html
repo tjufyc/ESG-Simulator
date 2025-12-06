@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title>SunLink ESG Simulator by TJU GIPC</title>
+    <title> 2 SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -1282,7 +1282,10 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   
   const applyStatePayload = (data) => {
       if(!data) return;
-      const isMyTurn = assignedRole && assignedRole === data.activeRole;
+      if (data.activeRole && data.activeRole !== activeRole) {
+                    setActiveRole(data.activeRole);setIsTransitioning(true);
+                    setTimeout(() => setIsTransitioning(false), 3000);
+                }
 
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
@@ -1437,7 +1440,15 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
           
           logs: currentLogs 
       };
-      syncToCloud('SYNC_STATE_FULL', payload);
+     const AV = window.AV;
+                const Action = AV.Object.extend('GameAction');
+                const act = new Action();
+                act.set('room', parseInt(roomNumber));
+                act.set('type', 'SYNC_STATE_FULL');
+                act.set('payload', payload);
+                act.save().catch(e => console.error("Sync failed", e));
+            };
+	  syncToCloud('SYNC_STATE_FULL', payload);
   };
 
 
