@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>A SunLink ESG Simulator by TJU GIPC</title>
+    <title> A SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -1658,8 +1658,144 @@ function SunLinkV7_51_TransitionRestore({ assignedRole, mode, onExit, onNext, ro
   }
 
   // --- Main Game View ---
-      const renderRoleColumn = (roleKey, title, Icon, colorClass) => {
-    // 修复多人模式下的高亮显示逻辑
+      // --- 内部渲染辅助函数 (修复作用域问题) ---
+
+  const FloatingText = ({ value, type }) => (
+      <span className={`absolute -top-4 right-0 text-xs font-black animate-out fade-out slide-out-to-top-4 duration-1000 z-50 ${value > 0 ? 'text-green-600' : 'text-red-600'}`}>
+        {value > 0 ? '+' : ''}{value}
+      </span>
+  );
+
+  const GentleAlert = ({ text, colorClass }) => {
+      if (!text) return null;
+      return (
+          <div className={`w-full mb-1 px-2 py-1 rounded text-[9px] font-medium flex items-center gap-1 animate-in slide-in-from-top-1 fade-in duration-500 ${colorClass}`}>
+              <Banknote size={10}/>
+              {text}
+          </div>
+      )
+  };
+
+  const renderS1ApprovedEsiaListFull = () => (
+      <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col shrink-0">
+        <div className="bg-slate-100 text-xs px-2 py-1 font-bold border-b border-slate-200 text-slate-700 flex justify-between items-center shrink-0">
+           <span>已通过的ESIA</span>
+           <ListChecks size={12}/>
+        </div>
+        <div className="bg-white p-1 overflow-y-auto h-32">
+           {ESIA_ITEMS.map(item => {
+              const isOwnerSelected = ownerEsiaSelection.includes(item.id);
+              const isConfirmed = confirmedEsiaSelection.includes(item.id); 
+              const isGovReq = accumulatedGovMandates.includes(item.id); 
+              const isNgoReq = accumulatedNgoReqs.includes(item.id);
+              
+              const isApproved = isConfirmed || isGovReq;
+
+              if (!isApproved) {
+                  return (
+                     <div key={item.id} className="flex items-center justify-between text-xs py-1 md:py-1 px-1 border-b border-slate-50 last:border-0 opacity-50 grayscale">
+                         <span className="text-slate-700 leading-none">{item.label}</span>
+                         <span className="text-[8px] text-slate-400">业主未选</span>
+                     </div>
+                  )
+              }
+              
+              return (
+                 <div key={item.id} className={`flex items-center justify-between text-xs py-1 md:py-1 px-1 border-b border-slate-50 last:border-0`}>
+                    <span className="text-slate-700 leading-none">{item.label}</span>
+                    <div className="flex gap-1">
+                         {isOwnerSelected && <Badge variant="outline" className="text-[8px] h-3 px-1 text-blue-500 bg-blue-50 border-blue-100 leading-none">已选</Badge>}
+                         {isNgoReq && <Badge variant="outline" className="text-[8px] h-3 px-1 text-red-500 bg-red-50 border-red-100 leading-none">公众</Badge>}
+                         {isGovReq && <Badge variant="outline" className="text-[8px] h-3 px-1 text-green-500 bg-green-50 border-green-100 leading-none">政府</Badge>}
+                    </div>
+                 </div>
+              )
+           })}
+        </div>
+      </div>
+  );
+
+  const renderS2ApprovedEscpListFull = () => (
+    <div className="mt-2 border border-slate-200 rounded overflow-hidden flex flex-col shrink-0">
+       <div className="bg-slate-100 text-xs px-2 py-1 font-bold border-b border-slate-200 text-slate-700 flex justify-between items-center shrink-0">
+          <span>已签署ESCP</span>
+          <ListChecks size={12}/>
+       </div>
+       <div className="bg-white p-1 overflow-y-auto h-32">
+          {ESMP_LIBRARY.map(item => {
+             const isOwner = confirmedEscpSelection.includes(item.id);
+             const isGov = accumulatedGovEscpReqs.includes(item.id);
+             const isMdb = accumulatedMdbEscpReqs.includes(item.id);
+             const isSigned = isOwner || isGov || isMdb;
+             
+             return (
+                <div key={item.id} className={`flex items-center justify-between text-xs py-1 md:py-1 px-1 border-b border-slate-50 last:border-0 ${!isSigned ? 'opacity-50 grayscale' : ''}`}>
+                   <span className="text-slate-700 truncate max-w-[180px] md:max-w-[220px] leading-none">{item.label}</span>
+                   <div className="flex gap-1">
+                      {isSigned ? (
+                          <>
+                            {isOwner && <Badge variant="outline" className="text-[8px] h-3 px-1 text-blue-500 bg-blue-50 border-blue-100 leading-none">业</Badge>}
+                            {isGov && <Badge variant="outline" className="text-[8px] h-3 px-1 text-green-500 bg-green-50 border-green-100 leading-none">政</Badge>}
+                            {isMdb && <Badge variant="outline" className="text-[8px] h-3 px-1 text-purple-500 bg-purple-50 border-purple-100 leading-none">银</Badge>}
+                          </>
+                      ) : (
+                          <span className="text-[8px] text-slate-400">未选</span>
+                      )}
+                   </div>
+                </div>
+             )
+          })}
+       </div>
+    </div>
+  );
+
+  const renderTimer = () => {
+      const totalSeconds = 24 * 60;
+      const remaining = totalSeconds - gameTime;
+      const m = Math.floor(Math.abs(remaining) / 60);
+      const s = Math.abs(remaining) % 60;
+      
+      return (
+        <span className={`font-mono font-bold ${remaining < 0 ? 'text-red-600 animate-pulse' : 'text-slate-700'}`}>
+          {remaining >= 0 ? `并网发电时间剩余 ${m}分${String(s).padStart(2,'0')}秒` : `延期 ${m}分${String(s).padStart(2,'0')}秒`}
+        </span>
+      );
+  };
+
+  const renderTopBar = () => (
+    <div className="h-14 bg-white border-b border-slate-200 flex justify-between items-center px-4 shrink-0 shadow-sm z-20 relative">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Activity className="text-blue-600" />
+          <span className="font-bold text-lg text-slate-800 hidden md:block">SunLink v7.51</span>
+          {mode === 'multi' && assignedRole && (
+             <Badge variant="secondary" className="ml-2 text-xs flex items-center gap-1"><Network size={10} className="text-green-500"/> {INITIAL_STATES[assignedRole].label} <span className="text-slate-400">|</span> {playerList?.find(p=>p.role===assignedRole)?.name}</Badge>
+          )}
+          {mode === 'single' && <Badge variant="outline" className="ml-2 text-xs text-slate-500">单机体验模式</Badge>}
+        </div>
+        <div className="hidden md:flex gap-1 overflow-x-auto">
+          {[1,2,3,4,5].map(s => (
+            <Badge key={s} variant={stage===s?"default":"outline"} className={stage===s?"bg-blue-600 hover:bg-blue-700 whitespace-nowrap":"text-slate-500 whitespace-nowrap"}>
+              {s===1?"立项审批":s===2?"项目融资":s===3?"EPC合同谈判":s===4?"项目建设":"验收与后评价"} 
+            </Badge>
+          ))}
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode==='roles'?'game':'roles')}>
+          {viewMode==='roles' ? <Reply className="mr-2" size={16}/> : <BookOpen className="mr-2" size={16}/>}
+          {viewMode==='roles' ? "返回游戏" : "档案"} 
+        </Button>
+        <div className="bg-slate-100 px-3 py-1 rounded flex items-center gap-2 border border-slate-200 text-xs">
+          <Timer size={16} className="text-slate-500"/>
+          {renderTimer()}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRoleColumn = (roleKey, title, Icon, colorClass) => {
     const isActive = activeRole === roleKey || activeRole === 'all' 
        || (stage===4 && ['gov','ngo',protestHandler].includes(roleKey))
        || (stage===4 && protestState==='ruling_result_display' && (roleKey==='ngo' || roleKey===protestHandler))
@@ -1803,6 +1939,7 @@ function SunLinkV7_51_TransitionRestore({ assignedRole, mode, onExit, onNext, ro
         );
     }
 
+    // --- Owner Roles ---
     if (role === 'owner') {
       if (stage === 1 && s1State === 'owner_draft') {
         const multiplier = 1.0 + (s1SubmissionCount - 1) * 0.2;
