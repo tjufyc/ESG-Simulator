@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>B SunLink ESG Simulator by TJU GIPC</title>
+    <title>A SunLink ESG Simulator by TJU GIPC</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -75,45 +75,66 @@ window.console = new Proxy(console, {
         :root {
           --background: 0 0% 100%;
           --foreground: 222.2 47.4% 11.2%;
+
           --muted: 210 40% 96.1%;
           --muted-foreground: 215.4 16.3% 46.9%;
+
           --popover: 0 0% 100%;
           --popover-foreground: 222.2 47.4% 11.2%;
+
           --border: 214.3 31.8% 91.4%;
           --input: 214.3 31.8% 91.4%;
+
           --card: 0 0% 100%;
           --card-foreground: 222.2 47.4% 11.2%;
+
           --primary: 222.2 47.4% 11.2%;
           --primary-foreground: 210 40% 98%;
+
           --secondary: 210 40% 96.1%;
           --secondary-foreground: 222.2 47.4% 11.2%;
+
           --accent: 210 40% 96.1%;
           --accent-foreground: 222.2 47.4% 11.2%;
+
           --destructive: 0 100% 50%;
           --destructive-foreground: 210 40% 98%;
+
           --ring: 215 20.2% 65.1%;
+
           --radius: 0.5rem;
         }
+
         .dark {
           --background: 224 71% 4%;
           --foreground: 213 31% 91%;
+
           --muted: 223 47% 11%;
           --muted-foreground: 215.4 16.3% 56.9%;
+
           --accent: 216 34% 17%;
           --accent-foreground: 210 40% 98%;
+
           --popover: 224 71% 4%;
           --popover-foreground: 215 20.2% 65.1%;
+
           --border: 216 34% 17%;
           --input: 216 34% 17%;
+
           --card: 224 71% 4%;
           --card-foreground: 213 31% 91%;
+
           --primary: 210 40% 98%;
           --primary-foreground: 222.2 47.4% 1.2%;
+
           --secondary: 222.2 47.4% 11.2%;
           --secondary-foreground: 210 40% 98%;
+
           --destructive: 0 63% 31%;
           --destructive-foreground: 210 40% 98%;
+
           --ring: 216 34% 17%;
+
           --radius: 0.5rem;
         }
       }
@@ -121,7 +142,9 @@ window.console = new Proxy(console, {
     <script type="module">
           import defaultTheme from "tailwindcss/defaultTheme"
           import tailwindcssAnimate from "tailwindcss-animate"
+
           const fontFamily = defaultTheme.fontFamily;
+
           tailwind.config = {
             darkMode: ["class"],
         content: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
@@ -177,6 +200,7 @@ window.console = new Proxy(console, {
             fontFamily: {
               sans: [...fontFamily.sans],
             },
+
             keyframes: {
               "accordion-down": {
                 from: { height: "0" },
@@ -201,8 +225,9 @@ window.console = new Proxy(console, {
   <body>
     <div id="root"></div>
     <script type="text/babel" data-type="module">
-      import {createRoot} from "react-dom/client";
-      
+      		  import {createRoot} from "react-dom/client";
+            
+      		  
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "https://esm.sh/shadcdn?external=react,react-dom";
 import { Button } from "https://esm.sh/shadcdn?external=react,react-dom";
@@ -212,6 +237,7 @@ import { Badge } from "https://esm.sh/shadcdn?external=react,react-dom";
 import { Alert, AlertTitle, AlertDescription } from "https://esm.sh/shadcdn?external=react,react-dom";
 import { ScrollArea } from "https://esm.sh/shadcdn?external=react,react-dom";
 import { Textarea } from "https://esm.sh/shadcdn?external=react,react-dom";
+
 import { 
   User, Building2, Landmark, Globe, Users, Activity, 
   ArrowRight, FileText, CheckCircle2, MapPin, 
@@ -1632,9 +1658,8 @@ function SunLinkV7_51_TransitionRestore({ assignedRole, mode, onExit, onNext, ro
   }
 
   // --- Main Game View ---
-      // --- Main Game View ---
-
-  const renderRoleColumn = (roleKey, title, Icon, colorClass) => {
+      const renderRoleColumn = (roleKey, title, Icon, colorClass) => {
+    // 修复多人模式下的高亮显示逻辑
     const isActive = activeRole === roleKey || activeRole === 'all' 
        || (stage===4 && ['gov','ngo',protestHandler].includes(roleKey))
        || (stage===4 && protestState==='ruling_result_display' && (roleKey==='ngo' || roleKey===protestHandler))
