@@ -2,7 +2,7 @@
 	      <!DOCTYPE html>
 <html>
   <head>
-    <title>SunLink ESG Simulator by TJU GIPC</title>
+    <title>Test</title>
 
     <script type="importmap">
       {"imports":{"react":"https://esm.sh/react@18.3.1","https:":"https://esm.sh/https:?external=react,react-dom","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
@@ -230,14 +230,14 @@ window.console = new Proxy(console, {
             
       		  
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Button } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Checkbox } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Input } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Badge } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Alert, AlertTitle, AlertDescription } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { ScrollArea } from "https://esm.sh/shadcdn?external=react,react-dom";
-import { Textarea } from "https://esm.sh/shadcdn?external=react,react-dom";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 
 import { 
   User, Building2, Landmark, Globe, Users, Activity, 
@@ -248,10 +248,10 @@ import {
   Zap, HardHat, ListChecks,
   PieChart, BarChart3, ScrollText, Target, Scale,
   LogIn, Users2, Loader2, Network,
-  UserPlus, ArrowBigRight, Info
+  UserPlus, ArrowBigRight, Info, Play
 } from 'lucide-react';
 
-// --- 静态配置 ---
+// --- 静态配置 (保持不变) ---
 const PROJECT_INFO = {
   name: "SunLink 光伏+输变电项目", 
   location: "A国 (虚构发展中国家) - 北部干旱荒漠与'绿洲'湿地保护区的交界地带",
@@ -353,7 +353,8 @@ const RISK_TABLE = [
 
 // --- 页面组件 ---
 
-const ProjectIntroView = ({ onStart, mode, assignedRole }) => {
+// 修改：增加 onlyIntroContent 属性，用于多人模式分步展示
+const ProjectIntroView = ({ onStart, mode, assignedRole, onNext, onlyIntroContent }) => {
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800 overflow-y-auto pb-10">
             <div className="max-w-5xl mx-auto p-6 md:p-12">
@@ -432,20 +433,27 @@ const ProjectIntroView = ({ onStart, mode, assignedRole }) => {
                 </div>
 
                 <div className="flex justify-center">
-                     <Button size="lg" onClick={onStart} className="h-14 px-8 text-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xl hover:shadow-2xl transition-all rounded-full flex items-center gap-2 animate-bounce">
-                        下一步：查看角色档案 <ArrowRight size={20}/>
-                     </Button>
+                    {mode === 'multi' ? (
+                        <Button size="lg" onClick={onNext} className="h-14 px-8 text-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xl hover:shadow-2xl transition-all rounded-full flex items-center gap-2 animate-bounce">
+                           下一步：查看角色档案 <ArrowRight size={20}/>
+                        </Button>
+                    ) : (
+                        <Button size="lg" onClick={onStart} className="h-14 px-8 text-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xl hover:shadow-2xl transition-all rounded-full flex items-center gap-2 animate-bounce">
+                           下一步：查看角色档案 <ArrowRight size={20}/>
+                        </Button>
+                    )}
                 </div>
                 
                 <div className="text-center text-slate-400 text-xs mt-8">
-                    {mode === 'multi' && assignedRole ? `当前身份: ${INITIAL_STATES[assignedRole].label}` : "单机模式"}
+                    {mode === 'multi' && assignedRole ? `当前身份: ${INITIAL_STATES[assignedRole].label}` : (mode==='multi' ? "多人联机模式" : "单机模式")}
                 </div>
             </div>
         </div>
     );
 };
 
-const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame }) => {
+// 修改：增加 onlyRoleContent 和 onNext 属性
+const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame, mode, onNext }) => {
     return (
         <div className="min-h-screen bg-slate-100 font-sans p-4 md:p-8 overflow-y-auto">
             <div className="max-w-6xl mx-auto">
@@ -454,14 +462,20 @@ const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame }) => {
                         <h1 className="text-3xl font-black text-slate-800">角色档案</h1>
                         <p className="text-slate-500">Stakeholder Profiles</p>
                      </div>
-                     {isGameRunning ? (
-                         <Button onClick={onBackToGame} variant="outline" className="border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
-                            <Reply className="mr-2" size={16}/> 返回游戏
+                     {mode === 'multi' ? (
+                         <Button onClick={onNext} size="lg" className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg">
+                            <Network className="mr-2" size={16}/> 进入房间选择角色
                          </Button>
                      ) : (
-                         <Button onClick={onStartGame} size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg">
-                            <Zap className="mr-2" size={16}/> 进入游戏
-                         </Button>
+                         isGameRunning ? (
+                             <Button onClick={onBackToGame} variant="outline" className="border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
+                                <Reply className="mr-2" size={16}/> 返回游戏
+                             </Button>
+                         ) : (
+                             <Button onClick={onStartGame} size="lg" className="bg-green-600 hover:bg-green-700 text-white shadow-lg">
+                                <Zap className="mr-2" size={16}/> 进入游戏
+                             </Button>
+                         )
                      )}
                 </div>
 
@@ -503,7 +517,7 @@ const RoleDetailView = ({ onStartGame, isGameRunning, onBackToGame }) => {
                              <CardTitle className="text-xl mt-4">知情同意书</CardTitle>
                          </CardHeader>
                          <CardContent className="text-sm text-slate-600 space-y-3">
-                             <p className="font-medium text-slate-700">您即将参与的是一项关于国际工程项目ESG管理的行为实验，由天津大学全球工程经营实验室开发。</p>
+                             <p className="font-medium text-slate-700">您即将参与的是一项关于国际工程项目ESG管理的决策行为实验，由天津大学全球工程经营实验室开发。</p>
                              <ul className="space-y-2 text-xs bg-white p-3 rounded border border-slate-200">
                                  <li><strong className="text-slate-800">自愿性：</strong>参与本实验完全自愿，您有权在任何时候关闭页面退出。</li>
                                  <li><strong className="text-slate-800">无风险：</strong>本实验不涉及任何商业利益或个人隐私风险。</li>
@@ -556,10 +570,10 @@ const GameEntryWrapper = ({ children }) => {
   
   const [roomNumber, setRoomNumber] = useState(''); 
   const [playerName, setPlayerName] = useState('');
-  const [lobbyStatus, setLobbyStatus] = useState('login'); 
   const [roomPlayers, setRoomPlayers] = useState([]);
   const [myRole, setMyRole] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0); 
+  const [gameStartSignal, setGameStartSignal] = useState(false);
   
   const pollingRef = useRef(null);
 
@@ -607,12 +621,13 @@ const GameEntryWrapper = ({ children }) => {
            }
       };
       fetchOnlineCount();
-      const timer = setInterval(fetchOnlineCount, 30000); // Reduced frequency
+      const timer = setInterval(fetchOnlineCount, 30000); 
       return () => clearInterval(timer);
   }, [sdkReady]);
 
+  // 修改：Polling Logic 仅在进入 Lobby 后才生效
   useEffect(() => {
-      if (lobbyStatus !== 'waiting' || !roomNumber || !sdkReady) {
+      if (appState !== 'multi_lobby' || !roomNumber || !sdkReady) {
           if (pollingRef.current) clearInterval(pollingRef.current);
           return;
       }
@@ -623,16 +638,19 @@ const GameEntryWrapper = ({ children }) => {
       const poll = async () => {
           try {
               if (!AV) return;
+              // 1. 获取玩家列表
               const pQuery = new AV.Query('GamePlayer');
               pQuery.equalTo('room', rNum);
               pQuery.ascending('createdAt');
               const players = await pQuery.find();
+              
               setRoomPlayers(players.map(p => ({
                   name: p.get('name'),
                   role: p.get('role'),
                   id: p.id
               })));
 
+              // 2. 检查游戏开始信号
               const aQuery = new AV.Query('GameAction');
               aQuery.equalTo('room', rNum);
               aQuery.equalTo('type', 'SYNC_STATE_FULL');
@@ -642,9 +660,10 @@ const GameEntryWrapper = ({ children }) => {
 
               if (latestAction) {
                   const payload = latestAction.get('payload');
-                  if (payload && payload.stage === 1) {
+                  // 只要有 stage 1 的 payload 且是 SYNC_STATE_FULL，就意味着游戏开始了
+                  if (payload && payload.stage >= 1) {
                       console.log("Detected Game Start Signal via Polling!");
-                      setAppState('playing');
+                      setGameStartSignal(true);
                   }
               }
           } catch (e) {
@@ -658,18 +677,32 @@ const GameEntryWrapper = ({ children }) => {
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
       };
-  }, [lobbyStatus, roomNumber, sdkReady]);
+  }, [appState, roomNumber, sdkReady]);
 
-  const enterRoomReal = async () => {
+  // 监听开始信号，跳转
+  useEffect(() => {
+      if (gameStartSignal && appState === 'multi_lobby') {
+          setAppState('playing');
+      }
+  }, [gameStartSignal, appState]);
+
+
+  // 修改：New flow logic
+  const handleMultiLogin = () => {
+      if (!playerName.trim()) return alert("请输入昵称");
+      const rNum = parseInt(roomNumber);
+      if (isNaN(rNum) || rNum < 1 || rNum > 20) return alert("请输入有效的房间号 (1-20)");
+      
+      setAppState('multi_intro'); // Go to Intro
+  };
+
+  const enterLobbyReal = async () => {
       if (!sdkReady || !window.AV) return alert("系统正在初始化，请稍等两秒再试...");
       const AV = window.AV;
-
       const rNum = parseInt(roomNumber); 
-      if (!playerName.trim()) return alert("请输入昵称");
-      if (isNaN(rNum) || rNum < 1 || rNum > 100) return alert("请输入有效的房间号 (1-99)");
 
       try {
-          setLobbyStatus('waiting');
+          setAppState('multi_lobby'); // Now we are in lobby
           
           const query = new AV.Query('GamePlayer');
           query.equalTo('room', rNum); 
@@ -677,6 +710,7 @@ const GameEntryWrapper = ({ children }) => {
           
           const existingPlayers = await query.find(); 
           
+          // Check if I already exist (re-join)
           const existingMe = existingPlayers.find(p => p.get('name') === playerName);
           if (existingMe) {
              setMyRole(existingMe.get('role')); 
@@ -693,9 +727,9 @@ const GameEntryWrapper = ({ children }) => {
       } catch (error) {
           console.error("Connection Error:", error);
           alert("连接失败，请检查网络。");
-          setLobbyStatus('login');
       }
   };
+
 
   const selectRole = async (roleToSelect) => {
       if (!sdkReady) return;
@@ -729,25 +763,23 @@ const GameEntryWrapper = ({ children }) => {
 
           await player.save();
           setMyRole(roleToSelect);
+          
+          // Refresh list immediately
+          const pQuery = new AV.Query('GamePlayer');
+          pQuery.equalTo('room', parseInt(roomNumber));
+          const players = await pQuery.find();
+          setRoomPlayers(players.map(p => ({ name: p.get('name'), role: p.get('role'), id: p.id })));
+
       } catch (e) {
           console.error("选角失败", e);
           alert(`选角失败: ${e.message || "网络错误"}`);
       }
   };
 
-  const startMultiIntro = () => {
-      setAppState('multi_intro');
-  };
-
-  const startMultiRoles = () => {
-      setAppState('multi_roles');
-  };
-
-  const startGame = async () => {
-      if (!myRole) return alert("请先选择一个角色！");
+  const startGameByOwner = async () => {
+      if (!myRole || myRole !== 'owner') return;
       
-      if (myRole === 'owner' && mode === 'multi') {
-          try {
+      try {
              const AV = window.AV;
              const Action = AV.Object.extend('GameAction');
              const act = new Action();
@@ -761,14 +793,11 @@ const GameEntryWrapper = ({ children }) => {
              });
              await act.save();
              console.log("Initial state broadcasted by Owner.");
-          } catch (e) {
+             setAppState('playing'); // Host jumps immediately, others jump via polling
+      } catch (e) {
              console.error("Failed to init game state", e);
              alert("启动失败，请重试");
-             return;
-          }
       }
-      
-      setAppState('playing');
   };
 
   if (!sdkReady) {
@@ -783,6 +812,7 @@ const GameEntryWrapper = ({ children }) => {
       )
   }
 
+  // Cover Screen
   if (appState === 'cover') {
       return (
         <div className="min-h-screen flex flex-col justify-between bg-slate-900 text-white p-8 relative overflow-hidden font-sans">
@@ -814,7 +844,7 @@ const GameEntryWrapper = ({ children }) => {
                         </div>
                     </Button>
                     
-                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_lobby'); }}>
+                    <Button size="lg" className="flex-1 h-auto py-4 text-base bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-[0_0_30px_-5px_rgba(147,51,234,0.5)] transition-all transform hover:scale-105 border border-purple-400/50 flex flex-col items-center justify-center gap-2" onClick={() => { setMode('multi'); setAppState('multi_login'); }}>
                         <Network size={24} />
                         <div className="flex flex-col items-center">
                             <span>多人互动版</span>
@@ -834,6 +864,7 @@ const GameEntryWrapper = ({ children }) => {
       );
   }
   
+  // Single Player Flow
   if (appState === 'single_intro') {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
@@ -841,38 +872,12 @@ const GameEntryWrapper = ({ children }) => {
          </div>
       );
   }
-  
-  if (appState === 'multi_intro') {
-      return (
-         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {React.cloneElement(children, { 
-                 assignedRole: myRole, 
-                 mode: 'multi', 
-                 initialViewMode: 'intro_only', 
-                 onNext: startMultiRoles,
-                 onExit: () => setAppState('cover') 
-             })}
-         </div>
-      );
-  }
 
-  if (appState === 'multi_roles') {
-      return (
-         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
-             {React.cloneElement(children, { 
-                 assignedRole: myRole, 
-                 mode: 'multi', 
-                 initialViewMode: 'roles_only',
-                 onNext: startGame,
-                 onExit: () => setAppState('cover') 
-             })}
-         </div>
-      );
-  }
+  // --- Multiplayer Flow Steps ---
 
-  if (appState === 'multi_lobby') {
-      if (lobbyStatus === 'login') {
-          return (
+  // Step 1: Login
+  if (appState === 'multi_login') {
+      return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans relative overflow-hidden">
                 <img src="https://images.unsplash.com/photo-1526304640152-929666d766a6?auto=format&fit=crop&w=1000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-20"/>
                 <div className="absolute top-4 right-4 text-white/60 text-xs flex items-center gap-2"><Users2 size={14}/> 平台玩家: {onlineCount}</div>
@@ -881,7 +886,7 @@ const GameEntryWrapper = ({ children }) => {
                     <CardHeader className="text-center pt-10">
                         <div className="mx-auto bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mb-2"><Network size={32} className="text-purple-600"/></div>
                         <CardTitle className="text-2xl font-black text-slate-800">多人互动大厅</CardTitle>
-                        <p className="text-sm text-slate-500">请输入房间号加入</p>
+                        <p className="text-sm text-slate-500">请输入信息以继续</p>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
@@ -889,27 +894,60 @@ const GameEntryWrapper = ({ children }) => {
                            <Input placeholder="例如: Player1" value={playerName} onChange={e=>setPlayerName(e.target.value)} className="text-center text-lg h-12"/>
                         </div>
                         <div className="space-y-2">
-                           <span className="text-xs font-bold text-slate-600">房间号 (1-99)</span>
+                           <span className="text-xs font-bold text-slate-600">房间号 (1-20)</span>
                            <Input type="number" min={1} max={20} placeholder="请输入房间号" value={roomNumber} onChange={e=>setRoomNumber(e.target.value)} className="text-center text-lg h-12 font-mono"/>
                         </div>
-                        <Button className="w-full h-12 text-lg font-bold bg-purple-600 hover:bg-purple-700" onClick={enterRoomReal}>
-                            <LogIn className="mr-2" size={20}/> 进入房间
+                        <Button className="w-full h-12 text-lg font-bold bg-purple-600 hover:bg-purple-700" onClick={handleMultiLogin}>
+                            下一步 (项目介绍) <ArrowRight className="ml-2" size={20}/>
                         </Button>
                     </CardContent>
                 </Card>
             </div>
-          )
-      }
+      )
+  }
+  
+  // Step 2: Project Intro
+  if (appState === 'multi_intro') {
+      return (
+         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
+             {React.cloneElement(children, { 
+                 assignedRole: null, 
+                 mode: 'multi', 
+                 initialViewMode: 'intro_only', 
+                 onNext: () => setAppState('multi_roles'),
+                 onExit: () => setAppState('cover') 
+             })}
+         </div>
+      );
+  }
 
-      if (lobbyStatus === 'waiting') {
-          return (
+  // Step 3: Roles Info
+  if (appState === 'multi_roles') {
+      return (
+         <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
+             {React.cloneElement(children, { 
+                 assignedRole: null, 
+                 mode: 'multi', 
+                 initialViewMode: 'roles_only',
+                 onNext: enterLobbyReal, // Proceed to actual Lobby/Connection
+                 onExit: () => setAppState('cover') 
+             })}
+         </div>
+      );
+  }
+
+  // Step 4: Lobby (Role Selection & Connection)
+  if (appState === 'multi_lobby') {
+      return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
                <Card className="w-full max-w-2xl border-t-4 border-purple-500 shadow-2xl">
                   <CardHeader className="text-center pb-2 border-b border-slate-100 relative">
                      <CardTitle className="flex items-center justify-center gap-2 text-purple-800">
                         房间 #{roomNumber} - 角色选择
                      </CardTitle>
-                     <div className="text-xs text-slate-400 mt-1">请点击空闲卡片选择您的角色 (建议满5人)</div>
+                     <div className="text-xs text-slate-400 mt-1">
+                         {myRole ? "等待房主开始..." : "请点击空闲卡片选择您的角色"}
+                     </div>
                   </CardHeader>
                   <CardContent className="pt-6">
                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -952,24 +990,24 @@ const GameEntryWrapper = ({ children }) => {
                      </div>
                      
                      <div className="mt-8 space-y-3">
-                         {myRole ? (
-                             <Button className="w-full h-12 text-lg bg-green-600 hover:bg-green-700 animate-bounce" onClick={startMultiIntro}>
-                                 <ArrowBigRight className="mr-2"/> 确认并下一步 (项目简介)
+                         {myRole === 'owner' ? (
+                             <Button className="w-full h-12 text-lg bg-green-600 hover:bg-green-700 animate-bounce" onClick={startGameByOwner}>
+                                 <Play className="mr-2"/> 开始游戏 (我是房主)
                              </Button>
                          ) : (
                              <Button disabled className="w-full h-12 bg-slate-200 text-slate-500">
-                                 {!myRole ? "请先选择角色" : <><Loader2 className="mr-2 animate-spin"/> 等待队友 ({roomPlayers.length}/5)</>}
+                                 {!myRole ? "请先选择角色" : <><Loader2 className="mr-2 animate-spin"/> 等待房主开始游戏 ({roomPlayers.length}/5)</>}
                              </Button>
                          )}
-                         <div className="text-center text-xs text-slate-400">请确认所有玩家到齐后点击下一步</div>
+                         <div className="text-center text-xs text-slate-400">请确认所有玩家到齐后由房主开始</div>
                      </div>
                   </CardContent>
                </Card>
             </div>
-          );
-      }
+      );
   }
 
+  // Step 5: Game Playing
   if (appState === 'playing') {
       const gameContent = React.cloneElement(children, { 
          assignedRole: myRole, 
@@ -1005,7 +1043,7 @@ const SummaryForm = ({ role, onSubmit }) => {
 
   const handleSubmit = () => {
      const allScoresFilled = Object.keys(INITIAL_STATES).every(k => scores[k] && scores[k] !== "");
-     if(!pros || !cons || !allScoresFilled) { alert("请填写优点/不足，并完成所有满意度评价"); return; }
+     if(!pros || !cons || !allScoresFilled) { alert("请填写优点、不足，并完成所有满意度评价"); return; }
      onSubmit(role, { pros, cons, scores });
   };
 
@@ -1119,13 +1157,24 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   const [viewMode, setViewMode] = useState('intro'); 
   
   useEffect(() => {
-      if (initialViewMode) setViewMode(initialViewMode);
+      // 这里的 viewMode 控制的是 "Game Board" vs "Intro" vs "Role Details"
+      // 在多人模式下，我们直接进入 'game'，因为前置步骤已经在 Wrapper 处理了
+      if (initialViewMode) {
+          if (initialViewMode === 'intro_only') setViewMode('intro');
+          else if (initialViewMode === 'roles_only') setViewMode('roles');
+          else setViewMode('game');
+      }
       if (mode === 'single' && !initialViewMode) setViewMode('intro');
   }, [mode, initialViewMode]);
 
-  if (mode === 'multi' && !assignedRole) {
-      return <div className="p-8 text-white">Error: No Role Assigned</div>
+  // If we are in "partial" views (Intro/Roles) handled by Wrapper, we delegate content rendering
+  if (initialViewMode === 'intro_only') {
+      return <ProjectIntroView mode={mode} assignedRole={assignedRole} onNext={onNext} onlyIntroContent={true} />;
   }
+  if (initialViewMode === 'roles_only') {
+      return <RoleDetailView mode={mode} onNext={onNext} onlyRoleContent={true} />;
+  }
+
 
   const [gameTime, setGameTime] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -1280,9 +1329,13 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       }
   }, [activeRole, mode]);
   
+  // 核心修复：移除权限判断，无条件同步所有接收到的状态
   const applyStatePayload = (data) => {
       if(!data) return;
-      const isMyTurn = assignedRole && assignedRole === data.activeRole;
+      
+      // 注意：这里不再有 `if (!isMyTurn)` 的限制。
+      // 多人模式下，所有客户端必须同步所有公共状态，否则界面不会更新。
+      // 私有输入（如Input框内容）由 React 本地 state 管理，提交时才通过 Broadcast 同步。
 
       if(data.stage) setStage(data.stage);
       if(data.activeRole) setActiveRole(data.activeRole);
@@ -1298,18 +1351,17 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.accumulatedGovEscpReqs) setAccumulatedGovEscpReqs(data.accumulatedGovEscpReqs);
       if(data.accumulatedMdbEscpReqs) setAccumulatedMdbEscpReqs(data.accumulatedMdbEscpReqs);
       
-      if (!isMyTurn || !assignedRole) {
-          if(data.govMandates) setGovMandates(data.govMandates);
-          if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
-          if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
-          if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
-          if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
-          if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
-          if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
-          if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
-          if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
-          if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
-      }
+      // 这些变量代表"已确认/已提交"的数据，所有人都应该看到更新
+      if(data.govMandates) setGovMandates(data.govMandates);
+      if(data.govEscpMandates) setGovEscpMandates(data.govEscpMandates);
+      if(data.mdbEscpMandates) setMdbEscpMandates(data.mdbEscpMandates);
+      if(data.ownerEsiaSelection) setOwnerEsiaSelection(data.ownerEsiaSelection);
+      if(data.ownerEscpSelection) setOwnerEscpSelection(data.ownerEscpSelection);
+      if(data.ngoRequirements) setNgoRequirements(data.ngoRequirements);
+      if(data.ownerRespEsmp) setOwnerRespEsmp(data.ownerRespEsmp);
+      if(data.epcExecPlan) setEpcExecPlan(data.epcExecPlan);
+      if(data.ownerAuditItems) setOwnerAuditItems(data.ownerAuditItems);
+      if(data.previousAuditItems) setPreviousAuditItems(data.previousAuditItems);
 
       if(data.confirmedEsiaSelection) setConfirmedEsiaSelection(data.confirmedEsiaSelection);
       if(data.confirmedEscpSelection) setConfirmedEscpSelection(data.confirmedEscpSelection);
@@ -1321,7 +1373,6 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.partyAppealReason !== undefined) setPartyAppealReason(data.partyAppealReason);
       if(data.ngoAppealReason !== undefined) setNgoAppealReason(data.ngoAppealReason);
       
-      if(data.ownerRespEsmp !== undefined) setOwnerRespEsmp(data.ownerRespEsmp); // Fix for multi
       if(data.tenderDuration) setTenderDuration(data.tenderDuration);
       if(data.delayPenalty) setDelayPenalty(data.delayPenalty);
       if(data.earlyBonus) setEarlyBonus(data.earlyBonus);
@@ -1331,6 +1382,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       if(data.logs && Array.isArray(data.logs)) {
           setLogs(data.logs);
       }
+      // Start timer if stage > 1, sync for everyone
       if (data.stage >= 1) setIsTimerRunning(true);
   };
 
@@ -1345,11 +1397,13 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
               const q = new AV.Query('GameAction');
               q.equalTo('room', parseInt(roomNumber));
               q.descending('createdAt');
-              q.limit(5); 
+              q.limit(5); // Fetch recent actions
               
               const actions = await q.find();
+              // Apply in chronological order (oldest first)
               const reversedActions = [...actions].reverse();
               
+              // Simplification: Just find the latest SYNC_STATE_FULL and apply it
               let latestStatePayload = null;
               
               reversedActions.forEach(act => {
@@ -1368,7 +1422,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       };
 
       pollState();
-      pollingRef.current = setInterval(pollState, 3000);
+      pollingRef.current = setInterval(pollState, 3000); // 3s polling
       
       return () => {
           if (pollingRef.current) clearInterval(pollingRef.current);
@@ -1598,7 +1652,8 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       setViewMode('game');
       setIsTimerRunning(true);
       if (mode === 'multi') {
-          onNext();
+          // In multiplayer, the wrapper handles this transition to 'playing'
+          // We can just broadcast the start state if owner, but it's done in Wrapper
       } else {
           triggerStageTransition(1, "项目立项审批阶段");
       }
@@ -1741,8 +1796,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       const newLogs = getUpdatedLogs(`政府批准ESIA。政府声誉变动: ${netRepChange}`, netRepChange >= 0 ? 'green' : 'orange');
       broadcastState({ logs: newLogs, playerState: newState });
       
-      // 恢复：进入Stage 2的过渡
-      triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程");
+      triggerStageTransition(2, "项目融资阶段", "政府已批准立项，项目正式进入融资流程。");
       
       return; 
       
@@ -2008,11 +2062,10 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
   };
   
   const s3EpcSignConfirm = () => {
-      // 恢复：EPC签署合同后，进入Stage 4的过渡
       triggerStageTransition(
           4, 
           "项目建设阶段", 
-          `合同签约完成\n合同价: $${epcBid.price}万\n工期: ${tenderDuration}个月\n误期罚款: ${delayPenalty}万/月\n提前奖励: ${earlyBonus}万/月`
+          `合同签约完成。\n合同价: $${epcBid.price}万\n工期: ${tenderDuration}个月\n误期罚款: ${delayPenalty}万/月\n提前奖励: ${earlyBonus}万/月`
       );
   };
 
@@ -2699,7 +2752,7 @@ function SunLinkESGSimV7_47_Refined({ assignedRole, mode, onExit, onNext, roomNu
       const newLogs = getUpdatedLogs(`结算完成。最终支付比例: ${finalPct}%。${bonusPenaltyText}`, 'green');
       broadcastState({logs: newLogs});
       
-      triggerStageTransition(6, "完工总结阶段", "项目已完成结算，顺利进入并网发电，请填写项目总结");
+      triggerStageTransition(6, "完工总结阶段", "项目已完成结算，顺利进入并网发电，请填写项目总结。");
   };
 
   const submitSummary = (role, data) => {
