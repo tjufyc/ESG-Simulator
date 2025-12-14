@@ -574,6 +574,7 @@ const GameEntryWrapper = ({ children }) => {
   const [myRole, setMyRole] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const [multiFlow, setMultiFlow] = useState(MULTI_FLOW.LOGIN);
+  console.log("[DEBUG] multiFlow =", multiFlow, "mode =", mode);
  
   
   const pollingRef = useRef(null);
