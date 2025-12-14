@@ -549,6 +549,19 @@ const MobileNavBtn = ({ role, label, icon: Icon, active, onClick, alert, isTurn 
 
 const ROLE_ORDER = ['owner', 'gov', 'mdb', 'epc', 'ngo'];
 
+  // ===============================
+  // ✅ 多人模式流程状态机（auto injected）
+  // ===============================
+  const MULTI_FLOW = {
+    LOGIN: 'login',
+    INTRO: 'intro',
+    ROLES: 'roles',
+    SELECT: 'select',
+    WAIT_OWNER: 'wait_owner',
+    PLAYING: 'playing'
+  };
+
+
 const GameEntryWrapper = ({ children }) => {
   const [sdkReady, setSdkReady] = useState(false);
   const [appState, setAppState] = useState('cover'); 
@@ -559,7 +572,9 @@ const GameEntryWrapper = ({ children }) => {
   const [lobbyStatus, setLobbyStatus] = useState('login'); 
   const [roomPlayers, setRoomPlayers] = useState([]);
   const [myRole, setMyRole] = useState(null);
-  const [onlineCount, setOnlineCount] = useState(0); 
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [multiFlow, setMultiFlow] = useState(MULTI_FLOW.LOGIN);
+ 
   
   const pollingRef = useRef(null);
 
@@ -646,6 +661,9 @@ const GameEntryWrapper = ({ children }) => {
                       console.log("Detected Game Start Signal via Polling!");
                       setAppState('playing');
                   }
+
+          setMultiFlow(MULTI_FLOW.INTRO);
+
               }
           } catch (e) {
               console.warn("Polling failed:", e);
@@ -746,7 +764,14 @@ const GameEntryWrapper = ({ children }) => {
   const startGame = async () => {
       if (!myRole) return alert("请先选择一个角色！");
       
-      if (myRole === 'owner' && mode === 'multi') {
+      
+      if (mode === 'multi' && myRole !== 'owner') {
+        alert("只有业主（房主）可以开始游戏");
+        return;
+      }
+
+      if (myRole === 'owner' && mode === 'multi')
+     {
           try {
              const AV = window.AV;
              const Action = AV.Object.extend('GameAction');
@@ -768,7 +793,10 @@ const GameEntryWrapper = ({ children }) => {
           }
       }
       
+      
+      setMultiFlow(MULTI_FLOW.PLAYING);
       setAppState('playing');
+    
   };
 
   if (!sdkReady) {
@@ -856,7 +884,62 @@ const GameEntryWrapper = ({ children }) => {
       );
   }
 
-  if (appState === 'multi_roles') {
+  
+  // ===============================
+  // ✅ 多人流程视图顺序（auto injected）
+  // ===============================
+  if (mode === 'multi' && multiFlow === MULTI_FLOW.INTRO) {
+    return React.cloneElement(children, {
+      assignedRole: myRole,
+      mode: 'multi',
+      initialViewMode: 'intro_only',
+      onNext: () => setMultiFlow(MULTI_FLOW.ROLES),
+      onExit: () => setAppState('cover')
+    });
+  }
+
+  if (mode === 'multi' && multiFlow === MULTI_FLOW.ROLES) {
+    return React.cloneElement(children, {
+      assignedRole: myRole,
+      mode: 'multi',
+      initialViewMode: 'roles_only',
+      onNext: () => setMultiFlow(MULTI_FLOW.SELECT),
+      onExit: () => setAppState('cover')
+    });
+  }
+
+  if (mode === 'multi' && multiFlow === MULTI_FLOW.SELECT) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="bg-white p-6 rounded shadow">
+          <h2 className="text-lg font-bold mb-4">请选择角色</h2>
+          {ROLE_ORDER.map(r => (
+            <Button key={r} className="m-1" onClick={() => selectRole(r)}>
+              {INITIAL_STATES[r].label}
+            </Button>
+          ))}
+          <div className="mt-4">
+            <Button disabled={!myRole} onClick={() => setMultiFlow(MULTI_FLOW.WAIT_OWNER)}>
+              确认角色
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'multi' && multiFlow === MULTI_FLOW.WAIT_OWNER) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+        {myRole === 'owner'
+          ? <Button onClick={startGame}>房主确认开始游戏</Button>
+          : <div>等待业主开始游戏…</div>}
+      </div>
+    );
+  }
+
+  if (appState === 'multi_roles')
+   {
       return (
          <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
              {React.cloneElement(children, { 
